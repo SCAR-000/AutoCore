@@ -3,6 +3,7 @@
 namespace AutoCore.Auth.Packets.Server
 {
     using Data;
+    using Utils.Packets;
 
     public class PlayFailPacket : IOpcodedPacket<ServerOpcode>
     {

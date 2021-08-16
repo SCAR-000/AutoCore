@@ -7,6 +7,7 @@ namespace AutoCore.Auth.Packets.Server
 {
     using Communicator;
     using Data;
+    using Utils.Packets;
 
     public class SendServerListExtPacket : IOpcodedPacket<ServerOpcode>
     {

@@ -3,6 +3,7 @@
 namespace AutoCore.Auth.Packets.Client
 {
     using Data;
+    using Utils.Packets;
 
     public class LogoutPacket : IOpcodedPacket<ClientOpcode>
     {

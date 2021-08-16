@@ -202,21 +202,21 @@ namespace AutoCore.Auth.Network
         {
             lock (GameServers)
             {
-                if (GameServers.ContainsKey(packet.ServerId))
+                if (GameServers.ContainsKey(packet.Data.Id))
                 {
                     DisconnectCommunicator(client);
                     Logger.WriteLog(LogType.Debug, $"A server tried to connect to an already in use server slot! Remote Address: {client.Socket.RemoteAddress}");
                     return false;
                 }
 
-                if (!Config.Servers.ContainsKey(packet.ServerId.ToString()))
+                if (!Config.Servers.ContainsKey(packet.Data.Id.ToString()))
                 {
                     DisconnectCommunicator(client);
                     Logger.WriteLog(LogType.Debug, $"A server tried to connect to a non-defined server slot! Remote Address: {client.Socket.RemoteAddress}");
                     return false;
                 }
 
-                if (Config.Servers[packet.ServerId.ToString()] != packet.Password)
+                if (Config.Servers[packet.Data.Id.ToString()] != packet.Data.Password)
                 {
                     DisconnectCommunicator(client);
                     Logger.WriteLog(LogType.Error, $"A server tried to log in with an invalid password! Remote Address: {client.Socket.RemoteAddress}");
@@ -224,9 +224,9 @@ namespace AutoCore.Auth.Network
                 }
 
                 GameServerQueue.Remove(client);
-                GameServers.Add(packet.ServerId, client);
+                GameServers.Add(packet.Data.Id, client);
 
-                Logger.WriteLog(LogType.Network, $"The Game server (Id: {packet.ServerId}, Address: {client.Socket.RemoteAddress}, Public Address: {packet.PublicAddress}) has authenticated! Requesting info...");
+                Logger.WriteLog(LogType.Network, $"The Game server (Id: {packet.Data.Id}, Address: {client.Socket.RemoteAddress}, Public Address: {packet.Data.Address}) has authenticated! Requesting info...");
 
                 return true;
             }
@@ -249,7 +249,7 @@ namespace AutoCore.Auth.Network
                 info = ServerList.FirstOrDefault(i => i.ServerId == client.ServerId);
 
             if (authClient != null && info != null)
-                authClient.RedirectionResult(packet.Response, info);
+                authClient.RedirectionResult(packet.Result, info);
         }
 
         public void RequestRedirection(Client client, byte serverId)
@@ -395,7 +395,6 @@ namespace AutoCore.Auth.Network
             Timer.Add("exit", minutes * 60000, false, () =>
             {
                 Shutdown();
-                _hostApplicationLifetime.StopApplication();
             });
 
             Logger.WriteLog(LogType.Command, $"Exiting the server in {minutes} minute(s).");

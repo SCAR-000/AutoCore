@@ -107,6 +107,26 @@ namespace AutoCore.Utils.Memory
             _buffers.Add(new ArrayPoolBuffer(newArr, count));
         }
 
+        // TODO: Later move the actual byte[], if possible, to avoid renting too much, if the already rented arrays can be moved
+        public int MoveBytesTo(NonContiguousMemoryStream dest, int count)
+        {
+            if (dest == null)
+                throw new ArgumentNullException(nameof(dest));
+
+            if (count > Length)
+                throw new ArgumentOutOfRangeException(nameof(count));
+
+            var destArr = ArrayPool<byte>.Shared.Rent(count);
+
+            var readCount = Read(destArr, 0, count);
+
+            dest.AddSharedPoolArray(destArr, readCount);
+
+            RemoveBytes(readCount);
+
+            return readCount;
+        }
+
         public void RemoveBytes(int count)
         {
             if (count > Length)

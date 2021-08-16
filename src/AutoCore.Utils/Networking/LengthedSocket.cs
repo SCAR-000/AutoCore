@@ -285,7 +285,7 @@ namespace AutoCore.Utils.Networking
             int length;
 
             // Keep space for the length header
-            data.Offset = LengthSize;
+            /*data.Offset = LengthSize;
 
             // Write the packet data to the buffer
             using (var sw = data.CreateWriter())
@@ -307,7 +307,7 @@ namespace AutoCore.Utils.Networking
             for (var i = 0; i < LengthSize; ++i)
                 data[i] = (byte)((sizeLen >> (i * 8)) & 0xFF);
 
-            args.SetBuffer(data.BaseOffset, data.Length);
+            args.SetBuffer(data.BaseOffset, data.Length);*/
 
             SendAsync(args);
         }

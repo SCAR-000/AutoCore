@@ -5,6 +5,7 @@ using System.IO;
 namespace AutoCore.Auth.Packets.Server
 {
     using Data;
+    using Utils.Packets;
 
     public class BlockedAccountWithMsgPacket : IOpcodedPacket<ServerOpcode>
     {

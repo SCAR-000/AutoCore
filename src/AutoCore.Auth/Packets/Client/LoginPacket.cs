@@ -8,6 +8,7 @@ using Org.BouncyCastle.Crypto.Parameters;
 namespace AutoCore.Auth.Packets.Client
 {
     using Data;
+    using Utils.Packets;
 
     public class LoginPacket : IOpcodedPacket<ClientOpcode>
     {

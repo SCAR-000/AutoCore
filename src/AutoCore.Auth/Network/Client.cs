@@ -1,10 +1,11 @@
 ﻿using System;
+using System.IO;
 using System.Net.Sockets;
 
 namespace AutoCore.Auth.Network
 {
     using Communicator;
-    using Cryptography;
+    //using Cryptography;
     using Data;
     using Utils;
     using Utils.Extensions;
@@ -14,8 +15,8 @@ namespace AutoCore.Auth.Network
     using Utils.Timer;
     using Packets.Client;
     using Packets.Server;
-    using Structures;
-    using Structures.Auth;
+    //using Structures;
+    //using Structures.Auth;
 
     public class Client
     {
@@ -27,7 +28,7 @@ namespace AutoCore.Auth.Network
         public uint OneTimeKey { get; }
         public uint SessionId1 { get; }
         public uint SessionId2 { get; }
-        public AuthAccountEntry AccountEntry { get; private set; }
+        //public AuthAccountEntry AccountEntry { get; private set; }
         public ClientState State { get; private set; }
         public Timer Timer { get; }
 
@@ -43,7 +44,7 @@ namespace AutoCore.Auth.Network
 
             Socket.OnError += OnError;
             Socket.OnReceive += OnReceive;
-            Socket.OnDecrypt += OnDecrypt;
+            //Socket.OnDecrypt += OnDecrypt;
 
             Socket.ReceiveAsync();
 
@@ -56,7 +57,7 @@ namespace AutoCore.Auth.Network
             SendPacket(new ProtocolVersionPacket(OneTimeKey));
 
             // This is here (after ProtocolVersionPacket), so it won't get encrypted
-            Socket.OnEncrypt += OnEncrypt;
+            //Socket.OnEncrypt += OnEncrypt;
 
             Timer.Add("timeout", Server.Config.AuthConfig.ClientTimeout * 1000, false, () =>
             {
@@ -130,11 +131,11 @@ namespace AutoCore.Auth.Network
             }
         }
 
-        public void RedirectionResult(RedirectResult result, ServerInfo info)
+        public void RedirectionResult(CommunicatorActionResult result, ServerInfo info)
         {
             switch (result)
             {
-                case RedirectResult.Fail:
+                case CommunicatorActionResult.Failure:
                     SendPacket(new PlayFailPacket(FailReason.UnexpectedError));
 
                     Close();
@@ -142,7 +143,7 @@ namespace AutoCore.Auth.Network
                     Logger.WriteLog(LogType.Error, $"Account ({AccountEntry.Username}, {AccountEntry.Id}) couldn't be redirected to server: {info.ServerId}!");
                     break;
 
-                case RedirectResult.Success:
+                case CommunicatorActionResult.Success:
                     HandleSuccessfulRedirect(info);
                     break;
 
@@ -172,7 +173,7 @@ namespace AutoCore.Auth.Network
             Close();
         }
 
-        private static void OnEncrypt(BufferData data, ref int length)
+        /*private static void OnEncrypt(BufferData data, ref int length)
         {
             AuthCryptManager.Encrypt(data.Buffer, data.BaseOffset + data.Offset, ref length, data.RemainingLength);
         }
@@ -180,14 +181,14 @@ namespace AutoCore.Auth.Network
         private static bool OnDecrypt(BufferData data)
         {
             return AuthCryptManager.Decrypt(data.Buffer, data.BaseOffset + data.Offset, data.RemainingLength);
-        }
+        }*/
 
-        private void OnReceive(BufferData data)
+        private void OnReceive(NonContiguousMemoryStream stream, int length)
         {
             // Reset the timeout after every action
             Timer.ResetTimer("timeout");
 
-            using var br = data.GetReader();
+            using var br = new BinaryReader(stream); // TODO: length
 
             var packet = CreatePacket((ClientOpcode)br.ReadByte());
 
@@ -213,11 +214,11 @@ namespace AutoCore.Auth.Network
         #region Handlers
         private void MsgLogin(LoginPacket packet)
         {
-            try
+            //try
             {
                 /*AccountEntry = unitOfWork.AuthAccountRepository.GetByUserName(packet.UserName, packet.Password);*/
             }
-            catch (EntityNotFoundException)
+            /*catch (EntityNotFoundException)
             {
                 SendPacket(new LoginFailPacket(FailReason.UserNameOrPassword));
                 Close();
@@ -237,7 +238,7 @@ namespace AutoCore.Auth.Network
                 Close();
                 Logger.WriteLog(LogType.Security, e.Message);
                 return;
-            }
+            }*/
 
             /*unitOfWork.AuthAccountRepository.UpdateLoginData(AccountEntry.Id, Socket.RemoteAddress);
             unitOfWork.Complete();*/
