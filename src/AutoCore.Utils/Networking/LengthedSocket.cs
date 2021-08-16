@@ -6,7 +6,9 @@ using System.Net.Sockets;
 
 namespace AutoCore.Utils.Networking
 {
+    using Extensions;
     using Memory;
+    using Packets;
 
     public enum SizeType : byte
     {
@@ -56,16 +58,6 @@ namespace AutoCore.Utils.Networking
             BufferStream = new();
         }
 
-        public void Bind(EndPoint ep)
-        {
-            Socket.Bind(ep);
-        }
-
-        public void Listen(int backlog)
-        {
-            Socket.Listen(backlog);
-        }
-
         #region SocketAsyncEventArgs
         public static void InitializeEventArgsPool(int eventArgsPoolCount)
         {
@@ -103,7 +95,7 @@ namespace AutoCore.Utils.Networking
             {
                 case SocketAsyncOperation.Receive:
                 case SocketAsyncOperation.Send:
-                    var data = args.UserToken as ArrayPoolBuffer;
+                    var data = args.GetUserToken<ArrayPoolBuffer>();
 
                     data.Buffer = ArrayPool<byte>.Shared.Rent(ReceiveBufferSize);
                     data.Length = data.Buffer.Length;
@@ -127,7 +119,7 @@ namespace AutoCore.Utils.Networking
             {
                 case SocketAsyncOperation.Receive:
                 case SocketAsyncOperation.Send:
-                    var data = args.UserToken as ArrayPoolBuffer;
+                    var data = args.GetUserToken<ArrayPoolBuffer>();
 
                     data.Buffer = null;
                     data.Length = 0;
@@ -158,7 +150,7 @@ namespace AutoCore.Utils.Networking
                 return;
             }
             
-            var data = args.UserToken as ArrayPoolBuffer;
+            var data = args.GetUserToken<ArrayPoolBuffer>();
 
             switch (args.LastOperation)
             {
@@ -244,7 +236,81 @@ namespace AutoCore.Utils.Networking
 
             throw new NotImplementedException($"Only 1, 2 and 4 byte headers are supported! {SizeHeaderLength} is not!");
         }
-#endregion
+        #endregion
+
+        public void Bind(EndPoint ep)
+        {
+            Socket.Bind(ep);
+        }
+
+        public void Listen(int backlog)
+        {
+            Socket.Listen(backlog);
+        }
+
+        public void AcceptAsync()
+        {
+            var args = SetupEventArgs(SocketAsyncOperation.Accept);
+
+            if (!Socket.AcceptAsync(args))
+                OperationCompleted(Socket, args);
+        }
+
+        public void ConnectAsync(EndPoint remote)
+        {
+            var args = SetupEventArgs(SocketAsyncOperation.Connect);
+
+            args.RemoteEndPoint = remote;
+
+            if (!Socket.ConnectAsync(args))
+                OperationCompleted(Socket, args);
+        }
+
+        public void ReceiveAsync()
+        {
+            ReceiveAsync(SetupEventArgs(SocketAsyncOperation.Receive));
+        }
+
+        private void ReceiveAsync(SocketAsyncEventArgs args)
+        {
+            if (!Socket.ReceiveAsync(args))
+                OperationCompleted(Socket, args);
+        }
+
+        public void Send(IBasePacket packet)
+        {
+            var args = SetupEventArgs(SocketAsyncOperation.Send);
+            var data = args.GetUserToken<ArrayPoolBuffer>();
+
+            int length;
+
+            // Keep space for the length header
+            data.Offset = LengthSize;
+
+            // Write the packet data to the buffer
+            using (var sw = data.CreateWriter())
+            {
+                packet.Write(sw);
+
+                length = (int)sw.BaseStream.Position;
+            }
+
+            OnEncrypt?.Invoke(data, ref length);
+
+            // Reset the offset to send everything (including the size header)
+            data.Offset = 0;
+            data.Length = length + LengthSize;
+
+            var sizeLen = CountSize ? length + LengthSize : length;
+
+            // Copy the size header into the buffer
+            for (var i = 0; i < LengthSize; ++i)
+                data[i] = (byte)((sizeLen >> (i * 8)) & 0xFF);
+
+            args.SetBuffer(data.BaseOffset, data.Length);
+
+            SendAsync(args);
+        }
 
         private void SendAsync(SocketAsyncEventArgs args)
         {

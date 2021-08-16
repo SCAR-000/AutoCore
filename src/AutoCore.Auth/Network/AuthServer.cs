@@ -6,10 +6,14 @@ using System.Net.Sockets;
 
 namespace AutoCore.Auth.Network
 {
+    using Communicator;
+    using Communicator.Packets;
     using Config;
     using Data;
     using Packets.Client;
     using Packets.Server;
+    using Utils;
+    using Utils.Config;
     using Utils.Commands;
     using Utils.Networking;
     using Utils.Server;
@@ -189,13 +193,11 @@ namespace AutoCore.Auth.Network
                 return;
 
             lock (Clients)
-                Clients.Add(new Client(newSocket, this, _authUnitOfWorkFactory));
+                Clients.Add(new Client(newSocket, this));
         }
         #endregion
 
         #region Communicator
-
-
         public bool AuthenticateGameServer(LoginRequestPacket packet, CommunicatorClient client)
         {
             lock (GameServers)

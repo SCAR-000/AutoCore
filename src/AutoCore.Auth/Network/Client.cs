@@ -3,19 +3,17 @@ using System.Net.Sockets;
 
 namespace AutoCore.Auth.Network
 {
+    using Communicator;
     using Cryptography;
     using Data;
     using Utils;
     using Utils.Extensions;
     using Utils.Memory;
     using Utils.Networking;
+    using Utils.Packets;
     using Utils.Timer;
-    using Packets;
     using Packets.Client;
     using Packets.Server;
-    using Repositories;
-    using Repositories.Auth.Account;
-    using Repositories.UnitOfWork;
     using Structures;
     using Structures.Auth;
 
@@ -24,7 +22,7 @@ namespace AutoCore.Auth.Network
         public const int LengthSize = 2;
 
         public LengthedSocket Socket { get; }
-        public Server Server { get; }
+        public AuthServer Server { get; }
 
         public uint OneTimeKey { get; }
         public uint SessionId1 { get; }
@@ -35,7 +33,7 @@ namespace AutoCore.Auth.Network
 
         private PacketQueue _packetQueue = new();
 
-        public Client(LengthedSocket socket, Server server)
+        public Client(LengthedSocket socket, AuthServer server)
         {
             Socket = socket;
             Server = server;
@@ -162,9 +160,9 @@ namespace AutoCore.Auth.Network
                 AccountId = AccountEntry.Id
             });
 
-            using var unitOfWork = _authUnitOfWorkFactory.Create();
+            /*using var unitOfWork = _authUnitOfWorkFactory.Create();
             unitOfWork.AuthAccountRepository.UpdateLastServer(AccountEntry.Id, info.ServerId);
-            unitOfWork.Complete();
+            unitOfWork.Complete();*/
 
             Logger.WriteLog(LogType.Network, $"Account ({AccountEntry.Username}, {AccountEntry.Id}) was redirected to the queue of the server: {info.ServerId}!");
         }
@@ -215,11 +213,9 @@ namespace AutoCore.Auth.Network
         #region Handlers
         private void MsgLogin(LoginPacket packet)
         {
-            using var unitOfWork = _authUnitOfWorkFactory.Create();
-
             try
             {
-                AccountEntry = unitOfWork.AuthAccountRepository.GetByUserName(packet.UserName, packet.Password);
+                /*AccountEntry = unitOfWork.AuthAccountRepository.GetByUserName(packet.UserName, packet.Password);*/
             }
             catch (EntityNotFoundException)
             {
@@ -243,8 +239,8 @@ namespace AutoCore.Auth.Network
                 return;
             }
 
-            unitOfWork.AuthAccountRepository.UpdateLoginData(AccountEntry.Id, Socket.RemoteAddress);
-            unitOfWork.Complete();
+            /*unitOfWork.AuthAccountRepository.UpdateLoginData(AccountEntry.Id, Socket.RemoteAddress);
+            unitOfWork.Complete();*/
 
             State = ClientState.LoggedIn;
 
