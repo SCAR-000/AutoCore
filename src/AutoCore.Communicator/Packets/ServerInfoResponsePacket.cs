@@ -21,8 +21,7 @@ namespace AutoCore.Communicator.Packets
 
         public void Read(BinaryReader br)
         {
-            Info.QueuePort = br.ReadInt32();
-            Info.GamePort = br.ReadInt32();
+            Info.Port = br.ReadInt32();
             Info.AgeLimit = br.ReadByte();
             Info.PKFlag = br.ReadByte();
             Info.CurrentPlayers = br.ReadUInt16();
@@ -32,8 +31,7 @@ namespace AutoCore.Communicator.Packets
         public void Write(BinaryWriter bw)
         {
             bw.Write((byte)Opcode);
-            bw.Write(Info.QueuePort);
-            bw.Write(Info.GamePort);
+            bw.Write(Info.Port);
             bw.Write(Info.AgeLimit);
             bw.Write(Info.PKFlag);
             bw.Write(Info.CurrentPlayers);

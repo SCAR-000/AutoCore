@@ -13,7 +13,6 @@ namespace AutoCore.Auth.Packets.Client
     public class LoginPacket : IOpcodedPacket<ClientOpcode>
     {
         private static readonly DesEngine Decrypter;
-        //private static readonly DesEngine Encrypter;
 
         public string UserName { get; set; }
         public string Password { get; set; }
@@ -28,9 +27,6 @@ namespace AutoCore.Auth.Packets.Client
 
             Decrypter = new DesEngine();
             Decrypter.Init(false, new DesParameters(key));
-
-            //Encrypter = new DesEngine();
-            //Encrypter.Init(true, new DesParameters(key));
         }
 
         public void Read(BinaryReader reader)
@@ -48,20 +44,7 @@ namespace AutoCore.Auth.Packets.Client
 
         public void Write(BinaryWriter writer)
         {
-            var data = new byte[30];
-            var unBuf = Encoding.UTF8.GetBytes(UserName);
-            var pwBuf = Encoding.UTF8.GetBytes(Password);
-
-            Array.Copy(unBuf, 0, data, 0, UserName.Length >= 14 ? 14 : UserName.Length);
-            Array.Copy(pwBuf, 0, data, 14, Password.Length >= 16 ? 16 : Password.Length);
-
-            //for (var i = 0; i < 24; i += 8)
-                //Encrypter.ProcessBlock(data, i, data, i);
-
-            writer.Write((byte) Opcode);
-            writer.Write(data);
-            writer.Write(GameId);
-            writer.Write(CDKey);
+            throw new NotImplementedException();
         }
 
         private static int FirstZeroIndex(byte[] data, int off, int length)

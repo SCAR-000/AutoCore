@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
@@ -7,7 +8,6 @@ using System.Net.Sockets;
 namespace AutoCore.Communicator
 {
     using Utils;
-    using Utils.Memory;
     using Utils.Networking;
     using Utils.Packets;
     using Packets;
@@ -21,11 +21,11 @@ namespace AutoCore.Communicator
 
     public enum CommunicatorOpcode : byte
     {
-        LoginRequest = 0,
-        LoginResponse = 1,
-        RedirectRequest = 2,
-        RedirectResponse = 3,
-        ServerInfoRequest = 4,
+        LoginRequest       = 0,
+        LoginResponse      = 1,
+        RedirectRequest    = 2,
+        RedirectResponse   = 3,
+        ServerInfoRequest  = 4,
         ServerInfoResponse = 5
     }
 
@@ -37,6 +37,7 @@ namespace AutoCore.Communicator
 
     public class Communicator
     {
+        public const int SendBufferSize = 512;
         public const SizeType CommunicatorHeaderLen = SizeType.Word;
         public const double ServerInfoUpdateIntervalMs = 30000.0d;
 
@@ -115,9 +116,9 @@ namespace AutoCore.Communicator
             Socket.AcceptAsync();
         }
 
-        private void OnSocketReceive(NonContiguousMemoryStream dataStream, int length)
+        private void OnSocketReceive(byte[] buffer, int length)
         {
-            using var br = new BinaryReader(dataStream); // TODO: length
+            using var br = new BinaryReader(new MemoryStream(buffer, 0, length, false));
 
             var opcode = (CommunicatorOpcode)br.ReadByte();
 
@@ -182,10 +183,22 @@ namespace AutoCore.Communicator
 
             OnConnect(info);
 
-            Socket.Send(new LoginRequestPacket(info));
+            SendPacket(new LoginRequestPacket(info));
             Socket.ReceiveAsync();
         }
         #endregion
+
+        private void SendPacket(IOpcodedPacket<CommunicatorOpcode> packet)
+        {
+            var buffer = ArrayPool<byte>.Shared.Rent(SendBufferSize);
+            var writer = new BinaryWriter(new MemoryStream(buffer, true));
+
+            packet.Write(writer);
+
+            Socket.Send(buffer, 0, (int)writer.BaseStream.Position);
+
+            ArrayPool<byte>.Shared.Return(buffer);
+        }
 
         #region Requests
         public void RequestServerInfo()
@@ -202,7 +215,7 @@ namespace AutoCore.Communicator
             {
                 LastRequestTime = DateTime.Now;
 
-                Socket.Send(new ServerInfoRequestPacket());
+                SendPacket(new ServerInfoRequestPacket());
             }
         }
 
@@ -214,7 +227,7 @@ namespace AutoCore.Communicator
                 return;
             }
 
-            Socket.Send(new RedirectRequestPacket(request));
+            SendPacket(new RedirectRequestPacket(request));
         }
         #endregion
 
@@ -235,7 +248,7 @@ namespace AutoCore.Communicator
 
             var result = OnLoginRequest(packet.Data);
 
-            Socket.Send(new LoginResponsePacket
+            SendPacket(new LoginResponsePacket
             {
                 Result = result ? CommunicatorActionResult.Success : CommunicatorActionResult.Failure
             });
@@ -286,7 +299,7 @@ namespace AutoCore.Communicator
 
             var result = OnRedirectRequest(packet.Request);
 
-            Socket.Send(new RedirectResponsePacket
+            SendPacket(new RedirectResponsePacket
             {
                 AccountId = packet.Request.AccountId,
                 Result = result ? CommunicatorActionResult.Success : CommunicatorActionResult.Failure
@@ -310,7 +323,9 @@ namespace AutoCore.Communicator
             OnRedirectResponse(packet.Result, packet.AccountId);
         }
 
+#pragma warning disable IDE0060 // Remove unused parameter
         private void MsgServerInfoRequest(ServerInfoRequestPacket packet)
+#pragma warning restore IDE0060 // Remove unused parameter
         {
             if (Type != CommunicatorType.Client)
             {
@@ -328,7 +343,7 @@ namespace AutoCore.Communicator
 
             OnServerInfoRequest(info);
 
-            Socket.Send(new ServerInfoResponsePacket(info));
+            SendPacket(new ServerInfoResponsePacket(info));
         }
 
         private void MsgServerInfoResponse(ServerInfoResponsePacket packet)
@@ -361,8 +376,7 @@ namespace AutoCore.Communicator
     {
         public byte ServerId { get; set; }
         public IPAddress Ip { get; set; }
-        public int QueuePort { get; set; }
-        public int GamePort { get; set; }
+        public int Port { get; set; }
         public byte AgeLimit { get; set; }
         public byte PKFlag { get; set; }
         public ushort CurrentPlayers { get; set; }

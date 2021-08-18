@@ -1,26 +1,30 @@
 ﻿using System;
+using System.Buffers;
 using System.IO;
+using System.Linq;
 using System.Net.Sockets;
 
 namespace AutoCore.Auth.Network
 {
     using Communicator;
-    //using Cryptography;
+    using Crypto;
     using Data;
+    using DataBase.Auth;
+    using DataBase.Auth.Models;
     using Utils;
     using Utils.Extensions;
-    using Utils.Memory;
     using Utils.Networking;
     using Utils.Packets;
     using Utils.Timer;
     using Packets.Client;
     using Packets.Server;
-    //using Structures;
-    //using Structures.Auth;
 
     public class Client
     {
         public const int LengthSize = 2;
+        public const int SendBufferSize = 512;
+        public const int SendBufferCryptoPadding = 8;
+        public const int SendBufferChecksumPadding = 8;
 
         public LengthedSocket Socket { get; }
         public AuthServer Server { get; }
@@ -28,11 +32,11 @@ namespace AutoCore.Auth.Network
         public uint OneTimeKey { get; }
         public uint SessionId1 { get; }
         public uint SessionId2 { get; }
-        //public AuthAccountEntry AccountEntry { get; private set; }
+        public Account Account { get; private set; }
         public ClientState State { get; private set; }
         public Timer Timer { get; }
 
-        private PacketQueue _packetQueue = new();
+        private readonly PacketQueue _packetQueue = new();
 
         public Client(LengthedSocket socket, AuthServer server)
         {
@@ -44,7 +48,6 @@ namespace AutoCore.Auth.Network
 
             Socket.OnError += OnError;
             Socket.OnReceive += OnReceive;
-            //Socket.OnDecrypt += OnDecrypt;
 
             Socket.ReceiveAsync();
 
@@ -55,9 +58,6 @@ namespace AutoCore.Auth.Network
             SessionId2 = rnd.NextUInt();
 
             SendPacket(new ProtocolVersionPacket(OneTimeKey));
-
-            // This is here (after ProtocolVersionPacket), so it won't get encrypted
-            //Socket.OnEncrypt += OnEncrypt;
 
             Timer.Add("timeout", Server.Config.AuthConfig.ClientTimeout * 1000, false, () =>
             {
@@ -103,7 +103,21 @@ namespace AutoCore.Auth.Network
 
         public void SendPacket(IBasePacket packet)
         {
-            Socket.Send(packet);
+            var buffer = ArrayPool<byte>.Shared.Rent(SendBufferSize + SendBufferCryptoPadding + SendBufferChecksumPadding);
+            var writer = new BinaryWriter(new MemoryStream(buffer, true));
+
+            packet.Write(writer);
+
+            var length = (int)writer.BaseStream.Position;
+
+            if (packet is not ProtocolVersionPacket)
+            {
+                CryptoManager.Encrypt(buffer, 0, ref length, buffer.Length);
+            }
+
+            Socket.Send(buffer, 0, length);
+
+            ArrayPool<byte>.Shared.Return(buffer);
         }
 
         public void HandlePacket(IBasePacket packet)
@@ -140,11 +154,27 @@ namespace AutoCore.Auth.Network
 
                     Close();
 
-                    Logger.WriteLog(LogType.Error, $"Account ({AccountEntry.Username}, {AccountEntry.Id}) couldn't be redirected to server: {info.ServerId}!");
+                    Logger.WriteLog(LogType.Error, $"Account ({Account.Username}, {Account.Id}) couldn't be redirected to server: {info.ServerId}!");
                     break;
 
                 case CommunicatorActionResult.Success:
-                    HandleSuccessfulRedirect(info);
+                    SendPacket(new PlayOkPacket
+                    {
+                        OneTimeKey = OneTimeKey,
+                        ServerId = info.ServerId,
+                        UserId = Account.Id
+                    });
+
+                    using (var context = new AuthContext())
+                    {
+                        var account = context.Accounts.Where(a => a.Id == Account.Id).First();
+
+                        account.LastServerId = info.ServerId;
+
+                        context.SaveChanges();
+                    }
+
+                    Logger.WriteLog(LogType.Network, $"Account ({Account.Username}, {Account.Id}) was redirected to the queue of the server: {info.ServerId}!");
                     break;
 
                 default:
@@ -152,52 +182,28 @@ namespace AutoCore.Auth.Network
             }
         }
 
-        private void HandleSuccessfulRedirect(ServerInfo info)
-        {
-            SendPacket(new HandoffToQueuePacket
-            {
-                OneTimeKey = OneTimeKey,
-                ServerId = info.ServerId,
-                AccountId = AccountEntry.Id
-            });
-
-            /*using var unitOfWork = _authUnitOfWorkFactory.Create();
-            unitOfWork.AuthAccountRepository.UpdateLastServer(AccountEntry.Id, info.ServerId);
-            unitOfWork.Complete();*/
-
-            Logger.WriteLog(LogType.Network, $"Account ({AccountEntry.Username}, {AccountEntry.Id}) was redirected to the queue of the server: {info.ServerId}!");
-        }
-
         private void OnError(SocketAsyncEventArgs args)
         {
             Close();
         }
 
-        /*private static void OnEncrypt(BufferData data, ref int length)
+        private void OnReceive(byte[] data, int length)
         {
-            AuthCryptManager.Encrypt(data.Buffer, data.BaseOffset + data.Offset, ref length, data.RemainingLength);
-        }
+            CryptoManager.Decrypt(data, 0, length);
 
-        private static bool OnDecrypt(BufferData data)
-        {
-            return AuthCryptManager.Decrypt(data.Buffer, data.BaseOffset + data.Offset, data.RemainingLength);
-        }*/
-
-        private void OnReceive(NonContiguousMemoryStream stream, int length)
-        {
-            // Reset the timeout after every action
-            Timer.ResetTimer("timeout");
-
-            using var br = new BinaryReader(stream); // TODO: length
+            using var br = new BinaryReader(new MemoryStream(data, 0, length, false));
 
             var packet = CreatePacket((ClientOpcode)br.ReadByte());
 
             packet.Read(br);
 
             _packetQueue.EnqueueIncoming(packet);
+
+            // Reset the timeout after every action
+            Timer.ResetTimer("timeout");
         }
 
-        private IBasePacket CreatePacket(ClientOpcode opcode)
+        private static IBasePacket CreatePacket(ClientOpcode opcode)
         {
             return opcode switch
             {
@@ -214,34 +220,34 @@ namespace AutoCore.Auth.Network
         #region Handlers
         private void MsgLogin(LoginPacket packet)
         {
-            //try
+            using (var context = new AuthContext())
             {
-                /*AccountEntry = unitOfWork.AuthAccountRepository.GetByUserName(packet.UserName, packet.Password);*/
-            }
-            /*catch (EntityNotFoundException)
-            {
-                SendPacket(new LoginFailPacket(FailReason.UserNameOrPassword));
-                Close();
-                Logger.WriteLog(LogType.Security, $"User ({packet.UserName}) tried to log in with an invalid username!");
-                return;
-            }
-            catch (PasswordCheckFailedException e)
-            {
-                SendPacket(new LoginFailPacket(FailReason.UserNameOrPassword));
-                Close();
-                Logger.WriteLog(LogType.Security, e.Message);
-                return;
-            }
-            catch (AccountLockedException e)
-            {
-                SendPacket(new BlockedAccountPacket());
-                Close();
-                Logger.WriteLog(LogType.Security, e.Message);
-                return;
-            }*/
+                var account = context.Accounts.FirstOrDefault(a => a.Username == packet.UserName);
+                if (account == null || !account.CheckPassword(packet.Password))
+                {
+                    SendPacket(new LoginFailPacket(FailReason.UserNameOrPassword));
 
-            /*unitOfWork.AuthAccountRepository.UpdateLoginData(AccountEntry.Id, Socket.RemoteAddress);
-            unitOfWork.Complete();*/
+                    Close();
+
+                    return;
+                }
+
+                if (account.Locked)
+                {
+                    SendPacket(new BlockedAccountPacket());
+
+                    Close();
+
+                    return;
+                }
+
+                account.LastIP = Socket.RemoteAddress.ToString();
+                account.LastLogin = DateTime.Now;
+
+                context.SaveChanges();
+
+                Account = account;
+            }
 
             State = ClientState.LoggedIn;
 
@@ -256,23 +262,25 @@ namespace AutoCore.Auth.Network
 
 #pragma warning disable IDE0060 // Remove unused parameter
         private void MsgLogout(LogoutPacket packet)
+#pragma warning restore IDE0060 // Remove unused parameter
         {
             Close();
         }
 
+#pragma warning disable IDE0060 // Remove unused parameter
         private void MsgServerListExt(ServerListExtPacket packet)
+#pragma warning restore IDE0060 // Remove unused parameter
         {
             State = ClientState.ServerList;
 
-            SendPacket(new SendServerListExtPacket(Server.ServerList, AccountEntry.LastServerId));
+            SendPacket(new SendServerListExtPacket(Server.ServerList, Account.LastServerId));
         }
-#pragma warning restore IDE0060 // Remove unused parameter
 
         private void MsgAboutToPlay(AboutToPlayPacket packet)
         {
             if (SessionId1 != packet.SessionId1 || SessionId2 != packet.SessionId2)
             {
-                Logger.WriteLog(LogType.Security, $"Account ({AccountEntry.Username}, {AccountEntry.Id}) has sent an AboutToPlay packet with invalid session data!");
+                Logger.WriteLog(LogType.Security, $"Account ({Account.Username}, {Account.Id}) has sent an AboutToPlay packet with invalid session data!");
                 return;
             }
 

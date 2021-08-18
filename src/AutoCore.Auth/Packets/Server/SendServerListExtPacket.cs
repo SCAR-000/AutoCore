@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
+using System.Net.Sockets;
 
 namespace AutoCore.Auth.Packets.Server
 {
@@ -31,11 +32,14 @@ namespace AutoCore.Auth.Packets.Server
 
             for (var i = 0; i < count; ++i)
             {
+                var serverId = reader.ReadByte();
+                var addrLen = reader.ReadByte();
+
                 ServerList.Add(new ServerInfo
                 {
-                    ServerId = reader.ReadByte(),
-                    Ip = new IPAddress(reader.ReadBytes(4)),
-                    QueuePort = reader.ReadInt32(),
+                    ServerId = serverId,
+                    Ip = new IPAddress(reader.ReadBytes(addrLen)),
+                    Port = reader.ReadInt32(),
                     AgeLimit = reader.ReadByte(),
                     PKFlag = reader.ReadByte(),
                     CurrentPlayers = reader.ReadUInt16(),
@@ -62,9 +66,12 @@ namespace AutoCore.Auth.Packets.Server
 
             foreach (var s in ServerList)
             {
+                var addrLen = (byte)(s.Ip.AddressFamily == AddressFamily.InterNetwork ? 4 : 16);
+
                 writer.Write(s.ServerId);
-                writer.Write(s.Ip.GetAddressBytes());
-                writer.Write(s.QueuePort);
+                writer.Write(addrLen);
+                writer.Write(s.Ip.GetAddressBytes(), 0, addrLen);
+                writer.Write(s.Port);
                 writer.Write(s.AgeLimit);
                 writer.Write(s.PKFlag);
                 writer.Write(s.CurrentPlayers);

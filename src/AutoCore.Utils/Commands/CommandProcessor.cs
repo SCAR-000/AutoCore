@@ -8,9 +8,9 @@ namespace AutoCore.Utils.Commands
     {
         private static readonly Dictionary<string, Action<string[]>> Commands = new();
 
-        public static void ProcessCommand(CancellationToken stopToken)
+        public static void ProcessCommand()
         {
-            var command = ReadCommand(stopToken);
+            var command = ReadCommand();
             if (string.IsNullOrWhiteSpace(command))
                 return;
 
@@ -27,27 +27,31 @@ namespace AutoCore.Utils.Commands
             Logger.WriteLog(LogType.Command, $"Invalid command: {command}");
         }
 
-        private static string ReadCommand(CancellationToken stopToken)
+        private static string ReadCommand()
         {
             var command = string.Empty;
-            while (!stopToken.IsCancellationRequested)
+
+            if (Console.KeyAvailable)
             {
-                if (Console.KeyAvailable)
+                while (true)
                 {
                     var key = Console.ReadKey();
                     switch (key.Key)
                     {
                         case ConsoleKey.Enter:
                             return command;
+
                         case ConsoleKey.Backspace:
                             command = command[0..^1];
                             break;
+
                         default:
                             command += key.KeyChar;
                             break;
                     }
                 }
             }
+
             return null;
         }
 

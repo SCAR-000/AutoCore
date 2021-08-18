@@ -3,6 +3,7 @@
 namespace AutoCore.Communicator.Packets
 {
     using Utils.Packets;
+
     public class LoginResponsePacket : IOpcodedPacket<CommunicatorOpcode>
     {
         public CommunicatorOpcode Opcode { get; } = CommunicatorOpcode.LoginResponse;

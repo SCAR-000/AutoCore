@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace AutoCore.Utils.Server
 {
@@ -8,27 +7,16 @@ namespace AutoCore.Utils.Server
 
     public abstract class BaseServer
     {
-        public bool IsRunning { get; protected set; }
+        public abstract bool IsRunning { get; }
         public abstract string ServerType { get; }
 
-        private async Task ProcessCommandsSafe(CancellationToken stoppingToken)
+        public void ProcessCommands()
         {
-            try
+            while (IsRunning)
             {
-                await ProcessCommands(stoppingToken);
-            }
-            catch (OperationCanceledException)
-            {
-            }
-        }
+                CommandProcessor.ProcessCommand();
 
-        private async Task ProcessCommands(CancellationToken stoppingToken)
-        {
-            while (IsRunning && !stoppingToken.IsCancellationRequested)
-            {
-                CommandProcessor.ProcessCommand(stoppingToken);
-
-                await Task.Delay(25, stoppingToken);
+                Thread.Sleep(25);
             }
         }
 

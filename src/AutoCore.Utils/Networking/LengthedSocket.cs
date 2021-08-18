@@ -8,7 +8,6 @@ namespace AutoCore.Utils.Networking
 {
     using Extensions;
     using Memory;
-    using Packets;
 
     public enum SizeType : byte
     {
@@ -24,7 +23,7 @@ namespace AutoCore.Utils.Networking
 
         public delegate void AcceptHandler(LengthedSocket acceptedSocket);
         public delegate void AsyncHandler(SocketAsyncEventArgs args);
-        public delegate void ReceiveHandler(NonContiguousMemoryStream dataStream, int length);
+        public delegate void ReceiveHandler(byte[] data, int length);
         public delegate void DisconnectHandler();
 
         private NonContiguousMemoryStream BufferStream { get; }
@@ -121,6 +120,8 @@ namespace AutoCore.Utils.Networking
                 case SocketAsyncOperation.Send:
                     var data = args.GetUserToken<ArrayPoolBuffer>();
 
+                    ArrayPool<byte>.Shared.Return(data.Buffer);
+
                     data.Buffer = null;
                     data.Length = 0;
 
@@ -165,9 +166,7 @@ namespace AutoCore.Utils.Networking
                     break;
 
                 case SocketAsyncOperation.Receive:
-                    data.Length = args.BytesTransferred;
-
-                    BufferStream.AddArrayPoolBuffer(data);
+                    BufferStream.CopyFromArray(data.Buffer, 0, args.BytesTransferred);
 
                     if (BufferStream.Length <= LengthSize)
                         break;
@@ -177,9 +176,15 @@ namespace AutoCore.Utils.Networking
                     if (BufferStream.Length < length)
                         break;
 
-                    BufferStream.RemoveBytes(LengthSize);
+                    var buffer = ArrayPool<byte>.Shared.Rent(length);
 
-                    OnReceive?.Invoke(BufferStream, length - LengthSize);
+                    BufferStream.Position += LengthSize;
+                    BufferStream.Read(buffer, 0, length - LengthSize);
+                    BufferStream.RemoveBytes(length);
+
+                    OnReceive?.Invoke(buffer, length - LengthSize);
+
+                    ArrayPool<byte>.Shared.Return(buffer);
                     break;
 
                 case SocketAsyncOperation.Connect:
@@ -277,37 +282,33 @@ namespace AutoCore.Utils.Networking
                 OperationCompleted(Socket, args);
         }
 
-        public void Send(IBasePacket packet)
+        public void Send(byte[] buffer)
+        {
+            Send(buffer, 0, buffer.Length);
+        }
+
+        public void Send(byte[] buffer, int offset, int length)
         {
             var args = SetupEventArgs(SocketAsyncOperation.Send);
             var data = args.GetUserToken<ArrayPoolBuffer>();
 
-            int length;
-
-            // Keep space for the length header
-            /*data.Offset = LengthSize;
-
-            // Write the packet data to the buffer
-            using (var sw = data.CreateWriter())
+            if (length + LengthSize > data.Length)
             {
-                packet.Write(sw);
+                ArrayPool<byte>.Shared.Return(data.Buffer);
 
-                length = (int)sw.BaseStream.Position;
+                data.Buffer = ArrayPool<byte>.Shared.Rent(length + LengthSize);
             }
 
-            OnEncrypt?.Invoke(data, ref length);
-
-            // Reset the offset to send everything (including the size header)
-            data.Offset = 0;
             data.Length = length + LengthSize;
 
-            var sizeLen = CountSize ? length + LengthSize : length;
+            var sizeLen = CountSize ? data.Length : length;
 
-            // Copy the size header into the buffer
             for (var i = 0; i < LengthSize; ++i)
-                data[i] = (byte)((sizeLen >> (i * 8)) & 0xFF);
+                data.Buffer[i] = (byte)((sizeLen >> (i * 8)) & 0xFF);
 
-            args.SetBuffer(data.BaseOffset, data.Length);*/
+            Buffer.BlockCopy(buffer, offset, data.Buffer, LengthSize, length);
+
+            args.SetBuffer(data.Buffer, 0, data.Length);
 
             SendAsync(args);
         }

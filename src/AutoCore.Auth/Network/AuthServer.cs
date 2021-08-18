@@ -10,7 +10,8 @@ namespace AutoCore.Auth.Network
     using Communicator.Packets;
     using Config;
     using Data;
-    using Packets.Client;
+    using DataBase.Auth;
+    using DataBase.Auth.Models;
     using Packets.Server;
     using Utils;
     using Utils.Config;
@@ -30,16 +31,16 @@ namespace AutoCore.Auth.Network
         public Communicator Communicator { get; private set; }
         public LengthedSocket AuthCommunicator { get; private set; }
         public LengthedSocket ListenerSocket { get; private set; }
-        public List<Client> Clients { get; } = new List<Client>();
+        public List<Client> Clients { get; } = new();
        
-        public List<ServerInfo> ServerList { get; } = new List<ServerInfo>();
+        public List<ServerInfo> ServerList { get; } = new();
         public MainLoop Loop { get; }
         public Timer Timer { get; }
-        public bool Running => Loop != null && Loop.Running;
+        public override bool IsRunning => Loop != null && Loop.Running;
 
         private readonly List<Client> _clientsToRemove = new();
-        private List<CommunicatorClient> GameServerQueue { get; } = new List<CommunicatorClient>();
-        private Dictionary<byte, CommunicatorClient> GameServers { get; } = new Dictionary<byte, CommunicatorClient>();
+        private List<CommunicatorClient> GameServerQueue { get; } = new();
+        private Dictionary<byte, CommunicatorClient> GameServers { get; } = new();
 
         public AuthServer()
         {
@@ -80,6 +81,8 @@ namespace AutoCore.Auth.Network
 
             Logger.UpdateConfig(Config.LoggerConfig);
 
+            AuthContext.InitializeConnectionString(Config.AuthDatabaseConnectionString);
+
             // Handle reloading the config and updating the list visibility
             if (oldConfig == null || oldConfig.AuthListType == Config.AuthListType)
                 return;
@@ -113,11 +116,10 @@ namespace AutoCore.Auth.Network
                 {
                     AgeLimit = 0,
                     CurrentPlayers = 0,
-                    GamePort = 0,
+                    Port = 0,
                     Ip = IPAddress.None,
                     MaxPlayers = 0,
                     PKFlag = 0,
-                    QueuePort = 0,
                     ServerId = id,
                     Status = 0
                 });
@@ -232,7 +234,9 @@ namespace AutoCore.Auth.Network
             }
         }
 
+#pragma warning disable IDE0060 // Remove unused parameter
         public void UpdateServerInfo(CommunicatorClient client, ServerInfoResponsePacket packet)
+#pragma warning restore IDE0060 // Remove unused parameter
         {
             GenerateServerList();
             BroadcastServerList();
@@ -242,7 +246,7 @@ namespace AutoCore.Auth.Network
         {
             Client authClient;
             lock (Clients)
-                authClient = Clients.FirstOrDefault(c => c.AccountEntry.Id == packet.AccountId);
+                authClient = Clients.FirstOrDefault(c => c.Account.Id == packet.AccountId);
 
             ServerInfo info;
             lock (ServerList)
@@ -286,7 +290,24 @@ namespace AutoCore.Auth.Network
         {
             lock (ServerList)
             {
-                var toRemove = new List<ServerInfo>();
+                ServerList.Clear();
+
+                foreach (var server in GameServers)
+                {
+                    ServerList.Add(new ServerInfo
+                    {
+                        AgeLimit = server.Value.AgeLimit,
+                        PKFlag = server.Value.PKFlag,
+                        CurrentPlayers = server.Value.CurrentPlayers,
+                        MaxPlayers = server.Value.MaxPlayers,
+                        Port = server.Value.Port,
+                        Ip = server.Value.PublicAddress,
+                        ServerId = server.Key,
+                        Status = 1
+                    });
+                }
+
+                /*var toRemove = new List<ServerInfo>();
 
                 lock (GameServers)
                 {
@@ -294,7 +315,7 @@ namespace AutoCore.Auth.Network
                     {
                         if (GameServers.TryGetValue(sInfo.ServerId, out CommunicatorClient client))
                         {
-                            sInfo.Setup(client.PublicAddress, client.QueuePort, client.GamePort, client.AgeLimit, client.PKFlag, client.CurrentPlayers, client.MaxPlayers);
+                            sInfo.Setup(client.PublicAddress, client.Port, client.AgeLimit, client.PKFlag, client.CurrentPlayers, client.MaxPlayers);
                             continue;
                         }
 
@@ -317,8 +338,7 @@ namespace AutoCore.Auth.Network
                                 PKFlag = server.Value.PKFlag,
                                 CurrentPlayers = server.Value.CurrentPlayers,
                                 MaxPlayers = server.Value.MaxPlayers,
-                                QueuePort = server.Value.QueuePort,
-                                GamePort = server.Value.GamePort,
+                                Port = server.Value.Port,
                                 Ip = server.Value.PublicAddress,
                                 ServerId = server.Key,
                                 Status = 1
@@ -331,7 +351,7 @@ namespace AutoCore.Auth.Network
                     return;
 
                 foreach (var rem in toRemove)
-                    ServerList.Remove(rem);
+                    ServerList.Remove(rem);*/
             }
         }
         #endregion
@@ -374,7 +394,7 @@ namespace AutoCore.Auth.Network
             lock (Clients)
                 foreach (var c in Clients)
                     if (c.State == ClientState.ServerList)
-                        c.SendPacket(new SendServerListExtPacket(ServerList, c.AccountEntry.LastServerId));
+                        c.SendPacket(new SendServerListExtPacket(ServerList, c.Account.LastServerId));
         }
 
         #region Commands
@@ -425,9 +445,19 @@ namespace AutoCore.Auth.Network
 
             try
             {
-                using var unitOfWork = _authUnitOfWorkFactory.Create();
-                unitOfWork.AuthAccountRepository.Create(email, userName, password);
-                unitOfWork.Complete();
+                using (var context = new AuthContext())
+                {
+                    var salt = Account.CreateSalt();
+
+                    context.Accounts.Add(new Account
+                    {
+                        Email = email,
+                        Username = userName,
+                        Password = Account.Hash(password ?? string.Empty, salt),
+                        Salt = salt
+                    });
+                    context.SaveChanges();
+                }
 
                 Logger.WriteLog(LogType.Command, $"Created account: {parts[2]}! (Password: {parts[3]})");
             }

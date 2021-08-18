@@ -1,22 +1,24 @@
 ﻿using System;
+using System.Buffers;
+using System.IO;
 using System.Net;
 using System.Net.Sockets;
 
 namespace AutoCore.Auth.Network
 {
-    using Data;
-    using Utils.Memory;
+    using Communicator;
+    using Communicator.Packets;
     using Utils.Networking;
-    using Packets;
-    using Packets.Communicator;
+    using Utils.Packets;
 
     public class CommunicatorClient
     {
+        public const int SendBufferSize = 512;
+
         public LengthedSocket Socket { get; }
-        public Server Server { get; }
+        public AuthServer Server { get; }
         public byte ServerId { get; set; }
-        public int QueuePort { get; set; }
-        public int GamePort { get; set; }
+        public int Port { get; set; }
         public byte AgeLimit { get; set; }
         public byte PKFlag { get; set; }
         public ushort CurrentPlayers { get; set; }
@@ -24,11 +26,11 @@ namespace AutoCore.Auth.Network
         public DateTime LastRequestTime { get; set; }
         public IPAddress PublicAddress { get; set; }
 
-        private readonly PacketRouter<CommunicatorClient, CommOpcode> _router = new PacketRouter<CommunicatorClient, CommOpcode>();
+        private readonly PacketRouter<CommunicatorClient, CommunicatorOpcode> _router = new();
 
         public bool Connected => Socket.Connected;
 
-        public CommunicatorClient(LengthedSocket socket, Server server)
+        public CommunicatorClient(LengthedSocket socket, AuthServer server)
         {
             Server = server;
             Socket = socket;
@@ -39,19 +41,18 @@ namespace AutoCore.Auth.Network
             Socket.ReceiveAsync();
         }
 
-        private void OnReceive(BufferData data)
+        private void OnReceive(byte[] data, int length)
         {
-            var opcode = (CommOpcode) data.Buffer[data.BaseOffset + data.Offset++];
+            var br = new BinaryReader(new MemoryStream(data, 0, length, false));
 
-            var packetType = _router.GetPacketType(opcode);
+            var packetType = _router.GetPacketType((CommunicatorOpcode)br.ReadByte());
             if (packetType == null)
                 return;
 
-            var packet = Activator.CreateInstance(packetType) as IOpcodedPacket<CommOpcode>;
-            if (packet == null)
+            if (Activator.CreateInstance(packetType) is not IOpcodedPacket<CommunicatorOpcode> packet)
                 return;
 
-            packet.Read(data.GetReader());
+            packet.Read(br);
 
             _router.RoutePacket(this, packet);
         }
@@ -63,58 +64,73 @@ namespace AutoCore.Auth.Network
             Server.DisconnectCommunicator(this);
         }
 
+        private void SendPacket(IOpcodedPacket<CommunicatorOpcode> packet)
+        {
+            var buffer = ArrayPool<byte>.Shared.Rent(SendBufferSize);
+            var writer = new BinaryWriter(new MemoryStream(buffer, true));
+
+            packet.Write(writer);
+
+            Socket.Send(buffer, 0, (int)writer.BaseStream.Position);
+
+            ArrayPool<byte>.Shared.Return(buffer);
+        }
+
         public void RequestServerInfo()
         {
             LastRequestTime = DateTime.Now;
 
-            Socket.Send(new ServerInfoRequestPacket());
+            SendPacket(new ServerInfoRequestPacket());
         }
 
         public void RequestRedirection(Client client)
         {
-            Socket.Send(new RedirectRequestPacket
+            SendPacket(new RedirectRequestPacket(new()
             {
-                AccountId = client.AccountEntry.Id,
-                Email = client.AccountEntry.Email,
-                Username = client.AccountEntry.Username,
+                AccountId = client.Account.Id,
+                Email = client.Account.Email,
+                Username = client.Account.Username,
                 OneTimeKey = client.OneTimeKey
-            });
+            }));
         }
 
-        // ReSharper disable once UnusedMember.Local
-        [PacketHandler(CommOpcode.LoginRequest)]
+        [PacketHandler(CommunicatorOpcode.LoginRequest)]
+#pragma warning disable IDE0051 // Remove unused private members
         private void MsgLoginRequest(LoginRequestPacket packet)
+#pragma warning restore IDE0051 // Remove unused private members
         {
             if (!Server.AuthenticateGameServer(packet, this))
             {
-                Socket.Send(new LoginResponsePacket
+                SendPacket(new LoginResponsePacket
                 {
-                    Response = CommLoginReason.Failure
+                    Result = CommunicatorActionResult.Failure
                 });
                 return;
             }
 
-            Socket.Send(new LoginResponsePacket
+            SendPacket(new LoginResponsePacket
             {
-                Response = CommLoginReason.Success
+                Result = CommunicatorActionResult.Success
             });
 
-            ServerId = packet.ServerId;
-            PublicAddress = packet.PublicAddress;
+            ServerId = packet.Data.Id;
+            PublicAddress = packet.Data.Address;
 
             RequestServerInfo();
         }
 
-        // ReSharper disable once UnusedMember.Local
-        [PacketHandler(CommOpcode.ServerInfoResponse)]
+        [PacketHandler(CommunicatorOpcode.ServerInfoResponse)]
+#pragma warning disable IDE0051 // Remove unused private members
         private void MsgGameInfoResponse(ServerInfoResponsePacket packet)
+#pragma warning restore IDE0051 // Remove unused private members
         {
             Server.UpdateServerInfo(this, packet);
         }
 
-        // ReSharper disable once UnusedMember.Local
-        [PacketHandler(CommOpcode.RedirectResponse)]
+        [PacketHandler(CommunicatorOpcode.RedirectResponse)]
+#pragma warning disable IDE0051 // Remove unused private members
         private void MsgRedirectResponse(RedirectResponsePacket packet)
+#pragma warning restore IDE0051 // Remove unused private members
         {
             Server.RedirectResponse(this, packet);
         }

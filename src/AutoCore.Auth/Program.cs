@@ -10,21 +10,19 @@ namespace AutoCore.Auth
     {
         private static AuthServer Server { get; set; }
 
-        public static void Main(string[] args)
+        public static void Main()
         {
             Initialize(ExitHandlerProc);
 
-            Console.WriteLine("Hello World!");
-
             Server = new AuthServer();
-            Server.Initialize();
-
             if (!Server.Start())
             {
                 Logger.WriteLog(LogType.Error, "Unable to start the server!");
 
                 return;
             }
+
+            Server.ProcessCommands();
 
             GC.Collect();
 

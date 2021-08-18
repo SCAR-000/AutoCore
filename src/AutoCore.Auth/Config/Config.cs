@@ -14,5 +14,6 @@ namespace AutoCore.Auth.Config
         public AuthConfig AuthConfig { get; set; }
         public CommunicatorConfig CommunicatorConfig { get; set; }
         public Logger.LoggerConfig LoggerConfig { get; set; }
+        public string AuthDatabaseConnectionString { get; set; }
     }
 }
