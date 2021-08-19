@@ -55,6 +55,8 @@ namespace AutoCore.Auth.Network
             packet.Read(br);
 
             _router.RoutePacket(this, packet);
+
+            Socket.ReceiveAsync();
         }
 
         private void OnError(SocketAsyncEventArgs args)
@@ -83,7 +85,7 @@ namespace AutoCore.Auth.Network
             SendPacket(new ServerInfoRequestPacket());
         }
 
-        public void RequestRedirection(Client client)
+        public void RequestRedirection(AuthClient client)
         {
             SendPacket(new RedirectRequestPacket(new()
             {

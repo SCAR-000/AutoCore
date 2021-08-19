@@ -31,14 +31,14 @@ namespace AutoCore.Auth.Network
         public Communicator Communicator { get; private set; }
         public LengthedSocket AuthCommunicator { get; private set; }
         public LengthedSocket ListenerSocket { get; private set; }
-        public List<Client> Clients { get; } = new();
+        public List<AuthClient> Clients { get; } = new();
        
         public List<ServerInfo> ServerList { get; } = new();
         public MainLoop Loop { get; }
         public Timer Timer { get; }
         public override bool IsRunning => Loop != null && Loop.Running;
 
-        private readonly List<Client> _clientsToRemove = new();
+        private readonly List<AuthClient> _clientsToRemove = new();
         private List<CommunicatorClient> GameServerQueue { get; } = new();
         private Dictionary<byte, CommunicatorClient> GameServers { get; } = new();
 
@@ -96,7 +96,7 @@ namespace AutoCore.Auth.Network
         }
         #endregion
 
-        public void Disconnect(Client client)
+        public void Disconnect(AuthClient client)
         {
             lock (_clientsToRemove)
                 _clientsToRemove.Add(client);
@@ -195,7 +195,7 @@ namespace AutoCore.Auth.Network
                 return;
 
             lock (Clients)
-                Clients.Add(new Client(newSocket, this));
+                Clients.Add(new AuthClient(newSocket, this));
         }
         #endregion
 
@@ -244,7 +244,7 @@ namespace AutoCore.Auth.Network
 
         public void RedirectResponse(CommunicatorClient client, RedirectResponsePacket packet)
         {
-            Client authClient;
+            AuthClient authClient;
             lock (Clients)
                 authClient = Clients.FirstOrDefault(c => c.Account.Id == packet.AccountId);
 
@@ -256,7 +256,7 @@ namespace AutoCore.Auth.Network
                 authClient.RedirectionResult(packet.Result, info);
         }
 
-        public void RequestRedirection(Client client, byte serverId)
+        public void RequestRedirection(AuthClient client, byte serverId)
         {
             lock (GameServers)
                 if (GameServers.ContainsKey(serverId))
@@ -306,52 +306,6 @@ namespace AutoCore.Auth.Network
                         Status = 1
                     });
                 }
-
-                /*var toRemove = new List<ServerInfo>();
-
-                lock (GameServers)
-                {
-                    foreach (var sInfo in ServerList)
-                    {
-                        if (GameServers.TryGetValue(sInfo.ServerId, out CommunicatorClient client))
-                        {
-                            sInfo.Setup(client.PublicAddress, client.Port, client.AgeLimit, client.PKFlag, client.CurrentPlayers, client.MaxPlayers);
-                            continue;
-                        }
-
-                        if (Config.AuthListType == AuthListType.Online)
-                        {
-                            toRemove.Add(sInfo);
-                            continue;
-                        }
-
-                        sInfo.Clear();
-                    }
-
-                    foreach (var server in GameServers)
-                    {
-                        if (ServerList.All(s => s.ServerId != server.Key))
-                        {
-                            ServerList.Add(new ServerInfo
-                            {
-                                AgeLimit = server.Value.AgeLimit,
-                                PKFlag = server.Value.PKFlag,
-                                CurrentPlayers = server.Value.CurrentPlayers,
-                                MaxPlayers = server.Value.MaxPlayers,
-                                Port = server.Value.Port,
-                                Ip = server.Value.PublicAddress,
-                                ServerId = server.Key,
-                                Status = 1
-                            });
-                        }
-                    }
-                }
-
-                if (toRemove.Count == 0)
-                    return;
-
-                foreach (var rem in toRemove)
-                    ServerList.Remove(rem);*/
             }
         }
         #endregion

@@ -19,7 +19,7 @@ namespace AutoCore.Auth.Network
     using Packets.Client;
     using Packets.Server;
 
-    public class Client
+    public class AuthClient
     {
         public const int LengthSize = 2;
         public const int SendBufferSize = 512;
@@ -38,7 +38,7 @@ namespace AutoCore.Auth.Network
 
         private readonly PacketQueue _packetQueue = new();
 
-        public Client(LengthedSocket socket, AuthServer server)
+        public AuthClient(LengthedSocket socket, AuthServer server)
         {
             Socket = socket;
             Server = server;
@@ -201,6 +201,8 @@ namespace AutoCore.Auth.Network
 
             // Reset the timeout after every action
             Timer.ResetTimer("timeout");
+
+            Socket.ReceiveAsync();
         }
 
         private static IBasePacket CreatePacket(ClientOpcode opcode)

@@ -16,7 +16,6 @@ namespace AutoCore.Auth.Packets.Server
         public uint QuotaTime { get; set; }
         public uint WarnFlag { get; set; }
         public uint LoginFlag { get; set; }
-        public byte UnkByte { get; set; }
 
         public ServerOpcode Opcode { get; } = ServerOpcode.LoginOk;
 
@@ -31,7 +30,6 @@ namespace AutoCore.Auth.Packets.Server
             QuotaTime = reader.ReadUInt32();
             WarnFlag = reader.ReadUInt32();
             LoginFlag = reader.ReadUInt32();
-            UnkByte = reader.ReadByte();
         }
 
         public void Write(BinaryWriter writer)
@@ -46,7 +44,6 @@ namespace AutoCore.Auth.Packets.Server
             writer.Write(QuotaTime);
             writer.Write(WarnFlag);
             writer.Write(LoginFlag);
-            writer.Write(UnkByte);
         }
 
         public override string ToString()
