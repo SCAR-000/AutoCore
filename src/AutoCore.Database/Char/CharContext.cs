@@ -6,13 +6,13 @@ namespace AutoCore.Database.Char
 {
     using Models;
 
-    public class WorldContext : DbContext
+    public class CharContext : DbContext
     {
         public static string ConnectionString { get; private set; }
 
         public DbSet<CharacterSocial> CharacterSocials { get; set; }
 
-        public WorldContext()
+        public CharContext()
         {
 
         }
@@ -23,7 +23,7 @@ namespace AutoCore.Database.Char
                 throw new ArgumentNullException(nameof(connectionString));
 
             if (!string.IsNullOrEmpty(ConnectionString))
-                throw new ArgumentException("The data source is already set up for the AuthContext!", nameof(connectionString));
+                throw new ArgumentException("The data source is already set up for the CharContext!", nameof(connectionString));
 
             ConnectionString = connectionString;
         }

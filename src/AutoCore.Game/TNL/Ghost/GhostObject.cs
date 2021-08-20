@@ -9,15 +9,21 @@ using TNLNET::TNL.Utils;
 
 namespace AutoCore.Game.TNL.Ghost
 {
-    using Constant;
-    using Entities.Base;
     using Structures;
+
+    public enum GhostType
+    {
+        Object    = 0,
+        Creature  = 1,
+        Vehicle   = 2,
+        Character = 3
+    }
 
     public class GhostObject : NetObject
     {
         private static NetClassRepInstance<GhostObject> _dynClassRep;
 
-        protected ClonedObjectBase Parent;
+        //protected ClonedObjectBase Parent;
         protected bool WaitingForParent;
         protected float UpdatePriorityScalar;
         protected object MsgCreate;
@@ -49,16 +55,16 @@ namespace AutoCore.Game.TNL.Ghost
             return OwningConnection != null && OwningConnection.GetGhostIndex(ghost) != -1;
         }
 
-        public void SetParent(ClonedObjectBase parent)
+        /*public void SetParent(ClonedObjectBase parent)
         {
             WaitingForParent = false;
             Parent = parent;
-        }
+        }*/
 
         public override bool OnGhostAdd(GhostConnection theConnection)
         {
-            if (Parent != null)
-                Parent.SetGhost(this);
+            /*if (Parent != null)
+                Parent.SetGhost(this);*/
 
             return true;
         }
@@ -76,8 +82,8 @@ namespace AutoCore.Game.TNL.Ghost
 
         public override void OnGhostRemove()
         {
-            if (Parent != null)
-                Parent.ClearGhost(false);
+            /*if (Parent != null)
+                Parent.ClearGhost(false);*/
         }
 
         public virtual void CreatePacket()
@@ -87,7 +93,7 @@ namespace AutoCore.Game.TNL.Ghost
 
         public virtual void RecreateForExisting()
         {
-            if (MsgCreate != null && Parent != null)
+            //if (MsgCreate != null && Parent != null)
             {
 
             }

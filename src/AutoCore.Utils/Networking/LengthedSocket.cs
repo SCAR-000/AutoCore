@@ -139,7 +139,8 @@ namespace AutoCore.Utils.Networking
             lock (_socketAsyncEventArgsPool)
                 _socketAsyncEventArgsPool.Push(args);
         }
-        
+        #endregion
+
         private void OperationCompleted(object o, SocketAsyncEventArgs args)
         {
             if (args.SocketError != SocketError.Success || (args.LastOperation == SocketAsyncOperation.Receive && args.BytesTransferred == 0))
@@ -241,7 +242,6 @@ namespace AutoCore.Utils.Networking
 
             throw new NotImplementedException($"Only 1, 2 and 4 byte headers are supported! {SizeHeaderLength} is not!");
         }
-        #endregion
 
         public void Bind(EndPoint ep)
         {

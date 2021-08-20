@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Buffers;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 
@@ -11,6 +10,7 @@ namespace AutoCore.Global.Network
     using Communicator;
     using Communicator.Packets;
     using Database.Char;
+    using Database.World;
     using Config;
     using Game.TNL;
     using Utils;
@@ -39,8 +39,6 @@ namespace AutoCore.Global.Network
         public TNLInterface Interface { get; private set; }
         private readonly object _interfaceLock = new();
 
-        private readonly PacketRouter<GlobalServer, CommunicatorOpcode> _router = new();
-
         public GlobalServer()
         {
             Logger.WriteLog(LogType.Initialize, "+++ Initializing Server for Global");
@@ -48,8 +46,6 @@ namespace AutoCore.Global.Network
             Configuration.OnLoad += ConfigLoaded;
             Configuration.OnReLoad += ConfigReLoaded;
             Configuration.Load();
-
-            WorldContext.InitializeConnectionString(""); // TODo
 
             TNLInterface.RegisterNetClassReps();
 
@@ -59,6 +55,9 @@ namespace AutoCore.Global.Network
             Loop = new MainLoop(this, MainLoopTime);
 
             PublicAddress = IPAddress.Parse(Config.GameConfig.PublicAddress);
+
+            CharContext.InitializeConnectionString(Config.CharDatabaseConnectionString);
+            WorldContext.InitializeConnectionString(Config.WorldDatabaseConnectionString);
 
             LengthedSocket.InitializeEventArgsPool(Config.SocketAsyncConfig.MaxClients * Config.SocketAsyncConfig.ConcurrentOperationsByClient);
 
@@ -103,7 +102,6 @@ namespace AutoCore.Global.Network
             }
         }
 
-        #region Socketing
         public bool Start()
         {
             // If no config file has been found, these values are 0 by default
@@ -113,9 +111,15 @@ namespace AutoCore.Global.Network
                 return false;
             }
 
+            if (Config.CommunicatorPort == 0 || Config.CommunicatorAddress == null)
+            {
+                Logger.WriteLog(LogType.Error, "Invalid Communicator config data! Can't connect!");
+                return false;
+            }
+
             Loop.Start();
 
-            SetupCommunicator();
+            ConnectCommunicator();
 
             Logger.WriteLog(LogType.Network, "*** Listening for clients on port {0}", Config.GameConfig.Port);
 
@@ -152,20 +156,8 @@ namespace AutoCore.Global.Network
 
             Logger.WriteLog(LogType.None, "The server was shut down!");
         }
-        #endregion
 
         #region Communicator
-        private void SetupCommunicator()
-        {
-            if (Config.CommunicatorConfig.Port == 0 || Config.CommunicatorConfig.Address == null)
-            {
-                Logger.WriteLog(LogType.Error, "Invalid Communicator config data! Can't connect!");
-                return;
-            }
-
-            ConnectCommunicator();
-        }
-
         public void ConnectCommunicator()
         {
             if (AuthCommunicator?.Connected ?? false)
@@ -176,7 +168,8 @@ namespace AutoCore.Global.Network
                 AuthCommunicator = new LengthedSocket(SizeType.Word);
                 AuthCommunicator.OnConnect += OnCommunicatorConnect;
                 AuthCommunicator.OnError += OnCommunicatorError;
-                AuthCommunicator.ConnectAsync(new IPEndPoint(IPAddress.Parse(Config.CommunicatorConfig.Address), Config.CommunicatorConfig.Port));
+                AuthCommunicator.OnReceive += OnCommunicatorReceive;
+                AuthCommunicator.ConnectAsync(new IPEndPoint(IPAddress.Parse(Config.CommunicatorAddress), Config.CommunicatorPort));
             }
             catch (Exception e)
             {
@@ -184,7 +177,7 @@ namespace AutoCore.Global.Network
                 Logger.WriteLog(LogType.Error, e);
             }
 
-            Logger.WriteLog(LogType.Network, $"*** Connecting to auth server! Address: {Config.CommunicatorConfig.Address}:{Config.CommunicatorConfig.Port}");
+            Logger.WriteLog(LogType.Network, $"*** Connecting to auth server! Address: {Config.CommunicatorAddress}:{Config.CommunicatorPort}");
         }
 
         private void OnCommunicatorError(SocketAsyncEventArgs args)
@@ -208,7 +201,6 @@ namespace AutoCore.Global.Network
 
             Logger.WriteLog(LogType.Network, "*** Connected to the Auth Server!");
 
-            AuthCommunicator.OnReceive += OnCommunicatorReceive;
             SendAuthCommunicatorPacket(new LoginRequestPacket(new()
             {
                 Id = Config.ServerInfoConfig.Id,
@@ -224,16 +216,31 @@ namespace AutoCore.Global.Network
             var reader = new BinaryReader(new MemoryStream(data, 0, length, false));
             var opcode = (CommunicatorOpcode)reader.ReadByte();
 
-            var packetType = _router.GetPacketType(opcode);
-            if (packetType == null)
-                return;
+            IOpcodedPacket<CommunicatorOpcode> packet;
 
-            if (Activator.CreateInstance(packetType) is not IOpcodedPacket<CommunicatorOpcode> packet)
-                return;
+            switch (opcode)
+            {
+                case CommunicatorOpcode.LoginResponse:
+                    packet = new LoginResponsePacket();
+                    packet.Read(reader);
 
-            packet.Read(reader);
+                    MsgLoginResponse(packet as LoginResponsePacket);
+                    break;
 
-            _router.RoutePacket(this, packet);
+                case CommunicatorOpcode.ServerInfoRequest:
+                    packet = new ServerInfoRequestPacket();
+                    packet.Read(reader);
+
+                    MsgGameInfoRequest(packet as ServerInfoRequestPacket);
+                    break;
+
+                case CommunicatorOpcode.RedirectRequest:
+                    packet = new RedirectRequestPacket();
+                    packet.Read(reader);
+
+                    MsgRedirectRequest(packet as RedirectRequestPacket);
+                    break;
+            }
 
             AuthCommunicator.ReceiveAsync();
         }
@@ -250,7 +257,6 @@ namespace AutoCore.Global.Network
             ArrayPool<byte>.Shared.Return(buffer);
         }
 
-        [PacketHandler(CommunicatorOpcode.LoginResponse)]
         private void MsgLoginResponse(LoginResponsePacket packet)
         {
             if (packet.Result == CommunicatorActionResult.Success)
@@ -265,7 +271,6 @@ namespace AutoCore.Global.Network
             Logger.WriteLog(LogType.Error, "Could not authenticate with the Auth server! Shutting down internal communication!");
         }
 
-        [PacketHandler(CommunicatorOpcode.ServerInfoRequest)]
         private void MsgGameInfoRequest(ServerInfoRequestPacket packet)
         {
             SendAuthCommunicatorPacket(new ServerInfoResponsePacket(new()
@@ -278,7 +283,6 @@ namespace AutoCore.Global.Network
             }));
         }
 
-        [PacketHandler(CommunicatorOpcode.RedirectRequest)]
         private void MsgRedirectRequest(RedirectRequestPacket packet)
         {
             /*lock (IncomingClients)

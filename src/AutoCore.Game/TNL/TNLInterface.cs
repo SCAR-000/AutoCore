@@ -13,15 +13,13 @@ namespace AutoCore.Game.TNL
     {
         private readonly object _lock = new();
 
-        public static TNLInterface Instance { get; private set; }
-
         public bool UnlimitedBandwith { get; }
         public bool Adaptive { get; private set; }
         public int Version { get; private set; }
         public ushort FragmentSize { get; private set; }
         public long ConnectionId { get; private set; }
-        public Dictionary<long, TNLConnection> MapConnections { get; }
-        public Dictionary<long, GhostObject> Ghosts { get; }
+        public Dictionary<long, TNLConnection> MapConnections { get; } = new();
+        public Dictionary<long, GhostObject> Ghosts { get; } = new();
 
         public static void RegisterNetClassReps()
         {
@@ -41,28 +39,30 @@ namespace AutoCore.Game.TNL
             UnlimitedBandwith = unlimitedBandwith;
             FragmentSize = 220;
             ConnectionId = 0;
-            MapConnections = new Dictionary<long, TNLConnection>();
-            Ghosts = new Dictionary<long, GhostObject>();
-
-            Instance = this;
         }
 
         public TNLConnection FindConnection(long connectionId)
         {
-            lock (_lock)
-                return MapConnections.ContainsKey(connectionId) ? MapConnections[connectionId] : null;
+            if (MapConnections.TryGetValue(connectionId, out var conn))
+                return conn;
+
+            return null;
         }
 
         public override void AddConnection(NetConnection conn)
         {
             if (conn is TNLConnection tConn)
             {
+                long connId;
+
                 lock (_lock)
                 {
-                    var connId = ConnectionId++;
-                    tConn.SetPlayerCOID(connId);
-                    MapConnections.Add(connId, tConn);
+                    connId = ConnectionId++;
                 }
+
+                tConn.SetPlayerCOID(connId);
+
+                MapConnections.Add(connId, tConn);
             }
 
             if (UnlimitedBandwith)
@@ -74,10 +74,7 @@ namespace AutoCore.Game.TNL
         protected override void RemoveConnection(NetConnection conn)
         {
             if (conn is TNLConnection tConn)
-            {
-                lock (_lock)
-                    MapConnections.Remove(tConn.GetPlayerCOID());
-            }
+                MapConnections.Remove(tConn.GetPlayerCOID());
 
             base.RemoveConnection(conn);
         }

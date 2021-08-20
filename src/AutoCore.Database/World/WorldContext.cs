@@ -23,7 +23,7 @@ namespace AutoCore.Database.World
                 throw new ArgumentNullException(nameof(connectionString));
 
             if (!string.IsNullOrEmpty(ConnectionString))
-                throw new ArgumentException("The data source is already set up for the AuthContext!", nameof(connectionString));
+                throw new ArgumentException("The data source is already set up for the WorldContext!", nameof(connectionString));
 
             ConnectionString = connectionString;
         }

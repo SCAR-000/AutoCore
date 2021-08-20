@@ -7,7 +7,10 @@
     {
         public SocketAsyncConfig SocketAsyncConfig { get; set; }
         public GameConfig GameConfig { get; set; }
-        public CommunicatorConfig CommunicatorConfig { get; set; }
+        public string CommunicatorAddress { get; set; }
+        public int CommunicatorPort { get; set; }
+        public string CharDatabaseConnectionString { get; set; }
+        public string WorldDatabaseConnectionString { get; set; }
         public Logger.LoggerConfig LoggerConfig { get; set; }
         public ServerInfoConfig ServerInfoConfig { get; set; }
     }

@@ -2,7 +2,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 using TNLNET::TNL.Data;
 using TNLNET::TNL.Entities;
@@ -12,8 +11,6 @@ using TNLNET::TNL.Utils;
 
 namespace AutoCore.Game.TNL
 {
-    using Constant;
-    using Entities;
     using Utils;
 
     public partial class TNLConnection : GhostConnection
@@ -30,7 +27,7 @@ namespace AutoCore.Game.TNL
         public ulong AccountId { get; private set; }
         public byte AccountLevel { get; private set; }
         public string AccountName { get; private set; }
-        public Character CurrentCharacter { get; set; }
+        //public Character CurrentCharacter { get; set; }
 
         private readonly SFragmentData _fragmentGuaranteed;
         private readonly SFragmentData _fragmentNonGuaranteed;

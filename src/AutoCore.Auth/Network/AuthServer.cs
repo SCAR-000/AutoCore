@@ -55,6 +55,8 @@ namespace AutoCore.Auth.Network
 
             LengthedSocket.InitializeEventArgsPool(Config.SocketAsyncConfig.MaxClients * Config.SocketAsyncConfig.ConcurrentOperationsByClient);
 
+            AuthContext.InitializeConnectionString(Config.AuthDatabaseConnectionString);
+
             RegisterConsoleCommands();
         }
 
@@ -80,8 +82,6 @@ namespace AutoCore.Auth.Network
             Configuration.Bind(Config);
 
             Logger.UpdateConfig(Config.LoggerConfig);
-
-            AuthContext.InitializeConnectionString(Config.AuthDatabaseConnectionString);
 
             // Handle reloading the config and updating the list visibility
             if (oldConfig == null || oldConfig.AuthListType == Config.AuthListType)
