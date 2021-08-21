@@ -31,7 +31,6 @@ namespace AutoCore.Global.Network
 
         public Config Config { get; private set; }
         public IPAddress PublicAddress { get; }
-        //public LengthedSocket AuthCommunicator { get; private set; }
         public Communicator AuthCommunicator { get; private set; }
         //public Dictionary<uint, LoginAccountEntry> IncomingClients { get; } = new();
         public MainLoop Loop { get; }
@@ -94,6 +93,9 @@ namespace AutoCore.Global.Network
         public void MainLoop(long delta)
         {
             Timer.Update(delta);
+
+            if (Interface == null)
+                return;
 
             lock (_interfaceLock)
             {

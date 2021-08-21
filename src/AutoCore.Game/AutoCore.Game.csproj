@@ -6,14 +6,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\AutoCore.Database\AutoCore.Database.csproj" />
+    <ProjectReference Include="..\..\lib\TNL.NET\TNL.NET\TNL.NET.csproj" />
     <ProjectReference Include="..\AutoCore.Utils\AutoCore.Utils.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Reference Include="TNL.NET">
-      <HintPath>..\..\lib\$(Configuration)\TNL.NET.dll</HintPath>
-      <Aliases>TNLNET</Aliases>
-    </Reference>
   </ItemGroup>
 
   <ItemGroup>

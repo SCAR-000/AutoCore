@@ -1,9 +1,7 @@
-﻿extern alias TNLNET;
-
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 
-using TNLNET::TNL.Entities;
+using TNL.Entities;
 
 namespace AutoCore.Game.TNL
 {

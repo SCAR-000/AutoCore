@@ -1,13 +1,11 @@
-﻿extern alias TNLNET;
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 
-using TNLNET::TNL.Data;
-using TNLNET::TNL.Entities;
-using TNLNET::TNL.Structures;
-using TNLNET::TNL.Types;
-using TNLNET::TNL.Utils;
+using TNL.Data;
+using TNL.Entities;
+using TNL.Structures;
+using TNL.Types;
+using TNL.Utils;
 
 namespace AutoCore.Game.TNL
 {

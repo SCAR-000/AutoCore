@@ -1,8 +1,6 @@
-﻿extern alias TNLNET;
-
-using TNLNET::TNL.Entities;
-using TNLNET::TNL.Types;
-using TNLNET::TNL.Utils;
+﻿using TNL.Entities;
+using TNL.Types;
+using TNL.Utils;
 
 namespace AutoCore.Game.TNL.Ghost
 {

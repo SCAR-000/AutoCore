@@ -1,0 +1,6 @@
+[submodule "src/TNL.NET"]
+	path = src/TNL.NET
+	url = https://github.com/Blumster/TNL.NET
+[submodule "lib/TNL.NET"]
+	path = lib/TNL.NET
+	url = https://github.com/Blumster/TNL.NET
