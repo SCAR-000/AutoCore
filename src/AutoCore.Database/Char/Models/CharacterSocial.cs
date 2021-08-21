@@ -1,4 +1,6 @@
-﻿namespace AutoCore.Database.Char.Models
+﻿using System.ComponentModel.DataAnnotations.Schema;
+
+namespace AutoCore.Database.Char.Models
 {
     public enum SocialType
     {
@@ -6,6 +8,7 @@
         Enemy
     }
 
+    [Table("character_social")]
     public class CharacterSocial
     {
         public long CharacterCoid { get; set; }

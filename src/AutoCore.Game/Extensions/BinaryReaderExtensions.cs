@@ -2,6 +2,7 @@
 
 namespace AutoCore.Game.Extensions
 {
+    using Constants;
     using Structures;
 
     public static class BinaryReaderExtensions
@@ -17,6 +18,11 @@ namespace AutoCore.Game.Extensions
             reader.BaseStream.Position += 7;
 
             return id;
+        }
+
+        public static GameOpcode ReadGameOpcode(this BinaryReader reader)
+        {
+            return (GameOpcode)reader.ReadUInt32();
         }
     }
 }

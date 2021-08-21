@@ -13,13 +13,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="TNL.NET">
-      <HintPath>..\..\lib\$(Configuration)\TNL.NET.dll</HintPath>
-      <Aliases>TNLNET</Aliases>
-    </Reference>
-  </ItemGroup>
-
-  <ItemGroup>
     <None Update="appsettings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

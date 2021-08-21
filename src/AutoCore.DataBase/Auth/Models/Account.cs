@@ -1,9 +1,11 @@
 ﻿using System;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Security.Cryptography;
 using System.Text;
 
 namespace AutoCore.Database.Auth.Models
 {
+    [Table("account")]
     public class Account
     {
         public uint Id { get; set; }

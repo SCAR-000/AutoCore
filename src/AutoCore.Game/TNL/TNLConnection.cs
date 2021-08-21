@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
+using System.IO;
 
 using TNL.Data;
 using TNL.Entities;
@@ -9,6 +11,9 @@ using TNL.Utils;
 
 namespace AutoCore.Game.TNL
 {
+    using Constants;
+    using Extensions;
+    using Packets;
     using Utils;
 
     public partial class TNLConnection : GhostConnection
@@ -67,26 +72,39 @@ namespace AutoCore.Game.TNL
             Logger.WriteLog(LogType.Network, "Client ({0} | {1}) disconnected", AccountId, AccountName);
         }
 
-        /*public void SendPacket(Packet p, RPCGuaranteeType type)
+        public void SendGamePacket(BasePacket packet, RPCGuaranteeType type = RPCGuaranteeType.RPCGuaranteedOrdered)
         {
-            var opcode = (uint) p.Opcode;
-            Logger.WriteLog(LogType.Network, "Outgoing Packet: {0}", p.Opcode);
+            Logger.WriteLog(LogType.Network, "Outgoing Packet: {0}", packet.Opcode);
 
-            var arr = p.ToArray();
+            var dest = ArrayPool<byte>.Shared.Rent(0x4000);
+
+            int packetLength;
+
+            using (var writer = new BinaryWriter(new MemoryStream(dest)))
+            {
+                packet.Write(writer);
+
+                packetLength = (int)writer.BaseStream.Position;
+            }
+
+            var arr = new byte[packetLength];
+            Buffer.BlockCopy(dest, 0, arr, 0, packetLength);
+
+            ArrayPool<byte>.Shared.Return(dest);
 
             /*using (var sw = new StreamWriter("sent.txt", true, Encoding.UTF8))
             {
                 sw.WriteLine(BitConverter.ToString(arr));
                 sw.WriteLine();
-            }* /
+            }*/
 
-            var arrLength = (uint) arr.Length;
+            var arrLength = (uint)packetLength;
             if (arrLength > 1400U)
             {
                 ++_fragmentCounter;
 
                 var doneSize = 0U;
-                var count = (ushort) Math.Ceiling(arrLength / 220.0);
+                var count = (ushort)Math.Ceiling(arrLength / 220.0);
                 for (ushort i = 0; i < count; ++i)
                 {
                     var buffSize = 220U;
@@ -104,15 +122,15 @@ namespace AutoCore.Game.TNL
                     switch (type)
                     {
                         case RPCGuaranteeType.RPCGuaranteed:
-                            rpcMsgGuaranteedFragmented(opcode, _fragmentCounter, i, count, stream);
+                            rpcMsgGuaranteedFragmented((uint)packet.Opcode, _fragmentCounter, i, count, stream);
                             break;
 
                         case RPCGuaranteeType.RPCGuaranteedOrdered:
-                            rpcMsgGuaranteedOrderedFragmented(opcode, _fragmentCounter, i, count, stream);
+                            rpcMsgGuaranteedOrderedFragmented((uint)packet.Opcode, _fragmentCounter, i, count, stream);
                             break;
 
                         case RPCGuaranteeType.RPCUnguaranteed:
-                            rpcMsgNonGuaranteedFragmented(opcode, _fragmentCounter, i, count, stream);
+                            rpcMsgNonGuaranteedFragmented((uint)packet.Opcode, _fragmentCounter, i, count, stream);
                             break;
                     }
                 }
@@ -124,128 +142,128 @@ namespace AutoCore.Game.TNL
                 switch (type)
                 {
                     case RPCGuaranteeType.RPCGuaranteed:
-                        rpcMsgGuaranteed(opcode, stream);
+                        rpcMsgGuaranteed((uint)packet.Opcode, stream);
                         break;
 
                     case RPCGuaranteeType.RPCGuaranteedOrdered:
-                        rpcMsgGuaranteedOrdered(opcode, stream);
+                        rpcMsgGuaranteedOrdered((uint)packet.Opcode, stream);
                         break;
 
                     case RPCGuaranteeType.RPCUnguaranteed:
-                        rpcMsgNonGuaranteed(opcode, stream);
+                        rpcMsgNonGuaranteed((uint)packet.Opcode, stream);
                         break;
                 }
             }
-        }*/
-
+        }
         #region Handler
 
-        /*private void HandlePacket(ByteBuffer buffer)
+        private void HandlePacket(ByteBuffer buffer)
         {
-            var packet = new Packet(buffer.GetBuffer());
+            var reader = new BinaryReader(new MemoryStream(buffer.GetBuffer()));
+            var gameOpcode = reader.ReadGameOpcode();
 
-            Logger.WriteLog(LogType.Network, "Incoming Packet: {0}", packet.Opcode);
+            Logger.WriteLog(LogType.Network, "Incoming Packet: {0}", gameOpcode);
 
             try
             {
-                switch (packet.Opcode)
+                switch (gameOpcode)
                 {
                     // Global
-                    case Opcode.LoginRequest:
-                        HandleLoginRequest(packet);
+                    case GameOpcode.LoginRequest:
+                        HandleLoginRequest(reader);
                         break;
 
-                    case Opcode.LoginNewCharacter:
-                        HandleLoginNewCharacter(packet);
+                    case GameOpcode.LoginNewCharacter:
+                        //HandleLoginNewCharacter(packet);
                         break;
 
-                    case Opcode.LoginDeleteCharacter:
-                        HandleLoginDeleteCharacter(packet);
+                    case GameOpcode.LoginDeleteCharacter:
+                        //HandleLoginDeleteCharacter(packet);
                         break;
 
-                    case Opcode.News:
-                        HandleNews(packet);
+                    case GameOpcode.News:
+                        HandleNews(reader);
                         break;
 
-                    case Opcode.Login:
-                        HandleGlobalLogin(packet);
+                    case GameOpcode.Login:
+                        //HandleGlobalLogin(packet);
                         break;
 
-                    case Opcode.Disconnect:
-                        HandleDisconnect(packet);
+                    case GameOpcode.Disconnect:
+                        //HandleDisconnect(packet);
                         break;
 
-                    case Opcode.Chat:
-                        ChatManager.HandleChat(this, packet);
+                    case GameOpcode.Chat:
+                        //ChatManager.HandleChat(this, packet);
                         break;
 
-                    case Opcode.GetFriends:
-                        SocialManager.GetFriends(this);
+                    case GameOpcode.GetFriends:
+                        //SocialManager.GetFriends(this);
                         break;
 
-                    case Opcode.GetEnemies:
-                        SocialManager.GetEnemies(this);
+                    case GameOpcode.GetEnemies:
+                        //SocialManager.GetEnemies(this);
                         break;
 
-                    case Opcode.GetIgnored:
-                        SocialManager.GetIgnored(this);
+                    case GameOpcode.GetIgnored:
+                        //SocialManager.GetIgnored(this);
                         break;
 
-                    case Opcode.AddFriend:
-                        SocialManager.AddEntry(this, packet, SocialType.Friend);
+                    case GameOpcode.AddFriend:
+                        //SocialManager.AddEntry(this, packet, SocialType.Friend);
                         break;
 
-                    case Opcode.AddEnemy:
-                        SocialManager.AddEntry(this, packet, SocialType.Enemy);
+                    case GameOpcode.AddEnemy:
+                        //SocialManager.AddEntry(this, packet, SocialType.Enemy);
                         break;
 
-                    case Opcode.AddIgnore:
-                        SocialManager.AddEntry(this, packet, SocialType.Ignore);
+                    case GameOpcode.AddIgnore:
+                        //SocialManager.AddEntry(this, packet, SocialType.Ignore);
                         break;
 
-                    case Opcode.RemoveFriend:
-                        SocialManager.RemoveEntry(this, packet.ReadPadding(4).ReadLong(), SocialType.Friend);
+                    case GameOpcode.RemoveFriend:
+                        //SocialManager.RemoveEntry(this, packet.ReadPadding(4).ReadLong(), SocialType.Friend);
                         break;
 
-                    case Opcode.RemoveEnemy:
-                        SocialManager.RemoveEntry(this, packet.ReadPadding(4).ReadLong(), SocialType.Enemy);
+                    case GameOpcode.RemoveEnemy:
+                        //SocialManager.RemoveEntry(this, packet.ReadPadding(4).ReadLong(), SocialType.Enemy);
                         break;
 
-                    case Opcode.RemoveIgnore:
-                        SocialManager.RemoveEntry(this, packet.ReadPadding(4).ReadLong(), SocialType.Ignore);
+                    case GameOpcode.RemoveIgnore:
+                        //SocialManager.RemoveEntry(this, packet.ReadPadding(4).ReadLong(), SocialType.Ignore);
                         break;
 
-                    case Opcode.RequestClanInfo:
-                        ClanManager.RequestInfo(this);
+                    case GameOpcode.RequestClanInfo:
+                        //ClanManager.RequestInfo(this);
                         break;
 
-                    case Opcode.ConvoyMissionsRequest:
-                        ConvoyManager.MissionsRequest(this);
+                    case GameOpcode.ConvoyMissionsRequest:
+                        //ConvoyManager.MissionsRequest(this);
                         break;
 
                     // Sector
-                    case Opcode.TransferFromGlobal:
-                        HandleTransferFromGlobal(packet);
+                    case GameOpcode.TransferFromGlobal:
+                        //HandleTransferFromGlobal(packet);
                         break;
 
-                    case Opcode.TransferFromGlobalStage2:
-                        HandleTransferFromGlobalStage2(packet);
+                    case GameOpcode.TransferFromGlobalStage2:
+                        //HandleTransferFromGlobalStage2(packet);
                         break;
 
-                    case Opcode.TransferFromGlobalStage3:
-                        HandleTransferFromGlobalStage3(packet);
+                    case GameOpcode.TransferFromGlobalStage3:
+                        //HandleTransferFromGlobalStage3(packet);
                         break;
 
-                    case Opcode.UpdateFirstTimeFlagsRequest:
-                        HandleUpdateFirstTimeFlagsRequest(packet);
+                    case GameOpcode.UpdateFirstTimeFlagsRequest:
+                        //HandleUpdateFirstTimeFlagsRequest(packet);
                         break;
 
-                    case Opcode.Broadcast:
-                        ChatManager.HandleBroadcast(this, packet);
+                    case GameOpcode.Broadcast:
+                        //ChatManager.HandleBroadcast(this, packet);
                         break;
 
                     default:
-                        Logger.WriteLog("Unhandled Opcode: {0}", LogType.Error, packet.Opcode);
+                        Logger.WriteLog(LogType.Error, "Unhandled Opcode: {0}", gameOpcode);
                         break;
                 }
             }
@@ -254,8 +272,7 @@ namespace AutoCore.Game.TNL
                 Logger.WriteLog(LogType.Error, "Caught exception while handling packets!");
                 Logger.WriteLog(LogType.Error, "Exception: {0}", e);
             }
-        }*/
-
+        }
         #endregion
 
         /*public void UpdateFirstTimeFlags(uint f1, uint f2, uint f3, uint f4)
@@ -301,7 +318,7 @@ namespace AutoCore.Game.TNL
         private void rpcMsgGuaranteed_remote(uint type, ByteBuffer data)
         #endregion
         {
-            //HandlePacket(data);
+            HandlePacket(data);
         }
 
         public void rpcMsgGuaranteedOrdered(uint type, ByteBuffer data)
@@ -316,7 +333,7 @@ namespace AutoCore.Game.TNL
         private void rpcMsgGuaranteedOrdered_remote(uint type, ByteBuffer data)
         #endregion
         {
-            //HandlePacket(data);
+            HandlePacket(data);
         }
 
         public void rpcMsgNonGuaranteed(uint type, ByteBuffer data)
@@ -331,7 +348,7 @@ namespace AutoCore.Game.TNL
         private void rpcMsgNonGuaranteed_remote(uint type, ByteBuffer data)
         #endregion
         {
-            //HandlePacket(data);
+            HandlePacket(data);
         }
 
         public void rpcMsgGuaranteedFragmented(uint type, ushort fragment, ushort fragmentId, ushort fragmentCount, ByteBuffer data)
@@ -542,7 +559,7 @@ namespace AutoCore.Game.TNL
                 sFragment.TotalSize = 0;
                 sFragment.MapFragments.Clear();
 
-                //HandlePacket(combined);
+                HandlePacket(combined);
             }
         }
 

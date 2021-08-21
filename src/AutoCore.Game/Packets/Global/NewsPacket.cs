@@ -2,14 +2,19 @@
 
 namespace AutoCore.Game.Packets.Global
 {
-    using Constant;
+    using Constants;
     using Extensions;
+    using Utils.Extensions;
 
     public class NewsPacket : BasePacket
     {
         public override GameOpcode Opcode => GameOpcode.News;
         public string News { get; }
         public uint Language { get; private set; }
+
+        public NewsPacket()
+        {
+        }
 
         public NewsPacket(string news, uint language)
         {

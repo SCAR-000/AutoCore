@@ -1,5 +1,8 @@
-﻿namespace AutoCore.Database.World.Models
+﻿using System.ComponentModel.DataAnnotations.Schema;
+
+namespace AutoCore.Database.World.Models
 {
+    [Table("experience_level")]
     public class ExperienceLevel
     {
         public byte Level { get; set; }

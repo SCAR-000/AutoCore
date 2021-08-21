@@ -5,6 +5,20 @@ namespace AutoCore.Utils.Extensions
 {
     public static class BinaryWriterExtensions
     {
+        public static void WriteUtf8NullString(this BinaryWriter writer, string value)
+        {
+            writer.Write(Encoding.UTF8.GetBytes(value));
+            writer.Write((byte)0);
+        }
+
+        public static void WriteUtf8StringOn(this BinaryWriter writer, string value, int len)
+        {
+            writer.Write(Encoding.UTF8.GetBytes(value));
+
+            for (var i = 0; i < len - value.Length; ++i)
+                writer.Write((byte)0);
+        }
+
         public static void WriteLengthedString(this BinaryWriter writer, string text)
         {
             if (string.IsNullOrEmpty(text))
@@ -14,26 +28,12 @@ namespace AutoCore.Utils.Extensions
             }
 
             writer.Write(text.Length);
-            writer.WriteUtf8StringOn(text);
+            writer.WriteUtf8StringOn(text, text.Length);
         }
 
         public static void WriteUtf8String(this BinaryWriter writer, string text)
         {
-            writer.WriteUtf8StringOn(text);
-        }
-
-        public static void WriteUtf8StringOn(this BinaryWriter writer, string text, int length = -1)
-        {
-            if (length == -1)
-                length = text.Length;
-
-            writer.Write(Encoding.UTF8.GetBytes(text));
-
-            if (length <= text.Length)
-                return;
-
-            for (var i = 0; i < length - text.Length; ++i)
-                writer.Write((byte) 0);
+            writer.WriteUtf8StringOn(text, text.Length);
         }
 
         public static void WriteAt(this BinaryWriter writer, byte value, long position)

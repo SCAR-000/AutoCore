@@ -4,8 +4,8 @@ namespace AutoCore.Utils.Packets
 {
     public interface IBasePacket
     {
-        void Read(BinaryReader br);
+        void Read(BinaryReader reader);
 
-        void Write(BinaryWriter bw);
+        void Write(BinaryWriter writer);
     }
 }
