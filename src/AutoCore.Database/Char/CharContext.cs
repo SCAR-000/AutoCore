@@ -10,6 +10,7 @@ namespace AutoCore.Database.Char
     {
         public static string ConnectionString { get; private set; }
 
+        public DbSet<Account> Accounts { get; set; }
         public DbSet<CharacterSocial> CharacterSocials { get; set; }
 
         public CharContext()
@@ -29,5 +30,12 @@ namespace AutoCore.Database.Char
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder options) => options.UseMySql(ConnectionString, ServerVersion.AutoDetect(ConnectionString));
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+
+            modelBuilder.Entity<CharacterSocial>().HasKey(cs => new { cs.CharacterCoid, cs.TargetCoid });
+        }
     }
 }

@@ -1,23 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Buffers;
-using System.IO;
 using System.Net;
-using System.Net.Sockets;
 
 namespace AutoCore.Global.Network
 {
     using Communicator;
-    using Communicator.Packets;
     using Database.Char;
     using Database.World;
     using Config;
+    using Game.Managers;
     using Game.TNL;
     using Utils;
     using Utils.Config;
     using Utils.Commands;
     using Utils.Networking;
-    using Utils.Packets;
     using Utils.Server;
     using Utils.Threading;
     using Utils.Timer;
@@ -105,6 +101,8 @@ namespace AutoCore.Global.Network
                 Interface.CheckIncomingPackets();
                 Interface.ProcessConnections();
             }
+
+            LoginManager.Instance.Update(delta);
         }
 
         public bool Start()
@@ -127,19 +125,6 @@ namespace AutoCore.Global.Network
             ConnectCommunicator();
 
             Logger.WriteLog(LogType.Network, "*** Listening for clients on port {0}", Config.GameConfig.Port);
-
-            Timer.Add("SessionExpire", 10000, true, () =>
-            {
-                var toRemove = new List<uint>();
-
-                /*lock (IncomingClients)
-                {
-                    toRemove.AddRange(IncomingClients.Where(ic => ic.Value.ExpireTime < DateTime.Now).Select(ic => ic.Key));
-
-                    foreach (var rem in toRemove)
-                        IncomingClients.Remove(rem);
-                }*/
-            });
 
             return true;
         }
@@ -223,15 +208,7 @@ namespace AutoCore.Global.Network
 
         private bool OnCommunicatorRedirectRequest(RedirectRequest request)
         {
-            /*lock (IncomingClients)
-            {
-                if (IncomingClients.ContainsKey(packet.Request.AccountId))
-                    IncomingClients.Remove(packet.Request.AccountId);
-
-                IncomingClients.Add(packet.Request.AccountId, new LoginAccountEntry(packet));
-            }*/
-
-            return true;
+            return LoginManager.Instance.ExpectLoginToGlobal(request.AccountId, request.Username, request.OneTimeKey);
         }
 
         private void OnCommunicatorServerInfoRequest(ServerInfo info)

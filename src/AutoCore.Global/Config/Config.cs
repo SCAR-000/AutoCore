@@ -9,7 +9,6 @@
         public GameConfig GameConfig { get; set; }
         public string CommunicatorAddress { get; set; }
         public int CommunicatorPort { get; set; }
-        public string AuthDatabaseConnectionString { get; set; }
         public string CharDatabaseConnectionString { get; set; }
         public string WorldDatabaseConnectionString { get; set; }
         public Logger.LoggerConfig LoggerConfig { get; set; }

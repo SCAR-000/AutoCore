@@ -5,8 +5,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\AutoCore.Database\AutoCore.Database.csproj" />
     <ProjectReference Include="..\..\lib\TNL.NET\TNL.NET\TNL.NET.csproj" />
+    <ProjectReference Include="..\AutoCore.Database\AutoCore.Database.csproj" />
     <ProjectReference Include="..\AutoCore.Utils\AutoCore.Utils.csproj" />
   </ItemGroup>
 

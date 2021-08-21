@@ -11,6 +11,7 @@ using TNL.Utils;
 
 namespace AutoCore.Game.TNL
 {
+    using Database.Char.Models;
     using Constants;
     using Extensions;
     using Packets;
@@ -26,10 +27,7 @@ namespace AutoCore.Game.TNL
         private long _playerCOID;
         private ushort _fragmentCounter;
 
-        public uint[] FirstTimeFlags { get; private set; }
-        public ulong AccountId { get; private set; }
-        public byte AccountLevel { get; private set; }
-        public string AccountName { get; private set; }
+        public Account Account { get; set; }
         //public Character CurrentCharacter { get; set; }
 
         private readonly SFragmentData _fragmentGuaranteed;
@@ -69,7 +67,7 @@ namespace AutoCore.Game.TNL
 
             //CharacterManager.LogoutCharacter(this);
 
-            Logger.WriteLog(LogType.Network, "Client ({0} | {1}) disconnected", AccountId, AccountName);
+            Logger.WriteLog(LogType.Network, "Client ({0} | {1}) disconnected", Account.Id, Account.Name);
         }
 
         public void SendGamePacket(BasePacket packet, RPCGuaranteeType type = RPCGuaranteeType.RPCGuaranteedOrdered)
@@ -274,35 +272,6 @@ namespace AutoCore.Game.TNL
             }
         }
         #endregion
-
-        /*public void UpdateFirstTimeFlags(uint f1, uint f2, uint f3, uint f4)
-        {
-            FirstTimeFlags[0] = f1;
-            FirstTimeFlags[1] = f2;
-            FirstTimeFlags[2] = f3;
-            FirstTimeFlags[2] = f4;
-
-            DataAccess.Account.UpdateFirstTimeFlags(AccountId, FirstTimeFlags);
-        }*/
-
-        /*public bool LoginAccount(uint oneTimeKey, string user = null, string password = null)
-        {
-            var data = DataAccess.Account.LoginAccount(oneTimeKey);
-            if (data == null)
-                return false;
-
-            if (user != null && (data.UserName != user || data.Password != password))
-                return false;
-
-            AccountId = data.Id;
-            AccountLevel = data.Level;
-            AccountName = data.UserName;
-            FirstTimeFlags = new uint[4];
-
-            Array.Copy(data.FirstTimeFlags, FirstTimeFlags, 4);
-
-            return true;
-        }*/
 
         #region RPC Calls
 
