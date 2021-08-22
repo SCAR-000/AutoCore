@@ -6,27 +6,27 @@ namespace AutoCore.Game.Structures
 
     public struct HeadBody
     {
-        public int CloneBase;
-        public string FileName;
-        public int Id;
-        public int IsBody;
-        public int IsHead;
-        public int MaxTextures;
+        public int CloneBase { get; set; }
+        public string FileName { get; set; }
+        public int Id { get; set; }
+        public int IsBody { get; set; }
+        public int IsHead { get; set; }
+        public int MaxTextures { get; set; }
 
-        public static HeadBody Read(BinaryReader br)
+        public static HeadBody ReadNew(BinaryReader rename)
         {
             var hb = new HeadBody
             {
-                Id = br.ReadInt32(),
-                CloneBase = br.ReadInt32(),
-                IsHead = br.ReadInt32(),
-                IsBody = br.ReadInt32(),
-                //FileName = br.ReadUnicodeString(65)
+                Id = rename.ReadInt32(),
+                CloneBase = rename.ReadInt32(),
+                IsHead = rename.ReadInt32(),
+                IsBody = rename.ReadInt32(),
+                FileName = rename.ReadUnicodeString(65)
             };
 
-            br.ReadBytes(2);
+            rename.ReadBytes(2);
 
-            hb.MaxTextures = br.ReadInt32();
+            hb.MaxTextures = rename.ReadInt32();
 
             return hb;
         }

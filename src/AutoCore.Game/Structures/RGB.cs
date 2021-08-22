@@ -8,13 +8,13 @@ namespace AutoCore.Game.Structures
         public float G;
         public float R;
 
-        public static RGB Read(BinaryReader br)
+        public static RGB ReadNew(BinaryReader reader)
         {
             return new RGB
             {
-                R = br.ReadSingle(),
-                G = br.ReadSingle(),
-                B = br.ReadSingle()
+                R = reader.ReadSingle(),
+                G = reader.ReadSingle(),
+                B = reader.ReadSingle()
             };
         }
 

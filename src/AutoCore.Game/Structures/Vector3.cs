@@ -15,7 +15,7 @@ namespace AutoCore.Game.Structures
             Z = z;
         }
 
-        public static Vector3 Read(BinaryReader br)
+        public static Vector3 ReadNew(BinaryReader br)
         {
             return new Vector3
             {

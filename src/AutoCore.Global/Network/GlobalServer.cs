@@ -28,7 +28,6 @@ namespace AutoCore.Global.Network
         public Config Config { get; private set; }
         public IPAddress PublicAddress { get; }
         public Communicator AuthCommunicator { get; private set; }
-        //public Dictionary<uint, LoginAccountEntry> IncomingClients { get; } = new();
         public MainLoop Loop { get; }
         public Timer Timer { get; } = new();
         public override bool IsRunning => Loop != null && Loop.Running;
@@ -54,6 +53,8 @@ namespace AutoCore.Global.Network
 
             CharContext.InitializeConnectionString(Config.CharDatabaseConnectionString);
             WorldContext.InitializeConnectionString(Config.WorldDatabaseConnectionString);
+
+            AssetManager.Instance.Initialize(Config.GamePath);
 
             LengthedSocket.InitializeEventArgsPool(Config.SocketAsyncConfig.MaxClients * Config.SocketAsyncConfig.ConcurrentOperationsByClient);
 
@@ -119,6 +120,8 @@ namespace AutoCore.Global.Network
                 Logger.WriteLog(LogType.Error, "Invalid Communicator config data! Can't connect!");
                 return false;
             }
+
+            AssetManager.Instance.LoadAllData();
 
             Loop.Start();
 

@@ -14,17 +14,17 @@ namespace AutoCore.Game.Structures
         public int Id;
         public int VehicleId;
 
-        public static VehicleTrick Read(BinaryReader br)
+        public static VehicleTrick ReadNew(BinaryReader reader)
         {
             return new VehicleTrick
             {
-                Id = br.ReadInt32(),
-                VehicleId = br.ReadInt32(),
-                ExclusiveGroup = br.ReadByte(),
-                GroupId = br.ReadByte(),
-                //FileName = br.ReadUnicodeString(65),
-                //Description = br.ReadUnicodeString(33),
-                //GroupDescription = br.ReadUnicodeString(33)
+                Id = reader.ReadInt32(),
+                VehicleId = reader.ReadInt32(),
+                ExclusiveGroup = reader.ReadByte(),
+                GroupId = reader.ReadByte(),
+                FileName = reader.ReadUnicodeString(65),
+                Description = reader.ReadUnicodeString(33),
+                GroupDescription = reader.ReadUnicodeString(33)
             };
         }
 

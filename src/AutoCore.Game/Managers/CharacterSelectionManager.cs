@@ -40,13 +40,13 @@ namespace AutoCore.Game.Managers
             var charObj = new ClonebaseObject
             {
                 Coid = 0,
-                Type = (byte)ClonebaseObjectType.Character
+                Type = (byte)CloneBaseObjectType.Character
             };
 
             var vehObj = new ClonebaseObject
             {
                 Coid = 0,
-                Type = (byte)ClonebaseObjectType.Vehicle
+                Type = (byte)CloneBaseObjectType.Vehicle
             };
 
             context.ClonebaseObjects.Add(charObj);

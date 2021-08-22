@@ -1,6 +1,6 @@
 ﻿namespace AutoCore.Game.Constants
 {
-    public enum ClonebaseObjectType
+    public enum CloneBaseObjectType
     {
         Base = 0,
         Object = 1,

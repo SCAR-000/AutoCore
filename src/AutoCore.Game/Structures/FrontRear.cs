@@ -7,12 +7,12 @@ namespace AutoCore.Game.Structures
         public float Front;
         public float Rear;
 
-        public static FrontRear Read(BinaryReader br)
+        public static FrontRear ReadNew(BinaryReader reader)
         {
             return new FrontRear
             {
-                Front = br.ReadSingle(),
-                Rear = br.ReadSingle()
+                Front = reader.ReadSingle(),
+                Rear = reader.ReadSingle()
             };
         }
     }

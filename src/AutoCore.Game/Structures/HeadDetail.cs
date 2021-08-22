@@ -14,21 +14,21 @@ namespace AutoCore.Game.Structures
         public int MaxTextures;
         public byte Type;
 
-        public static HeadDetail Read(BinaryReader br)
+        public static HeadDetail ReadNew(BinaryReader reader)
         {
             var hd = new HeadDetail
             {
-                Id = br.ReadInt32(),
-                HeadBody = br.ReadInt32(),
-                CloneBase = br.ReadInt32(),
-                //FileName = br.ReadUnicodeString(65),
-                Type = br.ReadByte()
+                Id = reader.ReadInt32(),
+                HeadBody = reader.ReadInt32(),
+                CloneBase = reader.ReadInt32(),
+                FileName = reader.ReadUnicodeString(65),
+                Type = reader.ReadByte()
             };
 
-            br.ReadByte();
+            reader.ReadByte();
 
-            hd.MaxTextures = br.ReadInt32();
-            hd.DisableHair = br.ReadInt32();
+            hd.MaxTextures = reader.ReadInt32();
+            hd.DisableHair = reader.ReadInt32();
 
             return hd;
         }

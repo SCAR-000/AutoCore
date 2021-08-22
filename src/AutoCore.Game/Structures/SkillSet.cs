@@ -14,19 +14,19 @@ namespace AutoCore.Game.Structures
         public bool StopsToAttack;
         public float Weight;
 
-        public static SkillSet Read(BinaryReader br)
+        public static SkillSet Read(BinaryReader reader)
         {
             return new SkillSet
             {
-                SkillId = br.ReadInt32(),
-                PauseTime = br.ReadUInt16(),
-                MinCastTime = br.ReadUInt16(),
-                SkillLevel = br.ReadUInt16(),
-                StopsToAttack = br.ReadBoolean(),
-                AnimationId = br.ReadByte(),
-                MinHealth = br.ReadInt32(),
-                MaxHealth = br.ReadInt32(),
-                Weight = br.ReadSingle()
+                SkillId = reader.ReadInt32(),
+                PauseTime = reader.ReadUInt16(),
+                MinCastTime = reader.ReadUInt16(),
+                SkillLevel = reader.ReadUInt16(),
+                StopsToAttack = reader.ReadBoolean(),
+                AnimationId = reader.ReadByte(),
+                MinHealth = reader.ReadInt32(),
+                MaxHealth = reader.ReadInt32(),
+                Weight = reader.ReadSingle()
             };
         }
 

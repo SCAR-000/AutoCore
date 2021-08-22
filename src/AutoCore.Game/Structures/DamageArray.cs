@@ -6,17 +6,21 @@ namespace AutoCore.Game.Structures
 
     public struct DamageArray
     {
-        public short[] Damage;
+        public short[] Damage { get; set; }
 
-        /*public static DamageArray Read(BinaryReader br)
+        public void Read(BinaryReader reader)
         {
-            return new DamageArray { Damage = br.Read<short>(6) };
-        }*/
+            Damage = reader.ReadConstArray(6, reader.ReadInt16);
+        }
 
-        /*public void WriteToPacket(Packet packet)
+        public void Write(BinaryWriter writer)
         {
-            for (var i = 0; i < 6; ++i)
-                packet.WriteShort(Damage[i]);
-        }*/
+            writer.WriteConstArray(Damage, 6, writer.Write);
+        }
+
+        public static DamageArray ReadNew(BinaryReader reader)
+        {
+            return new DamageArray { Damage = reader.ReadConstArray(6, reader.ReadInt16) };
+        }
     }
 }
