@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Text;
 
 namespace AutoCore.Utils.Extensions
@@ -34,6 +35,12 @@ namespace AutoCore.Utils.Extensions
         public static void WriteUtf8String(this BinaryWriter writer, string text)
         {
             writer.WriteUtf8StringOn(text, text.Length);
+        }
+
+        public static void WriteConstArray<T>(this BinaryWriter _, T[] data, int count, Action<T> writerFunction) where T : new()
+        {
+            for (var i = 0; i < count; ++i)
+                writerFunction(data[i]);
         }
 
         public static void WriteAt(this BinaryWriter writer, byte value, long position)

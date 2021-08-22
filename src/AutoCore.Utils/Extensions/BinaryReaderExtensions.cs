@@ -22,5 +22,31 @@ namespace AutoCore.Utils.Extensions
 
             return index == 0 ? "" : Encoding.UTF8.GetString(bytes, 0, index);
         }
+
+        public static string ReadUnicodeString(this BinaryReader br, int size)
+        {
+            if (size > 0)
+            {
+                var buff = br.ReadBytes(size * 2);
+
+                for (var i = 0; i < buff.Length; i += 2)
+                    if (buff[i] == 0 && buff[i + 1] == 0)
+                        return Encoding.Unicode.GetString(buff, 0, i);
+
+                return Encoding.Unicode.GetString(buff);
+            }
+
+            return string.Empty;
+        }
+
+        public static T[] ReadConstArray<T>(this BinaryReader _, int count, Func<T> readerFunction) where T : new()
+        {
+            var result = new T[count];
+
+            for (var i = 0; i < count; ++i)
+                result[i] = readerFunction();
+
+            return result;
+        }
     }
 }
