@@ -9,6 +9,7 @@ namespace AutoCore.Database.Char.Models
         public long CharacterCoid { get; set; }
         public int Rank { get; set; }
 
+        [ForeignKey("ClanId")]
         public Clan Clan { get; set; }
 
         public ClanMember()

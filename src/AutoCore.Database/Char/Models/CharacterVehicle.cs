@@ -9,9 +9,7 @@ namespace AutoCore.Database.Char.Models
         [Key]
         public long Coid { get; set; }
         public long CharacterCoid { get; set; }
-        public int CBID { get; set; }
         public string Name { get; set; }
-        public int TeamFaction { get; set; }
         public float PositionX { get; set; }
         public float PositionY { get; set; }
         public float PositionZ { get; set; }
@@ -31,5 +29,11 @@ namespace AutoCore.Database.Char.Models
         public uint PrimaryColor { get; set; }
         public uint SecondaryColor { get; set; }
         public byte Trim { get; set; }
+
+        [ForeignKey("Coid")]
+        public SimpleObject SimpleObjectBase { get; set; }
+
+        [ForeignKey("CharacterCoid")]
+        public Character Character { get; set; }
     }
 }

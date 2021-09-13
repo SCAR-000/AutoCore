@@ -17,6 +17,7 @@ namespace AutoCore.Database.Char.Models
         public int MonthlyDues { get; set; }
         public int MonthlyUpkeep { get; set; }
 
+        [InverseProperty("Clan")]
         public List<ClanMember> Members { get; set; }
 
         public Clan()

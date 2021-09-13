@@ -37,27 +37,28 @@ namespace AutoCore.Game.Managers
                 config = worldContext.ConfigNewCharacters.First(cnc => cnc.Race == 0 && cnc.Class == 3);
             }
 
-            var charObj = new ClonebaseObject
+            var charObj = new SimpleObject
             {
                 Coid = 0,
-                Type = (byte)CloneBaseObjectType.Character
+                Type = (byte)CloneBaseObjectType.Character,
+                CBID = packet.CBID
             };
 
-            var vehObj = new ClonebaseObject
+            var vehObj = new SimpleObject
             {
                 Coid = 0,
-                Type = (byte)CloneBaseObjectType.Vehicle
+                Type = (byte)CloneBaseObjectType.Vehicle,
+                CBID = config.Vehicle
             };
 
-            context.ClonebaseObjects.Add(charObj);
-            context.ClonebaseObjects.Add(vehObj);
+            context.SimpleObjects.Add(charObj);
+            context.SimpleObjects.Add(vehObj);
             context.SaveChanges();
 
             var character = new Character
             {
                 Coid = charObj.Coid,
                 AccountId = client.Account.Id,
-                CBID = packet.CBID,
                 Name = packet.CharacterName,
                 HeadId = packet.HeadId,
                 BodyId = packet.BodyId,
@@ -73,20 +74,20 @@ namespace AutoCore.Game.Managers
                 HairColor = packet.HairColor,
                 SkinColor = packet.SkinColor,
                 SpecialityColor = packet.SpecialityColor,
-                ScaleOffset = packet.ScaleOffset
+                ScaleOffset = packet.ScaleOffset,
+                Level = 1
             };
             context.Characters.Add(character);
 
             var vehicle = new CharacterVehicle
             {
                 Coid = vehObj.Coid,
-                CharacterCoid = charObj.Coid,
-                CBID = config.Vehicle
+                CharacterCoid = charObj.Coid
             };
             context.CharacterVehicles.Add(vehicle);
             context.SaveChanges();
 
-            return (true, -1);
+            return (true, charObj.Coid);
         }
 
         public void SendCharacterList(TNLConnection client)

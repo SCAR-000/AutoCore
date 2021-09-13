@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace AutoCore.Database.Char.Models
@@ -9,7 +10,6 @@ namespace AutoCore.Database.Char.Models
         [Key]
         public long Coid { get; set; }
         public uint AccountId { get; set; }
-        public int CBID { get; set; }
         public string Name { get; set; }
         public int HeadId { get; set; }
         public int BodyId { get; set; }
@@ -26,6 +26,20 @@ namespace AutoCore.Database.Char.Models
         public uint SkinColor { get; set; }
         public uint SpecialityColor { get; set; }
         public float ScaleOffset { get; set; }
+        public byte Level { get; set; }
+        public long ActiveVehicleCoid { get; set; }
+
+        [ForeignKey("Coid")]
+        public SimpleObject SimpleObjectBase { get; set; }
+
+        [InverseProperty("Character")]
+        public List<CharacterSocial> Socials { get; set; }
+
+        [InverseProperty("Character")]
+        public List<CharacterVehicle> Vehicles { get; set; }
+
+        [ForeignKey("ActiveVehicleCoid")]
+        public CharacterVehicle ActiveVehicle { get; set; }
 
         public Character()
         {
@@ -38,6 +52,7 @@ namespace AutoCore.Database.Char.Models
             HeadDetail2 = -1;
             EyesId = -1;
             MouthId = -1;
+            Level = 1;
         }
     }
 }
