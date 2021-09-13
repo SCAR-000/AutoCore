@@ -26,5 +26,18 @@ namespace AutoCore.Database.Char.Models
         public uint SkinColor { get; set; }
         public uint SpecialityColor { get; set; }
         public float ScaleOffset { get; set; }
+
+        public Character()
+        {
+            Name = "";
+            BodyId = -1;
+            HeadId = -1;
+            HairId = -1;
+            HelmetId = -1;
+            HeadDetail1 = -1;
+            HeadDetail2 = -1;
+            EyesId = -1;
+            MouthId = -1;
+        }
     }
 }
