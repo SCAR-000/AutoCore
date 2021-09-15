@@ -55,9 +55,10 @@ namespace AutoCore.Global.Network
             WorldContext.InitializeConnectionString(Config.WorldDatabaseConnectionString);
 
             if (!AssetManager.Instance.Initialize(Config.GamePath))
-            {
                 throw new Exception("Unable to load assets!");
-            }
+
+            if (!MapManager.Instance.Initialize())
+                throw new Exception("Unable to load maps!");
 
             Logger.WriteLog(LogType.Initialize, "Initializing the network...");
             PublicAddress = IPAddress.Parse(Config.GameConfig.PublicAddress);

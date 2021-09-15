@@ -17,6 +17,7 @@ namespace AutoCore.Game.Managers
         private bool DataLoaded { get; set; }
         private WADLoader WADLoader { get; } = new();
         private GLMLoader GLMLoader { get; } = new();
+        private MapDataLoader MapDataLoader { get; } = new();
 
         public string GamePath { get; private set; }
 
@@ -46,9 +47,13 @@ namespace AutoCore.Game.Managers
             if (!GLMLoader.Load(GamePath))
                 return false;
 
+            if (!MapDataLoader.Load())
+                return false;
+
             DataLoaded = true;
 
             Logger.WriteLog(LogType.Initialize, "Asset Manager has loaded all data!");
+
             return true;
         }
 
