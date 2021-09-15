@@ -16,10 +16,10 @@ namespace AutoCore.Database.Char.Models
         public byte Type { get; set; }
 
         [ForeignKey("CharacterCoid")]
-        public Character Character { get; set; }
+        public CharacterData Character { get; set; }
 
         [ForeignKey("TargetCoid")]
-        public Character Target { get; set; }
+        public CharacterData Target { get; set; }
 
         public SocialType SocialType
         {

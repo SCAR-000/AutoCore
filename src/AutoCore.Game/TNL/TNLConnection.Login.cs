@@ -22,7 +22,7 @@ namespace AutoCore.Game.TNL
 
             Logger.WriteLog(LogType.Network, "Client ({3} -> {1} | {2}) authenticated from {0}", GetNetAddressString(), Account.Id, Account.Name, _playerCOID);
 
-            CharacterSelectionManager.Instance.SendCharacterList(this);
+            CharacterSelectionManager.SendCharacterList(this);
 
             SendGamePacket(new LoginResponsePacket(0x1000000));
         }
@@ -32,9 +32,14 @@ namespace AutoCore.Game.TNL
             var packet = new NewCharacterPacket();
             packet.Read(reader);
 
-            var (result, coid) = CharacterSelectionManager.Instance.CreateNewCharacter(this, packet);
+            var (result, coid) = CharacterSelectionManager.CreateNewCharacter(this, packet);
 
             SendGamePacket(new NewCharacterResponsePacket(result ? 0x80000000 : 0x1, coid));
+
+            if (result)
+            {
+                CharacterSelectionManager.ExtendCharacterList(this, coid);
+            }
         }
     }
 }

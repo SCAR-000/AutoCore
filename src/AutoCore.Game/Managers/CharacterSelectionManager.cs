@@ -1,23 +1,24 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace AutoCore.Game.Managers
 {
+    using CloneBases;
     using Constants;
     using Database.Char;
     using Database.Char.Models;
     using Database.World;
     using Database.World.Models;
+    using Entities;
     using Packets.Login;
+    using Packets.Sector;
     using TNL;
     using Utils.Memory;
 
     public class CharacterSelectionManager : Singleton<CharacterSelectionManager>
     {
-        public (bool, long) CreateNewCharacter(TNLConnection client, NewCharacterPacket packet)
+        public static (bool, long) CreateNewCharacter(TNLConnection client, NewCharacterPacket packet)
         {
             using var context = new CharContext();
 
@@ -29,22 +30,25 @@ namespace AutoCore.Game.Managers
             if (existingVehicle != null)
                 return (false, -1);
 
-            // TODO: create the actual character, add every item to it and save it into the DB
+            var cloneBaseCharacter = AssetManager.Instance.GetCloneBase<CloneBaseCharacter>(packet.CBID);
+            if (cloneBaseCharacter == null)
+                return (false, -1);
+
             ConfigNewCharacter config;
 
             using (var worldContext = new WorldContext())
             {
-                config = worldContext.ConfigNewCharacters.First(cnc => cnc.Race == 0 && cnc.Class == 3);
+                config = worldContext.ConfigNewCharacters.First(cnc => cnc.Race == cloneBaseCharacter.CharacterSpecific.Race && cnc.Class == cloneBaseCharacter.CharacterSpecific.Class);
             }
 
-            var charObj = new SimpleObject
+            var charObj = new SimpleObjectData
             {
                 Coid = 0,
                 Type = (byte)CloneBaseObjectType.Character,
                 CBID = packet.CBID
             };
 
-            var vehObj = new SimpleObject
+            var vehObj = new SimpleObjectData
             {
                 Coid = 0,
                 Type = (byte)CloneBaseObjectType.Vehicle,
@@ -55,7 +59,7 @@ namespace AutoCore.Game.Managers
             context.SimpleObjects.Add(vehObj);
             context.SaveChanges();
 
-            var character = new Character
+            var character = new CharacterData
             {
                 Coid = charObj.Coid,
                 AccountId = client.Account.Id,
@@ -90,23 +94,34 @@ namespace AutoCore.Game.Managers
             return (true, charObj.Coid);
         }
 
-        public void SendCharacterList(TNLConnection client)
+        public static void SendCharacterList(TNLConnection client)
         {
-            /*var list = DataAccess.Character.GetCharacters(AccountId);
+            using var context = new CharContext();
 
-            foreach (var character in (from charData in list let character = new Character() where character.LoadFromDB(charData.Value, charData.Key) select character))
+            var coids = context.Characters.Where(c => c.AccountId == client.Account.Id).Select(c => c.Coid).ToList();
+
+            foreach (var coid in coids)
             {
-                character.SetOwner(this);
+                SendCharacter(client, context, coid);
+            }
+        }
 
-                var pack = new Packet(Opcode.CreateCharacter);
-                character.WriteToCreatePacket(pack);
+        public static void ExtendCharacterList(TNLConnection client, long coid)
+        {
+            using var context = new CharContext();
 
-                var vpack = new Packet(Opcode.CreateVehicle);
-                character.GetVehicle().WriteToCreatePacket(vpack);
+            SendCharacter(client, context, coid);
+        }
 
-                client.SendGamePacket(pack);
-                client.SendPacket(vpack);
-            }*/
+        private static void SendCharacter(TNLConnection client, CharContext context, long coid)
+        {
+            var character = new Character(client);
+            character.LoadFromDB(context, coid);
+
+            var createCharPacket = new CreateCharacterPacket();
+            character.WriteToPacket(createCharPacket);
+
+            client.SendGamePacket(createCharPacket);
         }
     }
 }

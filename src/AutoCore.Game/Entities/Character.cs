@@ -4,12 +4,14 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+using Microsoft.EntityFrameworkCore;
+
 namespace AutoCore.Game.Entities
 {
+    using Database.Char;
     using Database.Char.Models;
     using Packets.Sector;
-
-    using CharacterData = Database.Char.Models.Character;
+    using TNL;
 
     public class Character : Creature
     {
@@ -36,19 +38,25 @@ namespace AutoCore.Game.Entities
         #endregion
 
         public byte GMLevel { get; }
+        public TNLConnection Owner { get; }
         #endregion
 
-        public Character()
+        public Character(TNLConnection owner)
         {
-            CharacterDBData = new CharacterData();
-            
-            GMLevel = 0;
+            Owner = owner;
         }
 
-        public bool LoadFromDB(long coid)
+        public bool LoadFromDB(CharContext context, long coid)
         {
-            // TODO: load character data
-            // TODO: load clan data
+            CharacterDBData = context.Characters.Include(c => c.SimpleObjectBase).FirstOrDefault(c => c.Coid == coid);
+
+            if (CharacterDBData == null)
+                return false;
+
+            ClanMemberDBData = context.ClanMembers.Include(cm => cm.Clan).FirstOrDefault(cm => cm.CharacterCoid == coid);
+
+            // TODO: set up stuff, fields, baseclasses, etc
+
             return false;
         }
 
@@ -76,8 +84,10 @@ namespace AutoCore.Game.Entities
                 charPacket.SpecialityColor = CharacterDBData.SpecialityColor;
                 charPacket.LastTownId = 0; // TODO
                 charPacket.LastStationMapId = 0; // TODO
-                charPacket.Level = CharacterDBData.Level; // TODO
-                charPacket.Bf297 = 0; // TODO
+                charPacket.Level = CharacterDBData.Level;
+                charPacket.UsingVehicle = false; // TODO
+                charPacket.UsingTrailer = false;
+                charPacket.IsPosessingCreature = false;
                 charPacket.GMLevel = GMLevel;
                 charPacket.ServerTime = 0; // TODO
                 charPacket.Name = Name;

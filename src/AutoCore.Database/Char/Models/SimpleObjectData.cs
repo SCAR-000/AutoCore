@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace AutoCore.Database.Char.Models
 {
     [Table("simple_object")]
-    public class SimpleObject
+    public class SimpleObjectData
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]

@@ -5,7 +5,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace AutoCore.Database.Char.Models
 {
     [Table("character")]
-    public class Character
+    public class CharacterData
     {
         [Key]
         public long Coid { get; set; }
@@ -30,7 +30,7 @@ namespace AutoCore.Database.Char.Models
         public long ActiveVehicleCoid { get; set; }
 
         [ForeignKey("Coid")]
-        public SimpleObject SimpleObjectBase { get; set; }
+        public SimpleObjectData SimpleObjectBase { get; set; }
 
         [InverseProperty("Character")]
         public List<CharacterSocial> Socials { get; set; }
@@ -41,7 +41,7 @@ namespace AutoCore.Database.Char.Models
         [ForeignKey("ActiveVehicleCoid")]
         public CharacterVehicle ActiveVehicle { get; set; }
 
-        public Character()
+        public CharacterData()
         {
             Name = "";
             BodyId = -1;

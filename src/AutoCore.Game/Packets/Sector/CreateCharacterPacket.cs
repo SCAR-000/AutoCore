@@ -32,7 +32,61 @@ namespace AutoCore.Game.Packets.Sector
         public int LastTownId { get; set; }
         public int LastStationMapId { get; set; }
         public byte Level { get; set; }
-        public byte Bf297 { get; set; }
+        private byte Bf297 { get; set; }
+        public bool UsingVehicle
+        {
+            get
+            {
+                return (Bf297 & 1) == 1;
+            }
+            set
+            {
+                if (value)
+                {
+                    Bf297 |= 1;
+                }
+                else
+                {
+                    Bf297 &= 0xFE;
+                }
+            }
+        }
+        public bool UsingTrailer
+        {
+            get
+            {
+                return (Bf297 & 2) == 2;
+            }
+            set
+            {
+                if (value)
+                {
+                    Bf297 |= 2;
+                }
+                else
+                {
+                    Bf297 &= 0xFD;
+                }
+            }
+        }
+        public bool IsPosessingCreature
+        {
+            get
+            {
+                return (Bf297 & 4) == 4;
+            }
+            set
+            {
+                if (value)
+                {
+                    Bf297 |= 4;
+                }
+                else
+                {
+                    Bf297 &= 0xFB;
+                }
+            }
+        }
         public byte GMLevel { get; set; }
         public long ServerTime { get; set; }
         public string Name { get; set; }

@@ -31,9 +31,9 @@ namespace AutoCore.Database.Char.Models
         public byte Trim { get; set; }
 
         [ForeignKey("Coid")]
-        public SimpleObject SimpleObjectBase { get; set; }
+        public SimpleObjectData SimpleObjectBase { get; set; }
 
         [ForeignKey("CharacterCoid")]
-        public Character Character { get; set; }
+        public CharacterData Character { get; set; }
     }
 }
