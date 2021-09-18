@@ -210,7 +210,8 @@ namespace AutoCore.Communicator
                     break;
             }
 
-            Socket.ReceiveAsync();
+            if (Socket != null && Socket.Connected)
+                Socket.ReceiveAsync();
         }
 
         private void OnSocketConnect(SocketAsyncEventArgs args)

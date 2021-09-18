@@ -10,6 +10,7 @@ namespace AutoCore.Game.Entities
 {
     using Database.Char;
     using Database.Char.Models;
+    using Managers;
     using Packets.Sector;
     using TNL;
 
@@ -52,6 +53,8 @@ namespace AutoCore.Game.Entities
 
             if (CharacterDBData == null)
                 return false;
+
+            LoadCloneBase(CharacterDBData.SimpleObjectBase.CBID);
 
             ClanMemberDBData = context.ClanMembers.Include(cm => cm.Clan).FirstOrDefault(cm => cm.CharacterCoid == coid);
 

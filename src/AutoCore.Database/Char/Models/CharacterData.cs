@@ -27,7 +27,6 @@ namespace AutoCore.Database.Char.Models
         public uint SpecialityColor { get; set; }
         public float ScaleOffset { get; set; }
         public byte Level { get; set; }
-        public long ActiveVehicleCoid { get; set; }
 
         [ForeignKey("Coid")]
         public SimpleObjectData SimpleObjectBase { get; set; }
@@ -37,9 +36,6 @@ namespace AutoCore.Database.Char.Models
 
         [InverseProperty("Character")]
         public List<CharacterVehicle> Vehicles { get; set; }
-
-        [ForeignKey("ActiveVehicleCoid")]
-        public CharacterVehicle ActiveVehicle { get; set; }
 
         public CharacterData()
         {

@@ -8,6 +8,7 @@ namespace AutoCore.Game.Entities
 {
     using CloneBases;
     using Constants;
+    using Managers;
     using Packets.Sector;
     using Structures;
 
@@ -34,6 +35,11 @@ namespace AutoCore.Game.Entities
                 Coid = -1L,
                 Global = false
             };
+        }
+
+        protected void LoadCloneBase(int cbid)
+        {
+            CloneBaseObject = AssetManager.Instance.GetCloneBase<CloneBaseObject>(cbid);
         }
 
         public virtual void WriteToPacket(CreateSimpleObjectPacket packet)

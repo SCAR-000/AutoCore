@@ -28,8 +28,8 @@ namespace AutoCore.Game.Packets.Login
         public uint SkinColor { get; set; }
         public uint SpecialityColor { get; set; }
         public int ShardId { get; set; }
-        public int VehiclePrimaryColor { get; set; }
-        public int VehicleSecondaryColor { get; set; }
+        public uint VehiclePrimaryColor { get; set; }
+        public uint VehicleSecondaryColor { get; set; }
         public byte VehicleTrim { get; set; }
         public float ScaleOffset { get; set; }
         public int WheelsetCBID { get; set; }
@@ -55,8 +55,8 @@ namespace AutoCore.Game.Packets.Login
             SkinColor = reader.ReadUInt32();
             SpecialityColor = reader.ReadUInt32();
             ShardId = reader.ReadInt32();
-            VehiclePrimaryColor = reader.ReadInt32();
-            VehicleSecondaryColor = reader.ReadInt32();
+            VehiclePrimaryColor = reader.ReadUInt32();
+            VehicleSecondaryColor = reader.ReadUInt32();
             VehicleTrim = reader.ReadByte();
 
             reader.BaseStream.Position += 3;
