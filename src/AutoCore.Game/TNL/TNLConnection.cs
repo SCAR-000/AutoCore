@@ -276,7 +276,8 @@ namespace AutoCore.Game.TNL
         #endregion
 
         #region RPC Calls
-
+#pragma warning disable IDE0051 // Remove unused private members
+#pragma warning disable IDE1006 // Naming Styles
         public void rpcMsgGuaranteed(uint type, ByteBuffer data)
         #region rpcMsgGuaranteed
         {
@@ -286,7 +287,7 @@ namespace AutoCore.Game.TNL
             PostNetEvent(rpcEvent);
         }
 
-        private void rpcMsgGuaranteed_remote(uint type, ByteBuffer data)
+        private void rpcMsgGuaranteed_remote(uint _, ByteBuffer data)
         #endregion
         {
             HandlePacket(data);
@@ -301,7 +302,7 @@ namespace AutoCore.Game.TNL
             PostNetEvent(rpcEvent);
         }
 
-        private void rpcMsgGuaranteedOrdered_remote(uint type, ByteBuffer data)
+        private void rpcMsgGuaranteedOrdered_remote(uint _, ByteBuffer data)
         #endregion
         {
             HandlePacket(data);
@@ -316,7 +317,7 @@ namespace AutoCore.Game.TNL
             PostNetEvent(rpcEvent);
         }
 
-        private void rpcMsgNonGuaranteed_remote(uint type, ByteBuffer data)
+        private void rpcMsgNonGuaranteed_remote(uint _, ByteBuffer data)
         #endregion
         {
             HandlePacket(data);
@@ -372,6 +373,8 @@ namespace AutoCore.Game.TNL
 
             ProcessFragment(data, _fragmentNonGuaranteed, type, fragment, fragmentId, fragmentCount);
         }
+#pragma warning restore IDE1006 // Naming Styles
+#pragma warning restore IDE0051 // Remove unused private members
         #endregion RPC Calls
 
         public override NetClassRep GetClassRep()
