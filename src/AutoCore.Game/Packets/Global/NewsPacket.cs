@@ -3,7 +3,6 @@
 namespace AutoCore.Game.Packets.Global
 {
     using Constants;
-    using Extensions;
     using Utils.Extensions;
 
     public class NewsPacket : BasePacket

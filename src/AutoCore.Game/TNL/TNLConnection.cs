@@ -492,7 +492,7 @@ namespace AutoCore.Game.TNL
             return Interface.GetCurrentTime() - LastPacketRecvTime;
         }
 
-        private void ProcessFragment(ByteBuffer theData, SFragmentData sFragment, uint type, ushort fragment, ushort fragmentId, ushort fragmentCount)
+        private void ProcessFragment(ByteBuffer theData, SFragmentData sFragment, uint _, ushort fragment, ushort fragmentId, ushort fragmentCount)
         {
             if (sFragment.FragmentId != fragment)
             {
