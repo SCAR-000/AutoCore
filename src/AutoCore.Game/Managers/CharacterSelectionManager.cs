@@ -22,12 +22,10 @@ namespace AutoCore.Game.Managers
         {
             using var context = new CharContext();
 
-            var existingCharacter = context.Characters.FirstOrDefault(c => c.Name == packet.CharacterName);
-            if (existingCharacter != null)
+            if (context.Characters.Any(c => c.Name == packet.CharacterName))
                 return (false, -1);
 
-            var existingVehicle = context.Vehicles.FirstOrDefault(v => v.Name == packet.VehicleName);
-            if (existingVehicle != null)
+            if (context.Vehicles.Any(v => v.Name == packet.VehicleName))
                 return (false, -1);
 
             var cloneBaseCharacter = AssetManager.Instance.GetCloneBase<CloneBaseCharacter>(packet.CBID);
@@ -100,6 +98,9 @@ namespace AutoCore.Game.Managers
                 Trim = packet.VehicleTrim
             };
             context.Vehicles.Add(vehicle);
+            context.SaveChanges();
+
+            character.ActiveVehicleCoid = vehicle.Coid;
             context.SaveChanges();
 
             return (true, charObj.Coid);
