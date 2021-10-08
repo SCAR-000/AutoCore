@@ -18,21 +18,22 @@ namespace AutoCore.Game.Entities
     {
         #region Properties
         #region Database Character Data
-        public CharacterData CharacterDBData { get; private set; }
-        public string Name => CharacterDBData.Name;
-        public int BodyId => CharacterDBData.BodyId;
-        public int HeadId => CharacterDBData.HeadId;
-        public int HairId => CharacterDBData.HairId;
-        public int HelmetId => CharacterDBData.HelmetId;
-        public int AccessoryId1 => CharacterDBData.HeadDetail1;
-        public int AccessoryId2 => CharacterDBData.HeadDetail2;
-        public int EyesId => CharacterDBData.EyesId;
-        public int MouthId => CharacterDBData.MouthId;
-        public float ScaleOffset => CharacterDBData.ScaleOffset;
+        private CharacterData DBData { get; set; }
+        public string Name => DBData.Name;
+        public long ActiveVehicleCoid => DBData.ActiveVehicleCoid;
+        public int BodyId => DBData.BodyId;
+        public int HeadId => DBData.HeadId;
+        public int HairId => DBData.HairId;
+        public int HelmetId => DBData.HelmetId;
+        public int AccessoryId1 => DBData.HeadDetail1;
+        public int AccessoryId2 => DBData.HeadDetail2;
+        public int EyesId => DBData.EyesId;
+        public int MouthId => DBData.MouthId;
+        public float ScaleOffset => DBData.ScaleOffset;
         #endregion
 
         #region Database Clan Data
-        public ClanMember ClanMemberDBData { get; private set; }
+        private ClanMember ClanMemberDBData { get; set; }
         public string ClanName => ClanMemberDBData?.Clan?.Name;
         public int ClanId => ClanMemberDBData?.ClanId ?? -1;
         public int ClanRank => ClanMemberDBData?.Rank ?? -1;
@@ -49,18 +50,18 @@ namespace AutoCore.Game.Entities
 
         public bool LoadFromDB(CharContext context, long coid)
         {
-            CharacterDBData = context.Characters.Include(c => c.SimpleObjectBase).FirstOrDefault(c => c.Coid == coid);
+            DBData = context.Characters.Include(c => c.SimpleObjectBase).FirstOrDefault(c => c.Coid == coid);
 
-            if (CharacterDBData == null)
+            if (DBData == null)
                 return false;
 
-            LoadCloneBase(CharacterDBData.SimpleObjectBase.CBID);
+            LoadCloneBase(DBData.SimpleObjectBase.CBID);
 
             ClanMemberDBData = context.ClanMembers.Include(cm => cm.Clan).FirstOrDefault(cm => cm.CharacterCoid == coid);
 
             // TODO: set up stuff, fields, baseclasses, etc
 
-            return false;
+            return true;
         }
 
         public override void WriteToPacket(CreateSimpleObjectPacket packet)
@@ -71,23 +72,23 @@ namespace AutoCore.Game.Entities
             {
                 charPacket.CurrentVehicleCoid = -1; // TODO
                 charPacket.CurrentTrailerCoid = -1; // TODO
-                charPacket.HeadId = CharacterDBData.HeadId;
-                charPacket.BodyId = CharacterDBData.BodyId;
-                charPacket.AccessoryId1 = CharacterDBData.HeadDetail1;
-                charPacket.AccessoryId2 = CharacterDBData.HeadDetail2;
-                charPacket.HairId = CharacterDBData.HairId;
-                charPacket.MouthId = CharacterDBData.MouthId;
-                charPacket.EyesId = CharacterDBData.EyesId;
-                charPacket.HelmetId = CharacterDBData.HelmetId;
-                charPacket.PrimaryColor = CharacterDBData.PrimaryColor;
-                charPacket.SecondaryColor = CharacterDBData.SecondaryColor;
-                charPacket.EyesColor = CharacterDBData.EyesColor;
-                charPacket.HairColor = CharacterDBData.HairColor;
-                charPacket.SkinColor = CharacterDBData.SkinColor;
-                charPacket.SpecialityColor = CharacterDBData.SpecialityColor;
+                charPacket.HeadId = HeadId;
+                charPacket.BodyId = BodyId;
+                charPacket.AccessoryId1 = DBData.HeadDetail1;
+                charPacket.AccessoryId2 = DBData.HeadDetail2;
+                charPacket.HairId = DBData.HairId;
+                charPacket.MouthId = DBData.MouthId;
+                charPacket.EyesId = DBData.EyesId;
+                charPacket.HelmetId = DBData.HelmetId;
+                charPacket.PrimaryColor = DBData.PrimaryColor;
+                charPacket.SecondaryColor = DBData.SecondaryColor;
+                charPacket.EyesColor = DBData.EyesColor;
+                charPacket.HairColor = DBData.HairColor;
+                charPacket.SkinColor = DBData.SkinColor;
+                charPacket.SpecialityColor = DBData.SpecialityColor;
                 charPacket.LastTownId = 0; // TODO
                 charPacket.LastStationMapId = 0; // TODO
-                charPacket.Level = CharacterDBData.Level;
+                charPacket.Level = DBData.Level;
                 charPacket.UsingVehicle = false; // TODO
                 charPacket.UsingTrailer = false;
                 charPacket.IsPosessingCreature = false;
@@ -95,7 +96,7 @@ namespace AutoCore.Game.Entities
                 charPacket.ServerTime = 0; // TODO
                 charPacket.Name = Name;
                 charPacket.ClanName = ClanMemberDBData?.Clan?.Name ?? "";
-                charPacket.CharacterScaleOffset = CharacterDBData.ScaleOffset;
+                charPacket.CharacterScaleOffset = DBData.ScaleOffset;
             }
 
             if (packet is CreateCharacterExtendedPacket extendedCharPacket)
