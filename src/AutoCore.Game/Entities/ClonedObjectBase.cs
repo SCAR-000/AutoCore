@@ -42,6 +42,12 @@ namespace AutoCore.Game.Entities
             CloneBaseObject = AssetManager.Instance.GetCloneBase<CloneBaseObject>(cbid);
         }
 
+        protected void SetCoid(long coid, bool global)
+        {
+            ObjectId.Coid = coid;
+            ObjectId.Global = global;
+        }
+
         public virtual void WriteToPacket(CreateSimpleObjectPacket packet)
         {
             // TODO: only fill fields which are ClonedObjectBase specific!

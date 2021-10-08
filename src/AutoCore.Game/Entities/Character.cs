@@ -41,15 +41,20 @@ namespace AutoCore.Game.Entities
 
         public byte GMLevel { get; }
         public TNLConnection Owner { get; }
+        public Vehicle CurrentVehicle { get; private set; }
+        public bool IsInCharacterSelection { get; }
         #endregion
 
-        public Character(TNLConnection owner)
+        public Character(TNLConnection owner, bool isInCharacterSelection = false)
         {
             Owner = owner;
+            IsInCharacterSelection = isInCharacterSelection;
         }
 
-        public bool LoadFromDB(CharContext context, long coid)
+        public override bool LoadFromDB(CharContext context, long coid)
         {
+            SetCoid(coid, true);
+
             DBData = context.Characters.Include(c => c.SimpleObjectBase).FirstOrDefault(c => c.Coid == coid);
 
             if (DBData == null)
@@ -64,13 +69,18 @@ namespace AutoCore.Game.Entities
             return true;
         }
 
+        public void SetActiveVehicle(Vehicle vehicle)
+        {
+            CurrentVehicle = vehicle;
+        }
+
         public override void WriteToPacket(CreateSimpleObjectPacket packet)
         {
             base.WriteToPacket(packet);
 
             if (packet is CreateCharacterPacket charPacket)
             {
-                charPacket.CurrentVehicleCoid = -1; // TODO
+                charPacket.CurrentVehicleCoid = CurrentVehicle?.ObjectId.Coid ?? -1;
                 charPacket.CurrentTrailerCoid = -1; // TODO
                 charPacket.HeadId = HeadId;
                 charPacket.BodyId = BodyId;

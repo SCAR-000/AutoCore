@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Linq;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -14,18 +10,122 @@ namespace AutoCore.Game.Entities
 
     public class Vehicle : SimpleObject
     {
+        #region Properties
         #region Database Vehicle Data
         private VehicleData DBData { get; set; }
         #endregion
 
-        public bool LoadFromDB(CharContext context, long coid)
+        public bool IsInCharacterSelection { get; }
+
+        public Armor Armor { get; private set; }
+        public PowerPlant PowerPlant { get; private set; }
+        public SimpleObject Ornament { get; private set; }
+        public SimpleObject RaceItem { get; private set; }
+        public Weapon WeaponMelee { get; private set; }
+        public Weapon WeaponFront { get; private set; }
+        public Weapon WeaponTurret { get; private set; }
+        public Weapon WeaponRear { get; private set; }
+        public WheelSet WheelSet { get; private set; }
+        #endregion
+
+        public Vehicle(bool isInCharacterSelection = false)
+            : base()
         {
+            IsInCharacterSelection = isInCharacterSelection;
+        }
+
+        public override bool LoadFromDB(CharContext context, long coid)
+        {
+            SetCoid(coid, true);
+
             DBData = context.Vehicles.Include(v => v.SimpleObjectBase).FirstOrDefault(v => v.Coid == coid);
 
             if (DBData == null)
                 return false;
 
             LoadCloneBase(DBData.SimpleObjectBase.CBID);
+
+            WheelSet = new WheelSet();
+            if (!WheelSet.LoadFromDB(context, DBData.Wheelset))
+            {
+                return false;
+            }
+
+            if (DBData.MeleeWeapon != 0)
+            {
+                WeaponMelee = new Weapon();
+                if (!WeaponMelee.LoadFromDB(context, DBData.MeleeWeapon))
+                {
+                    return false;
+                }
+            }
+
+            if (DBData.Front != 0)
+            {
+                WeaponFront = new Weapon();
+                if (!WeaponFront.LoadFromDB(context, DBData.Front))
+                {
+                    return false;
+                }
+            }
+
+            if (DBData.Turret != 0)
+            {
+                WeaponTurret = new Weapon();
+                if (!WeaponTurret.LoadFromDB(context, DBData.Turret))
+                {
+                    return false;
+                }
+            }
+
+            if (DBData.Rear != 0)
+            {
+                WeaponRear = new Weapon();
+                if (!WeaponRear.LoadFromDB(context, DBData.Rear))
+                {
+                    return false;
+                }
+            }
+
+            // Skip loading other unnecessary stuff from the DB, if we are displaying this Vehicle in the character selection
+            if (IsInCharacterSelection)
+                return true;
+
+            if (DBData.Armor != 0)
+            {
+                Armor = new Armor();
+                if (!Armor.LoadFromDB(context, DBData.Armor))
+                {
+                    return false;
+                }
+            }
+
+            if (DBData.Ornament != 0)
+            {
+                Ornament = new SimpleObject();
+                if (!Ornament.LoadFromDB(context, DBData.Ornament))
+                {
+                    return false;
+                }
+            }
+
+            if (DBData.RaceItem != 0)
+            {
+                RaceItem = new SimpleObject();
+                if (!RaceItem.LoadFromDB(context, DBData.RaceItem))
+                {
+                    return false;
+                }
+            }
+
+            if (DBData.PowerPlant != 0)
+            {
+                PowerPlant = new PowerPlant();
+                if (!PowerPlant.LoadFromDB(context, DBData.PowerPlant))
+                {
+                    return false;
+                }
+            }
 
             return true;
         }
@@ -68,6 +168,56 @@ namespace AutoCore.Game.Entities
                 vehiclePacket.Trim = DBData.Trim;
 
                 // TODO: sub-packets
+                if (Ornament != null)
+                {
+                    vehiclePacket.CreateOrnament = new CreateSimpleObjectPacket();
+                    Ornament.WriteToPacket(vehiclePacket.CreateOrnament);
+                }
+
+                if (RaceItem != null)
+                {
+                    vehiclePacket.CreateRaceItem = new CreateSimpleObjectPacket();
+                    RaceItem.WriteToPacket(vehiclePacket.CreateRaceItem);
+                }
+
+                if (PowerPlant != null)
+                {
+                    vehiclePacket.CreatePowerPlant = new CreatePowerPlantPacket();
+                    PowerPlant.WriteToPacket(vehiclePacket.CreatePowerPlant);
+                }
+
+                vehiclePacket.CreateWheelSet = new CreateWheelSetPacket();
+                WheelSet.WriteToPacket(vehiclePacket.CreateWheelSet);
+
+                if (Armor != null)
+                {
+                    vehiclePacket.CreateArmor = new CreateArmorPacket();
+                    Armor.WriteToPacket(vehiclePacket.CreateArmor);
+                }
+
+                if (WeaponMelee != null)
+                {
+                    vehiclePacket.CreateWeaponMelee = new CreateWeaponPacket();
+                    WeaponMelee.WriteToPacket(vehiclePacket.CreateWeaponMelee);
+                }
+
+                if (WeaponFront != null)
+                {
+                    vehiclePacket.CreateWeapons[0] = new CreateWeaponPacket();
+                    WeaponFront.WriteToPacket(vehiclePacket.CreateWeapons[0]);
+                }
+
+                if (WeaponTurret != null)
+                {
+                    vehiclePacket.CreateWeapons[1] = new CreateWeaponPacket();
+                    WeaponTurret.WriteToPacket(vehiclePacket.CreateWeapons[1]);
+                }
+
+                if (WeaponRear != null)
+                {
+                    vehiclePacket.CreateWeapons[2] = new CreateWeaponPacket();
+                    WeaponRear.WriteToPacket(vehiclePacket.CreateWeapons[2]);
+                }
 
                 vehiclePacket.CurrentPathId = 0;
                 vehiclePacket.ExtraPathId = 0;
@@ -77,8 +227,8 @@ namespace AutoCore.Game.Entities
                 vehiclePacket.TemplateId = 0;
                 vehiclePacket.MurdererCoid = 0;
                 vehiclePacket.WeaponsCBID[0] = 0;
-                vehiclePacket.WeaponsCBID[0] = 0;
-                vehiclePacket.WeaponsCBID[0] = 0;
+                vehiclePacket.WeaponsCBID[1] = 0;
+                vehiclePacket.WeaponsCBID[2] = 0;
                 vehiclePacket.Name = DBData.Name;
             }
 

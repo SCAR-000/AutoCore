@@ -7,8 +7,16 @@ using System.Threading.Tasks;
 
 namespace AutoCore.Game.Entities
 {
+    using Database.Char;
+    using Database.Char.Models;
+
     public class SimpleObject : ClonedObjectBase
     {
+        #region Properties
+        #region Database SimpleObject data
+        private SimpleObjectData DBData { get; set; }
+        #endregion
+
         protected int[] Prefixes { get; set; }
         protected int[] Gadgets { get; set; }
         protected short MaxGadgets { get; set; }
@@ -23,6 +31,7 @@ namespace AutoCore.Game.Entities
         protected byte SkillLevel2 { get; set; }
         protected byte SkillLevel3 { get; set; }
         protected bool AlreadyAssembled { get; set; }
+        #endregion
 
         public SimpleObject()
             : base()
@@ -39,6 +48,15 @@ namespace AutoCore.Game.Entities
             SkillLevel1 = 1;
             SkillLevel2 = 1;
             SkillLevel3 = 1;
+        }
+
+        public virtual bool LoadFromDB(CharContext context, long coid)
+        {
+            DBData = context.SimpleObjects.FirstOrDefault(so => so.Coid == coid);
+            if (DBData == null)
+                return false;
+
+            return true;
         }
 
         public override void WriteToPacket(CreateSimpleObjectPacket packet)

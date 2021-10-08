@@ -21,7 +21,6 @@ namespace AutoCore.Database.Char
 
         public CharContext()
         {
-
         }
 
         public static void InitializeConnectionString(string connectionString)
