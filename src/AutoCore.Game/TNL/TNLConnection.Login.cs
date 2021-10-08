@@ -34,7 +34,7 @@ namespace AutoCore.Game.TNL
 
             var (result, coid) = CharacterSelectionManager.CreateNewCharacter(this, packet);
 
-            SendGamePacket(new NewCharacterResponsePacket(result ? (uint)0x1000000 : 0x1, coid)); // 0x80000000
+            SendGamePacket(new NewCharacterResponsePacket(result ? 0x80000000 : 0x1, coid));
 
             if (result)
             {
