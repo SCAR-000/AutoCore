@@ -39,27 +39,62 @@ namespace AutoCore.Game.Managers
                 config = worldContext.ConfigNewCharacters.First(cnc => cnc.Race == cloneBaseCharacter.CharacterSpecific.Race && cnc.Class == cloneBaseCharacter.CharacterSpecific.Class);
             }
 
-            var charObj = new SimpleObjectData
+            var characterSimpleObject = new SimpleObjectData
             {
                 Type = (byte)CloneBaseObjectType.Character,
                 CBID = packet.CBID
             };
 
-            var vehObj = new SimpleObjectData
+            var vehicleSimpleObject = new SimpleObjectData
             {
                 Type = (byte)CloneBaseObjectType.Vehicle,
                 CBID = config.Vehicle
             };
 
-            context.SimpleObjects.Add(charObj);
-            context.SimpleObjects.Add(vehObj);
+            var wheelSetSimpleObject = new SimpleObjectData
+            {
+                Type = (byte)CloneBaseObjectType.WheelSet,
+                CBID = packet.WheelsetCBID
+            };
+
+            var powerPlantSimpleObject = new SimpleObjectData
+            {
+                Type = (byte)CloneBaseObjectType.PowerPlant,
+                CBID = config.PowerPlant
+            };
+
+            var armorSimpleObject = new SimpleObjectData
+            {
+                Type = (byte)CloneBaseObjectType.Armor,
+                CBID = config.Armor
+            };
+
+            var raceItemSimpleObject = new SimpleObjectData
+            {
+                Type = (byte)CloneBaseObjectType.RaceItem,
+                CBID = config.RaceItem
+            };
+
+            var turretSimpleObject = new SimpleObjectData
+            {
+                Type = (byte)CloneBaseObjectType.Weapon,
+                CBID = config.Weapon
+            };
+
+            context.SimpleObjects.Add(characterSimpleObject);
+            context.SimpleObjects.Add(vehicleSimpleObject);
+            context.SimpleObjects.Add(wheelSetSimpleObject);
+            context.SimpleObjects.Add(powerPlantSimpleObject);
+            context.SimpleObjects.Add(armorSimpleObject);
+            context.SimpleObjects.Add(raceItemSimpleObject);
+            context.SimpleObjects.Add(turretSimpleObject);
             context.SaveChanges();
 
             try
             {
                 var character = new CharacterData
                 {
-                    Coid = charObj.Coid,
+                    Coid = characterSimpleObject.Coid,
                     AccountId = client.Account.Id,
                     Name = packet.CharacterName,
                     HeadId = packet.HeadId,
@@ -83,8 +118,8 @@ namespace AutoCore.Game.Managers
 
                 var vehicle = new VehicleData
                 {
-                    Coid = vehObj.Coid,
-                    CharacterCoid = charObj.Coid,
+                    Coid = vehicleSimpleObject.Coid,
+                    CharacterCoid = characterSimpleObject.Coid,
                     Name = packet.VehicleName,
                     PositionX = 0.0f,
                     PositionY = 0.0f,
@@ -95,22 +130,32 @@ namespace AutoCore.Game.Managers
                     Rotation4 = 0.0f,
                     PrimaryColor = packet.VehiclePrimaryColor,
                     SecondaryColor = packet.VehicleSecondaryColor,
-                    Trim = packet.VehicleTrim
+                    Trim = packet.VehicleTrim,
+                    Wheelset = wheelSetSimpleObject.Coid,
+                    PowerPlant = powerPlantSimpleObject.Coid,
+                    Armor = armorSimpleObject.Coid,
+                    RaceItem = raceItemSimpleObject.Coid,
+                    Turret = turretSimpleObject.Coid
                 };
                 context.Vehicles.Add(vehicle);
                 context.SaveChanges();
 
-                character.ActiveVehicleCoid = vehObj.Coid;
+                character.ActiveVehicleCoid = vehicleSimpleObject.Coid;
                 context.SaveChanges();
             }
             catch
             {
-                context.SimpleObjects.Remove(charObj);
-                context.SimpleObjects.Remove(vehObj);
+                context.SimpleObjects.Remove(characterSimpleObject);
+                context.SimpleObjects.Remove(vehicleSimpleObject);
+                context.SimpleObjects.Remove(wheelSetSimpleObject);
+                context.SimpleObjects.Remove(powerPlantSimpleObject);
+                context.SimpleObjects.Remove(armorSimpleObject);
+                context.SimpleObjects.Remove(raceItemSimpleObject);
+                context.SimpleObjects.Remove(turretSimpleObject);
                 context.SaveChanges();
             }
 
-            return (true, charObj.Coid);
+            return (true, characterSimpleObject.Coid);
         }
 
         public static void SendCharacterList(TNLConnection client)
@@ -134,17 +179,19 @@ namespace AutoCore.Game.Managers
 
         private static void SendCharacter(TNLConnection client, CharContext context, long coid)
         {
-            var character = new Character(client);
+            var character = new Character(client, isInCharacterSelection: true);
             if (!character.LoadFromDB(context, coid))
             {
                 return;
             }
 
-            var vehicle = new Vehicle();
+            var vehicle = new Vehicle(isInCharacterSelection: true);
             if (!vehicle.LoadFromDB(context, character.ActiveVehicleCoid))
             {
                 return;
             }
+
+            character.SetActiveVehicle(vehicle);
 
             var createCharPacket = new CreateCharacterPacket();
             character.WriteToPacket(createCharPacket);
