@@ -41,14 +41,12 @@ namespace AutoCore.Game.Managers
 
             var charObj = new SimpleObjectData
             {
-                Coid = 0,
                 Type = (byte)CloneBaseObjectType.Character,
                 CBID = packet.CBID
             };
 
             var vehObj = new SimpleObjectData
             {
-                Coid = 0,
                 Type = (byte)CloneBaseObjectType.Vehicle,
                 CBID = config.Vehicle
             };
@@ -57,51 +55,60 @@ namespace AutoCore.Game.Managers
             context.SimpleObjects.Add(vehObj);
             context.SaveChanges();
 
-            var character = new CharacterData
+            try
             {
-                Coid = charObj.Coid,
-                AccountId = client.Account.Id,
-                Name = packet.CharacterName,
-                HeadId = packet.HeadId,
-                BodyId = packet.BodyId,
-                HeadDetail1 = packet.HeadDetail1,
-                HeadDetail2 = packet.HeadDetail2,
-                HelmetId = packet.HelmetId,
-                EyesId = packet.EyesId,
-                MouthId = packet.MouthId,
-                HairId = packet.HairId,
-                PrimaryColor = packet.PrimaryColor,
-                SecondaryColor = packet.SecondaryColor,
-                EyesColor = packet.EyesColor,
-                HairColor = packet.HairColor,
-                SkinColor = packet.SkinColor,
-                SpecialityColor = packet.SpecialityColor,
-                ScaleOffset = packet.ScaleOffset,
-                Level = 1
-            };
-            context.Characters.Add(character);
+                var character = new CharacterData
+                {
+                    Coid = charObj.Coid,
+                    AccountId = client.Account.Id,
+                    Name = packet.CharacterName,
+                    HeadId = packet.HeadId,
+                    BodyId = packet.BodyId,
+                    HeadDetail1 = packet.HeadDetail1,
+                    HeadDetail2 = packet.HeadDetail2,
+                    HelmetId = packet.HelmetId,
+                    EyesId = packet.EyesId,
+                    MouthId = packet.MouthId,
+                    HairId = packet.HairId,
+                    PrimaryColor = packet.PrimaryColor,
+                    SecondaryColor = packet.SecondaryColor,
+                    EyesColor = packet.EyesColor,
+                    HairColor = packet.HairColor,
+                    SkinColor = packet.SkinColor,
+                    SpecialityColor = packet.SpecialityColor,
+                    ScaleOffset = packet.ScaleOffset,
+                    Level = 1
+                };
+                context.Characters.Add(character);
 
-            var vehicle = new VehicleData
+                var vehicle = new VehicleData
+                {
+                    Coid = vehObj.Coid,
+                    CharacterCoid = charObj.Coid,
+                    Name = packet.VehicleName,
+                    PositionX = 0.0f,
+                    PositionY = 0.0f,
+                    PositionZ = 0.0f,
+                    Rotation1 = 0.0f,
+                    Rotation2 = 0.0f,
+                    Rotation3 = 0.0f,
+                    Rotation4 = 0.0f,
+                    PrimaryColor = packet.VehiclePrimaryColor,
+                    SecondaryColor = packet.VehicleSecondaryColor,
+                    Trim = packet.VehicleTrim
+                };
+                context.Vehicles.Add(vehicle);
+                context.SaveChanges();
+
+                character.ActiveVehicleCoid = vehObj.Coid;
+                context.SaveChanges();
+            }
+            catch
             {
-                Coid = vehObj.Coid,
-                CharacterCoid = charObj.Coid,
-                Name = packet.VehicleName,
-                PositionX = 0.0f,
-                PositionY = 0.0f,
-                PositionZ = 0.0f,
-                Rotation1 = 0.0f,
-                Rotation2 = 0.0f,
-                Rotation3 = 0.0f,
-                Rotation4 = 0.0f,
-                PrimaryColor = packet.VehiclePrimaryColor,
-                SecondaryColor = packet.VehicleSecondaryColor,
-                Trim = packet.VehicleTrim
-            };
-            context.Vehicles.Add(vehicle);
-            context.SaveChanges();
-
-            character.ActiveVehicleCoid = vehicle.Coid;
-            context.SaveChanges();
+                context.SimpleObjects.Remove(charObj);
+                context.SimpleObjects.Remove(vehObj);
+                context.SaveChanges();
+            }
 
             return (true, charObj.Coid);
         }
@@ -128,10 +135,16 @@ namespace AutoCore.Game.Managers
         private static void SendCharacter(TNLConnection client, CharContext context, long coid)
         {
             var character = new Character(client);
-            character.LoadFromDB(context, coid);
+            if (!character.LoadFromDB(context, coid))
+            {
+                return;
+            }
 
             var vehicle = new Vehicle();
-            vehicle.LoadFromDB(context, character.CharacterDBData.ActiveVehicleId);
+            if (!vehicle.LoadFromDB(context, character.ActiveVehicleCoid))
+            {
+                return;
+            }
 
             var createCharPacket = new CreateCharacterPacket();
             character.WriteToPacket(createCharPacket);
