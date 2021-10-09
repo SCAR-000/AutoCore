@@ -185,20 +185,20 @@ namespace AutoCore.Game.Managers
                 return;
             }
 
-            var vehicle = new Vehicle(isInCharacterSelection: true);
-            if (!vehicle.LoadFromDB(context, character.ActiveVehicleCoid))
-            {
-                return;
-            }
+            //var vehicle = new Vehicle(isInCharacterSelection: true);
+            //if (!vehicle.LoadFromDB(context, character.ActiveVehicleCoid))
+            //{
+            //    return;
+            //}
 
             var createCharPacket = new CreateCharacterPacket();
             character.WriteToPacket(createCharPacket);
 
-            var createVehiclePacket = new CreateVehiclePacket();
-            vehicle.WriteToPacket(createVehiclePacket);
+            //var createVehiclePacket = new CreateVehiclePacket();
+            //vehicle.WriteToPacket(createVehiclePacket);
 
             client.SendGamePacket(createCharPacket);
-            client.SendGamePacket(createVehiclePacket);
+            //client.SendGamePacket(createVehiclePacket);
         }
     }
 }
