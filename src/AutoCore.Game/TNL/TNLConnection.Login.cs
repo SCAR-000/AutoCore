@@ -43,7 +43,15 @@ namespace AutoCore.Game.TNL
             }
         }
 
-        private void HandleGlobalLogin(BinaryReader reader)
+        private void HandleDeleteCharacterPacket(BinaryReader reader)
+        {
+            var packet = new DeleteCharacterPacket();
+            packet.Read(reader);
+
+            var result = CharacterSelectionManager.DeleteCharacter(this, packet.CharacterCoid);
+        }
+
+        private void HandleGlobalLoginPacket(BinaryReader reader)
         {
             var packet = new LoginPacket();
             packet.Read(reader);

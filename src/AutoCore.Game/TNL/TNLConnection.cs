@@ -178,7 +178,7 @@ namespace AutoCore.Game.TNL
                         break;
 
                     case GameOpcode.LoginDeleteCharacter:
-                        //HandleDeleteCharacter(reader);
+                        HandleDeleteCharacterPacket(reader);
                         break;
 
                     case GameOpcode.News:
@@ -186,7 +186,7 @@ namespace AutoCore.Game.TNL
                         break;
 
                     case GameOpcode.Login:
-                        HandleGlobalLogin(reader);
+                        HandleGlobalLoginPacket(reader);
                         break;
 
                     case GameOpcode.Disconnect:

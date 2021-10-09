@@ -28,6 +28,7 @@ namespace AutoCore.Database.Char.Models
         public uint SpecialityColor { get; set; }
         public float ScaleOffset { get; set; }
         public byte Level { get; set; }
+        public bool Deleted { get; set; }
 
         [ForeignKey("Coid")]
         public SimpleObjectData SimpleObjectBase { get; set; }
@@ -43,7 +44,6 @@ namespace AutoCore.Database.Char.Models
 
         public CharacterData()
         {
-            Coid = -1;
             Name = "";
             BodyId = -1;
             HeadId = -1;
