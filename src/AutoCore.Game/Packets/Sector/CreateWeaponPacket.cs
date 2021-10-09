@@ -34,6 +34,8 @@ namespace AutoCore.Game.Packets.Sector
 
         public override void Write(BinaryWriter writer)
         {
+            base.Write(writer);
+
             writer.Write(VarianceRange);
             writer.Write(VarianceRefireRate);
             writer.Write(VarianceDamageMinimum);

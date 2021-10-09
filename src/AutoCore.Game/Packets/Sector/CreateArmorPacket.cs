@@ -23,6 +23,8 @@ namespace AutoCore.Game.Packets.Sector
 
         public override void Write(BinaryWriter writer)
         {
+            base.Write(writer);
+
             ArmorSpecific.Write(writer);
 
             writer.Write(Mass);
