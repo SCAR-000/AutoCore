@@ -10,12 +10,13 @@ namespace AutoCore.Database.World
     {
         public static string ConnectionString { get; private set; }
 
-        public DbSet<ExperienceLevel> ExperienceLevels { get; set; }
         public DbSet<ConfigNewCharacter> ConfigNewCharacters { get; set; }
+        public DbSet<ContinentArea> ContinentAreas { get; set; }
+        public DbSet<ContinentObject> ContinentObjects { get; set; }
+        public DbSet<ExperienceLevel> ExperienceLevels { get; set; }
 
         public WorldContext()
         {
-
         }
 
         public static void InitializeConnectionString(string connectionString)
@@ -36,6 +37,7 @@ namespace AutoCore.Database.World
             base.OnModelCreating(modelBuilder);
 
             modelBuilder.Entity<ConfigNewCharacter>().HasKey(cnc => new { cnc.Race, cnc.Class });
+            modelBuilder.Entity<ContinentArea>().HasKey(ca => new { ca.ContinentObjectId, ca.Area });
         }
     }
 }
