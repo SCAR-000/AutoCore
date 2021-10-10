@@ -6,8 +6,6 @@ namespace AutoCore.Game.Managers
     using Constants;
     using Database.Char;
     using Database.Char.Models;
-    using Database.World;
-    using Database.World.Models;
     using Entities;
     using Packets.Login;
     using Packets.Sector;
@@ -30,12 +28,9 @@ namespace AutoCore.Game.Managers
             if (cloneBaseCharacter == null)
                 return (false, -1);
 
-            ConfigNewCharacter config;
-
-            using (var worldContext = new WorldContext())
-            {
-                config = worldContext.ConfigNewCharacters.First(cnc => cnc.Race == cloneBaseCharacter.CharacterSpecific.Race && cnc.Class == cloneBaseCharacter.CharacterSpecific.Class);
-            }
+            var configNewCharacter = AssetManager.Instance.Get(cloneBaseCharacter.CharacterSpecific.Race, cloneBaseCharacter.CharacterSpecific.Class);
+            if (configNewCharacter == null)
+                return (false, -1);
 
             var characterSimpleObject = new SimpleObjectData
             {
@@ -46,7 +41,7 @@ namespace AutoCore.Game.Managers
             var vehicleSimpleObject = new SimpleObjectData
             {
                 Type = (byte)CloneBaseObjectType.Vehicle,
-                CBID = config.Vehicle
+                CBID = configNewCharacter.Vehicle
             };
 
             var wheelSetSimpleObject = new SimpleObjectData
@@ -58,25 +53,25 @@ namespace AutoCore.Game.Managers
             var powerPlantSimpleObject = new SimpleObjectData
             {
                 Type = (byte)CloneBaseObjectType.PowerPlant,
-                CBID = config.PowerPlant
+                CBID = configNewCharacter.PowerPlant
             };
 
             var armorSimpleObject = new SimpleObjectData
             {
                 Type = (byte)CloneBaseObjectType.Armor,
-                CBID = config.Armor
+                CBID = configNewCharacter.Armor
             };
 
             var raceItemSimpleObject = new SimpleObjectData
             {
                 Type = (byte)CloneBaseObjectType.RaceItem,
-                CBID = config.RaceItem
+                CBID = configNewCharacter.RaceItem
             };
 
             var turretSimpleObject = new SimpleObjectData
             {
                 Type = (byte)CloneBaseObjectType.Weapon,
-                CBID = config.Weapon
+                CBID = configNewCharacter.Weapon
             };
 
             context.SimpleObjects.Add(characterSimpleObject);
