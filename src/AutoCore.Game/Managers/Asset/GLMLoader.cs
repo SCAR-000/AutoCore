@@ -28,8 +28,6 @@ namespace AutoCore.Game.Managers.Asset
 
         public bool LoadInternal(string directoryPath)
         {
-            Logger.WriteLog(LogType.Initialize, "Loading GLM files...");
-
             Directory.GetFiles(directoryPath, "*.glm", SearchOption.TopDirectoryOnly).ToList().ForEach(ReadGLMFile);
 
             Logger.WriteLog(LogType.Initialize, $"Loaded {FileEntries.Count} GLM files with {FileEntries.Sum(f => f.Value.FileEntries.Count)} file entries!");

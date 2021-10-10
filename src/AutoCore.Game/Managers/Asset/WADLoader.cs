@@ -43,8 +43,6 @@ namespace AutoCore.Game.Managers.Asset
             if (version != 27)
                 return false;
 
-            Logger.WriteLog(LogType.Initialize, "Loading CloneBases...");
-
             var objectCount = reader.ReadUInt32();
             for (var i = 0U; i < objectCount; ++i)
             {
@@ -73,7 +71,6 @@ namespace AutoCore.Game.Managers.Asset
             }
 
             Logger.WriteLog(LogType.Initialize, $"Loaded {objectCount} CloneBases!");
-            Logger.WriteLog(LogType.Initialize, "Loading Missions...");
 
             var missionCount = reader.ReadUInt32();
             for (var i = 0U; i < missionCount; ++i)
@@ -84,7 +81,6 @@ namespace AutoCore.Game.Managers.Asset
             }
 
             Logger.WriteLog(LogType.Initialize, $"Loaded {missionCount} Missions!");
-            Logger.WriteLog(LogType.Initialize, "Loading Skills...");
 
             var skillCount = reader.ReadUInt32();
             for (var i = 0U; i < skillCount; ++i)
@@ -95,7 +91,6 @@ namespace AutoCore.Game.Managers.Asset
             }
 
             Logger.WriteLog(LogType.Initialize, $"Loaded {skillCount} Skills!");
-            Logger.WriteLog(LogType.Initialize, "Loading Armor prefixes...");
 
             var armorPrefCount = reader.ReadInt32();
             for (var i = 0; i < armorPrefCount; ++i)
@@ -106,7 +101,6 @@ namespace AutoCore.Game.Managers.Asset
             }
 
             Logger.WriteLog(LogType.Initialize, $"Loaded {armorPrefCount} Armor prefixes!");
-            Logger.WriteLog(LogType.Initialize, "Loading Power Plant prefixes...");
 
             var powerPlantPrefCount = reader.ReadInt32();
             for (var i = 0; i < powerPlantPrefCount; ++i)
@@ -117,7 +111,6 @@ namespace AutoCore.Game.Managers.Asset
             }
 
             Logger.WriteLog(LogType.Initialize, $"Loaded {powerPlantPrefCount} Power Plant prefixes!");
-            Logger.WriteLog(LogType.Initialize, "Loading Weapon prefixes...");
 
             var weaponPrefCount = reader.ReadInt32();
             for (var i = 0; i < weaponPrefCount; ++i)
@@ -128,7 +121,6 @@ namespace AutoCore.Game.Managers.Asset
             }
 
             Logger.WriteLog(LogType.Initialize, $"Loaded {weaponPrefCount} Weapon prefixes!");
-            Logger.WriteLog(LogType.Initialize, "Loading Vehicle prefixes...");
 
             var vehiclePrefCount = reader.ReadInt32();
             for (var i = 0; i < vehiclePrefCount; ++i)
@@ -139,7 +131,6 @@ namespace AutoCore.Game.Managers.Asset
             }
 
             Logger.WriteLog(LogType.Initialize, $"Loaded {vehiclePrefCount} Vehicle prefixes!");
-            Logger.WriteLog(LogType.Initialize, "Loading Ornament prefixes...");
 
             var ornamentPrefCount = reader.ReadInt32();
             for (var i = 0; i < ornamentPrefCount; ++i)
@@ -150,7 +141,6 @@ namespace AutoCore.Game.Managers.Asset
             }
 
             Logger.WriteLog(LogType.Initialize, $"Loaded {ornamentPrefCount} Ornament prefixes!");
-            Logger.WriteLog(LogType.Initialize, "Loading Race Item prefixes...");
 
             var raceItemPrefCount = reader.ReadInt32();
             for (var i = 0U; i < raceItemPrefCount; ++i)
