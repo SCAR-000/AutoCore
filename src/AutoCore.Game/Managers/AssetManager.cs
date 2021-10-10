@@ -10,6 +10,7 @@ namespace AutoCore.Game.Managers
     using Asset;
     using CloneBases;
     using Constants;
+    using Database.World.Models;
     using Utils;
     using Utils.Memory;
 
@@ -19,6 +20,7 @@ namespace AutoCore.Game.Managers
         private WADLoader WADLoader { get; } = new();
         private GLMLoader GLMLoader { get; } = new();
         private MapDataLoader MapDataLoader { get; } = new();
+        private WorldDBLoader WorldDBLoader { get; } = new();
 
         public string GamePath { get; private set; }
         public ServerType ServerType { get; private set; }
@@ -45,13 +47,32 @@ namespace AutoCore.Game.Managers
             if (DataLoaded)
                 return false;
 
-            if (!WADLoader.Load(Path.Combine(GamePath, "clonebase.wad")))
-                return false;
+            var loadWadTask = Task<bool>.Factory.StartNew(() =>
+            {
+                return WADLoader.Load(Path.Combine(GamePath, "clonebase.wad"));
+            });
 
-            if (!GLMLoader.Load(GamePath))
-                return false;
+            var loadGLMTask = Task<bool>.Factory.StartNew(() =>
+            {
+                return GLMLoader.Load(GamePath);
+            });
 
-            if (!MapDataLoader.Load())
+            var loadWorldDBTask = Task<bool>.Factory.StartNew(() =>
+            {
+                return WorldDBLoader.Load();
+            });
+
+            var loadMapDataTask = Task.WhenAll(loadGLMTask, loadWorldDBTask).ContinueWith((previousValues) =>
+            {
+                if (previousValues.Result.Any(r => !r))
+                    return false;
+
+                return MapDataLoader.Load();
+            });
+
+            Task.WaitAll(loadWadTask, loadGLMTask, loadWorldDBTask, loadMapDataTask);
+
+            if (!loadWadTask.Result || !loadGLMTask.Result || !loadWorldDBTask.Result || !loadMapDataTask.Result)
                 return false;
 
             DataLoaded = true;
@@ -78,6 +99,24 @@ namespace AutoCore.Game.Managers
         #endregion
 
         #region GLM
+        #endregion
+
+        #region WorldDB
+        #region Global
+        public ConfigNewCharacter Get(byte characterRace, byte characterClass)
+        {
+            if (ServerType != ServerType.Global)
+                throw new Exception("Invalid server type!");
+
+            if (WorldDBLoader.ConfigNewCharacters.TryGetValue(Tuple.Create(characterRace, characterClass), out var result))
+                return result;
+
+            return null;
+        }
+        #endregion
+
+        #region Sector
+        #endregion
         #endregion
     }
 }
