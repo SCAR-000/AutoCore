@@ -150,18 +150,16 @@ namespace AutoCore.Game.Managers
             return (true, characterSimpleObject.Coid);
         }
 
-        public static bool DeleteCharacter(TNLConnection client, long coid)
+        public static void DeleteCharacter(TNLConnection client, long coid)
         {
             using var context = new CharContext();
 
             var characterData = context.Characters.FirstOrDefault(c => c.AccountId == client.Account.Id && c.Coid == coid && c.Deleted == false);
-            if (characterData == null)
-                return false;
-
-            characterData.Deleted = true;
-            context.SaveChanges();
-
-            return true;
+            if (characterData != null)
+            {
+                characterData.Deleted = true;
+                context.SaveChanges();
+            }
         }
 
         public static void SendCharacterList(TNLConnection client)

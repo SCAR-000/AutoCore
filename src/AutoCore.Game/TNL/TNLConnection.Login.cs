@@ -48,7 +48,7 @@ namespace AutoCore.Game.TNL
             var packet = new DeleteCharacterPacket();
             packet.Read(reader);
 
-            var result = CharacterSelectionManager.DeleteCharacter(this, packet.CharacterCoid);
+            CharacterSelectionManager.DeleteCharacter(this, packet.CharacterCoid);
         }
 
         private void HandleGlobalLoginPacket(BinaryReader reader)

@@ -104,10 +104,10 @@ namespace AutoCore.Game.Entities
                 charPacket.CharacterScaleOffset = DBData.ScaleOffset;
             }
 
-            if (packet is CreateCharacterExtendedPacket extendedCharPacket)
-            {
+            //if (packet is CreateCharacterExtendedPacket extendedCharPacket)
+            //{
                 // TODO
-            }
+            //}
         }
     }
 }

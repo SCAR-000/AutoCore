@@ -20,10 +20,12 @@ namespace AutoCore.Game.TNL
     public partial class TNLConnection : GhostConnection
     {
         private static NetClassRepInstance<TNLConnection> _dynClassRep;
+#pragma warning disable IDE0052 // Remove unread private members
         private static NetConnectionRep _connRep;
+#pragma warning restore IDE0052 // Remove unread private members
 
         private uint _key;
-        private uint _oneTimeKey;
+        //private uint _oneTimeKey;
         private long _playerCOID;
         private ushort _fragmentCounter;
 
@@ -49,7 +51,7 @@ namespace AutoCore.Game.TNL
         public TNLConnection()
         {
             _key = 0U;
-            _oneTimeKey = 0U;
+            //_oneTimeKey = 0U;
             _playerCOID = 0L;
             _fragmentCounter = 1;
 

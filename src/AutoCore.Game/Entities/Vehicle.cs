@@ -231,9 +231,10 @@ namespace AutoCore.Game.Entities
                 vehiclePacket.Name = DBData.Name;
             }
 
-            if (packet is CreateVehicleExtendedPacket extendedPacket)
-            {
-            }
+            //if (packet is CreateVehicleExtendedPacket extendedPacket)
+            //{
+            //    // TODO
+            //}
         }
     }
 }
