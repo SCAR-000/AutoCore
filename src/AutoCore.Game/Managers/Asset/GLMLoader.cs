@@ -8,30 +8,46 @@ using System.Threading.Tasks;
 namespace AutoCore.Game.Managers.Asset
 {
     using Utils;
+    using Utils.Memory;
 
     public class GLMLoader
     {
-        private Dictionary<string, GLMEntry> FileEntries { get; } = new();
+        private Dictionary<string, GLMEntry> GLMEntries { get; } = new();
 
         public bool Load(string directoryPath)
         {
             try
             {
-                return LoadInternal(directoryPath);
+                Directory.GetFiles(directoryPath, "*.glm", SearchOption.TopDirectoryOnly).ToList().ForEach(ReadGLMFile);
+
+                Logger.WriteLog(LogType.Initialize, $"Loaded {GLMEntries.Count} GLM files with {GLMEntries.Sum(f => f.Value.FileEntries.Count)} file entries!");
+
+                return true;
             }
             catch (Exception e)
             {
                 Logger.WriteLog(LogType.Error, $"Encountered exception while loading GLM files: {e}");
-                return false;
             }
+
+            return false;
         }
 
-        public bool LoadInternal(string directoryPath)
+        public BinaryReader GetReader(string fileName)
         {
-            Directory.GetFiles(directoryPath, "*.glm", SearchOption.TopDirectoryOnly).ToList().ForEach(ReadGLMFile);
+            foreach (var glmEntry in GLMEntries)
+            {
+                if (glmEntry.Value.FileEntries.TryGetValue(fileName, out var fileEntry))
+                {
+                    var dataStream = new ArrayPoolMemoryStream(fileEntry.Size);
 
-            Logger.WriteLog(LogType.Initialize, $"Loaded {FileEntries.Count} GLM files with {FileEntries.Sum(f => f.Value.FileEntries.Count)} file entries!");
-            return true;
+                    glmEntry.Value.FileStream.Seek(fileEntry.Offset, SeekOrigin.Begin);
+                    glmEntry.Value.FileStream.Read(dataStream.Data, 0, fileEntry.Size);
+
+                    return new BinaryReader(dataStream, Encoding.UTF8, false);
+                }    
+            }
+
+            return null;
         }
 
         private void ReadGLMFile(string filePath)
@@ -83,7 +99,7 @@ namespace AutoCore.Game.Managers.Asset
                 glmEntry.FileEntries.Add(entry.Name, entry);
             }
 
-            FileEntries.Add(glmEntry.Name, glmEntry);
+            GLMEntries.Add(glmEntry.Name, glmEntry);
         }
 
         private static List<FileEntry> CreateEntriesByStringTable(IEnumerable<byte> data)

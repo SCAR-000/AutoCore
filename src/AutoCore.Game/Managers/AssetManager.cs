@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace AutoCore.Game.Managers
@@ -11,6 +10,7 @@ namespace AutoCore.Game.Managers
     using CloneBases;
     using Constants;
     using Database.World.Models;
+    using Map;
     using Utils;
     using Utils.Memory;
 
@@ -99,10 +99,36 @@ namespace AutoCore.Game.Managers
         #endregion
 
         #region GLM
+        public BinaryReader GetFileReader(string fileName)
+        {
+            return GLMLoader.GetReader(fileName);
+        }
         #endregion
 
         #region WorldDB
-        #region Global
+
+        public ContinentObject GetContinentObject(int continentObjectId)
+        {
+            if (WorldDBLoader.ContinentObjects.TryGetValue(continentObjectId, out var result))
+                return result;
+
+            return null;
+        }
+
+        public IEnumerable<int> GetContinetObjectIds()
+        {
+            return WorldDBLoader.ContinentObjects.Select(co => co.Key);
+        }
+
+        public MapData GetMapData(int mapId)
+        {
+            if (MapDataLoader.MapDatas.TryGetValue(mapId, out var result))
+                return result;
+
+            return null;
+        }
+
+        #region Global only
         public ConfigNewCharacter Get(byte characterRace, byte characterClass)
         {
             if (ServerType != ServerType.Global)
@@ -115,7 +141,7 @@ namespace AutoCore.Game.Managers
         }
         #endregion
 
-        #region Sector
+        #region Sector only
         #endregion
         #endregion
     }

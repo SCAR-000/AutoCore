@@ -48,5 +48,15 @@ namespace AutoCore.Utils.Extensions
 
             return result;
         }
+
+        public static T[] ReadConstArray<T>(this BinaryReader reader, int count, Func<BinaryReader, T> readerFunction) where T : new()
+        {
+            var result = new T[count];
+
+            for (var i = 0; i < count; ++i)
+                result[i] = readerFunction(reader);
+
+            return result;
+        }
     }
 }
