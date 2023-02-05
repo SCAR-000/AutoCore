@@ -214,7 +214,6 @@ public class AuthClient
             ClientOpcode.Logout        => new LogoutPacket(),
             ClientOpcode.ServerListExt => new ServerListExtPacket(),
             ClientOpcode.SCCheck       => new SCCheckPacket(),
-
             _ => throw new ArgumentOutOfRangeException(nameof(opcode)),
         };
     }

@@ -9,6 +9,7 @@ using AutoCore.Utils.Networking;
 using AutoCore.Utils.Packets;
 using AutoCore.Communicator.Packets;
 using AutoCore.Utils.Memory;
+using System.Text;
 
 public enum CommunicatorType
 {
@@ -97,12 +98,12 @@ public class Communicator
         Socket.Start();
     }
 
-    public void Start(IPAddress address, int port, int backlog = 0)
+    public void Start(IPAddress address, int port, int backlog = int.MaxValue)
     {
         switch (Type)
         {
             case CommunicatorType.Server:
-                Socket.StartListening(new IPEndPoint(address, port));
+                Socket.StartListening(new IPEndPoint(address, port), backlog);
                 break;
 
             case CommunicatorType.Client:
@@ -161,11 +162,9 @@ public class Communicator
 
     private void OnSocketReceive(NonContiguousMemoryStream incomingStream, int length)
     {
-        var buffer = ArrayPool<byte>.Shared.Rent(length);
+        var startPosition = incomingStream.Position;
 
-        incomingStream.Read(buffer, 0, length);
-
-        using var br = new BinaryReader(new MemoryStream(buffer, 0, length, false));
+        using var br = new BinaryReader(incomingStream, Encoding.UTF8, true);
 
         var opcode = (CommunicatorOpcode)br.ReadByte();
 
@@ -177,13 +176,13 @@ public class Communicator
             CommunicatorOpcode.RedirectResponse   => new RedirectResponsePacket(),
             CommunicatorOpcode.ServerInfoRequest  => new ServerInfoRequestPacket(),
             CommunicatorOpcode.ServerInfoResponse => new ServerInfoResponsePacket(),
-
             _ => throw new Exception("Invalid opcode found in the Communicator's OnSocketReceive!")
         };
 
         packet.Read(br);
 
-        ArrayPool<byte>.Shared.Return(buffer);
+        if (startPosition + length != incomingStream.Position)
+            throw new Exception($"Over or under read of the incoming packet! Start position: {startPosition} | Length: {length} | Ending position: {incomingStream.Position}");
 
         switch (opcode)
         {
@@ -294,11 +293,9 @@ public class Communicator
             }
 
             Logger.WriteLog(LogType.Error, $"Communicator(Type = {Type}) was requested for redirection for an unknown server!");
-            return;
         }
-
-        Logger.WriteLog(LogType.Error, $"Communicator(Type = {Type}) can not request redirection!");
-        return;
+        else
+            Logger.WriteLog(LogType.Error, $"Communicator(Type = {Type}) can not request redirection!");
     }
     #endregion
 
