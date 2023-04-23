@@ -16,7 +16,7 @@ public class TNLInterface : NetInterface
     public Dictionary<long, TNLConnection> MapConnections { get; } = new();
     public Dictionary<long, GhostObject> Ghosts { get; } = new();
 
-    public static void RegisterNetClassReps()
+    static TNLInterface()
     {
         GhostObject.RegisterNetClassReps();
         GhostCreature.RegisterNetClassReps();

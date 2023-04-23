@@ -1,15 +1,12 @@
-﻿namespace AutoCore.Global.Config;
+﻿namespace AutoCore.Sector.Config;
 
 using AutoCore.Utils;
 
-public class GlobalConfig
+public class SectorConfig
 {
     public GameConfig GameConfig { get; set; } = new();
-    public string CommunicatorAddress { get; set; } = string.Empty;
-    public int CommunicatorPort { get; set; }
     public string CharDatabaseConnectionString { get; set; } = string.Empty;
     public string WorldDatabaseConnectionString { get; set; } = string.Empty;
     public string GamePath { get; set; } = string.Empty;
     public Logger.LoggerConfig LoggerConfig { get; set; } = new();
-    public ServerInfoConfig ServerInfoConfig { get; set; } = new();
 }

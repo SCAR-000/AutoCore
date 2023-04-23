@@ -1,9 +1,70 @@
-﻿namespace AutoCore.Sector;
+﻿using System.Diagnostics;
 
-public class Program
+namespace AutoCore.Sector;
+
+using AutoCore.Database.Char;
+using AutoCore.Database.World;
+using AutoCore.Game.Constants;
+using AutoCore.Game.Managers;
+using AutoCore.Sector.Config;
+using AutoCore.Sector.Network;
+using AutoCore.Utils;
+using Microsoft.Extensions.Configuration;
+
+public class Program : ExitableProgram
 {
-    public static void Main(string[] args)
+    private static SectorServer Server { get; } = new();
+
+    public static void Main()
     {
-        Console.WriteLine("Hello World!");
+        Initialize(ExitHandlerProc);
+
+        var builder = new ConfigurationBuilder()
+            .AddJsonFile("appsettings.json")
+            .AddJsonFile("appsettings.env.json", true);
+
+        var config = new SectorConfig();
+        var configRoot = builder.Build();
+        configRoot.Bind(config);
+
+        CharContext.InitializeConnectionString(config.CharDatabaseConnectionString);
+        WorldContext.InitializeConnectionString(config.WorldDatabaseConnectionString);
+
+        Server.InitConsole();
+        Server.Setup(config);
+
+        if (!AssetManager.Instance.Initialize(config.GamePath, ServerType.Sector))
+            throw new Exception("Unable to load assets!");
+
+        if (!MapManager.Instance.Initialize())
+            throw new Exception("Unable to load maps!");
+
+        AssetManager.Instance.LoadAllData();
+
+        if (!Server.Start())
+        {
+            Logger.WriteLog(LogType.Error, "Unable to start the server!");
+
+            return;
+        }
+
+        Server.ProcessCommands();
+
+        GC.Collect();
+
+        Process.GetCurrentProcess().WaitForExit();
+    }
+
+    private static bool ExitHandlerProc(byte sig)
+    {
+        Logger.WriteLog(LogType.Error, "Shutting down the server...");
+
+        Server.Shutdown();
+
+        Logger.WriteLog(LogType.Error, "Server shutdown completed!");
+
+        Logger.WriteLog(LogType.Error, "Press any key to exit...");
+
+        return false;
     }
 }

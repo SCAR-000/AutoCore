@@ -2,6 +2,7 @@
 
 public enum ServerType
 {
-    Global = 0,
-    Sector = 1
+    Global,
+    Sector,
+    Both
 }

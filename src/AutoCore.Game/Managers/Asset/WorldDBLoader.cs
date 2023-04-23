@@ -17,12 +17,12 @@ public class WorldDBLoader
         {
             ContinentObjects = worldContext.ContinentObjects.ToDictionary(co => co.Id);
 
-            if (AssetManager.Instance.ServerType == ServerType.Global)
+            if (AssetManager.Instance.ServerType == ServerType.Global || AssetManager.Instance.ServerType == ServerType.Both)
             {
                 ConfigNewCharacters = worldContext.ConfigNewCharacters.ToDictionary(cnc => Tuple.Create(cnc.Race, cnc.Class));
             }
 
-            if (AssetManager.Instance.ServerType == ServerType.Sector)
+            if (AssetManager.Instance.ServerType == ServerType.Sector || AssetManager.Instance.ServerType == ServerType.Both)
             {
                 ContinentAreas = worldContext.ContinentAreas.ToDictionary(ca => Tuple.Create(ca.ContinentObjectId, ca.Area));
                 ExperienceLevels = worldContext.ExperienceLevels.ToDictionary(el => el.Level);

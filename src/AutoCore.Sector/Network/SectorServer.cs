@@ -1,44 +1,38 @@
-﻿using System.Net;
+﻿namespace AutoCore.Sector.Network;
 
-namespace AutoCore.Global.Network;
-
-using AutoCore.Communicator;
-using AutoCore.Global.Config;
+using AutoCore.Game.Constants;
 using AutoCore.Game.Managers;
 using AutoCore.Game.TNL;
+using AutoCore.Sector.Config;
 using AutoCore.Utils;
-using AutoCore.Utils.Commands;
 using AutoCore.Utils.Server;
 using AutoCore.Utils.Threading;
 using AutoCore.Utils.Timer;
+using System.Net;
 
-public partial class GlobalServer : BaseServer, ILoopable
+public partial class SectorServer : BaseServer, ILoopable
 {
     public const int MainLoopTime = 100; // Milliseconds
-    public const int SendBufferSize = 512;
 
-    public GlobalConfig Config { get; private set; } = new();
+    public SectorConfig Config { get; private set; } = new();
     public IPAddress PublicAddress { get; private set; }
-    public Communicator AuthCommunicator { get; } = new(CommunicatorType.Client);
     public MainLoop Loop { get; }
     public Timer Timer { get; } = new();
     public override bool IsRunning => Loop != null && Loop.Running;
     public TNLInterface Interface { get; private set; }
     private readonly object _interfaceLock = new();
 
-    public GlobalServer()
-        : base("Global")
+    public SectorServer()
+        : base("Sector")
     {
         Loop = new MainLoop(this, MainLoopTime);
 
-        CommandProcessor.RegisterCommand("exit", ProcessExitCommand);
+        RegisterCommands();
     }
 
-    ~GlobalServer() => Shutdown();
-
-    public void Setup(GlobalConfig config)
+    public void Setup(SectorConfig config)
     {
-        Logger.WriteLog(LogType.Initialize, "Setting up the Global server...");
+        Logger.WriteLog(LogType.Initialize, "Setting up the Sector server...");
 
         if (config != null)
             Config = config;
@@ -49,7 +43,7 @@ public partial class GlobalServer : BaseServer, ILoopable
         Logger.WriteLog(LogType.Initialize, "Initializing the network...");
         PublicAddress = IPAddress.Parse(Config.GameConfig.PublicAddress);
 
-        Logger.WriteLog(LogType.Initialize, "The Global server has been setup!");
+        Logger.WriteLog(LogType.Initialize, "The Sector server has been setup!");
     }
 
     public void MainLoop(long delta)
@@ -67,8 +61,6 @@ public partial class GlobalServer : BaseServer, ILoopable
             Interface.CheckIncomingPackets();
             Interface.ProcessConnections();
         }
-
-        LoginManager.Instance.Update(delta);
     }
 
     public bool Start()
@@ -80,15 +72,7 @@ public partial class GlobalServer : BaseServer, ILoopable
             return false;
         }
 
-        if (Config.CommunicatorPort == 0 || Config.CommunicatorAddress == null)
-        {
-            Logger.WriteLog(LogType.Error, "Invalid Communicator config data! Can't connect!");
-            return false;
-        }
-
         Loop.Start();
-
-        ConnectCommunicator();
 
         Logger.WriteLog(LogType.Network, "*** Listening for clients on port {0}", Config.GameConfig.Port);
 
@@ -98,8 +82,6 @@ public partial class GlobalServer : BaseServer, ILoopable
     public void Shutdown()
     {
         Logger.WriteLog(LogType.None, "Shutting down the server...");
-
-        CloseCommunicator();
 
         lock (_interfaceLock)
         {

@@ -4,6 +4,8 @@ namespace AutoCore.Global;
 
 using AutoCore.Database.Char;
 using AutoCore.Database.World;
+using AutoCore.Game.Constants;
+using AutoCore.Game.Managers;
 using AutoCore.Global.Config;
 using AutoCore.Global.Network;
 using AutoCore.Utils;
@@ -11,7 +13,7 @@ using Microsoft.Extensions.Configuration;
 
 public class Program : ExitableProgram
 {
-    private static GlobalServer Server { get; set; }
+    private static GlobalServer Server { get; } = new();
 
     public static void Main()
     {
@@ -28,9 +30,16 @@ public class Program : ExitableProgram
         CharContext.InitializeConnectionString(config.CharDatabaseConnectionString);
         WorldContext.InitializeConnectionString(config.WorldDatabaseConnectionString);
 
-        Server = new GlobalServer();
         Server.InitConsole();
         Server.Setup(config);
+
+        if (!AssetManager.Instance.Initialize(config.GamePath, ServerType.Global))
+            throw new Exception("Unable to load assets!");
+
+        if (!MapManager.Instance.Initialize())
+            throw new Exception("Unable to load maps!");
+
+        AssetManager.Instance.LoadAllData();
 
         if (!Server.Start())
         {
@@ -50,7 +59,7 @@ public class Program : ExitableProgram
     {
         Logger.WriteLog(LogType.Error, "Shutting down the server...");
 
-        Server?.Shutdown();
+        Server.Shutdown();
 
         Logger.WriteLog(LogType.Error, "Server shutdown completed!");
 
