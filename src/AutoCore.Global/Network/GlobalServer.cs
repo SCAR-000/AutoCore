@@ -175,9 +175,9 @@ public class GlobalServer : BaseServer, ILoopable
         info.Password = Config.ServerInfoConfig.Password;
     }
 
-    private void OnCommunicatorLoginResponse(CommunicatorActionResult result)
+    private void OnCommunicatorLoginResponse(bool success)
     {
-        if (result == CommunicatorActionResult.Success)
+        if (success)
         {
             Logger.WriteLog(LogType.Communicator, "Successfully logged in to the Auth server!");
             return;

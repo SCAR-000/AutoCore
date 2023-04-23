@@ -1,15 +1,14 @@
 ﻿using System.Buffers;
 using System.Net;
-using System.Net.Sockets;
+using System.Text;
 
 namespace AutoCore.Communicator;
 
+using AutoCore.Communicator.Packets;
 using AutoCore.Utils;
 using AutoCore.Utils.Networking;
 using AutoCore.Utils.Packets;
-using AutoCore.Communicator.Packets;
 using AutoCore.Utils.Memory;
-using System.Text;
 
 public enum CommunicatorType
 {
@@ -28,12 +27,6 @@ public enum CommunicatorOpcode : byte
     ServerInfoResponse = 5
 }
 
-public enum CommunicatorActionResult : byte
-{
-    Success = 0,
-    Failure = 1
-}
-
 public class Communicator
 {
     public const int SendBufferSize = 512;
@@ -41,9 +34,9 @@ public class Communicator
 
     public CommunicatorType Type { get; }
     public AsyncLengthedSocket Socket { get; private set; }
-    public List<Communicator>? AuthenticatingChildren { get; }
-    public Dictionary<byte, Communicator>? Clients { get; }
-    public List<byte>? ToRemoveClients { get; }
+    public List<Communicator> AuthenticatingChildren { get; } = new();
+    public Dictionary<byte, Communicator> Clients { get; } = new();
+    public List<byte> ToRemoveClients { get; } = new();
     public DateTime LastRequestTime { get; private set; }
     public ServerData Data { get; private set; } = new();
     public bool Connected => Socket?.Connected ?? false;
@@ -53,7 +46,7 @@ public class Communicator
     public Action? OnError { get; set; }
     public Action<ServerData>? OnConnect { get; set; }
     public Func<Communicator, LoginRequestPacket, bool>? OnLoginRequest { get; set; }
-    public Action<CommunicatorActionResult>? OnLoginResponse { get; set; }
+    public Action<bool>? OnLoginResponse { get; set; }
     public Func<RedirectRequest, bool>? OnRedirectRequest { get; set; }
     public Action<Communicator, RedirectResponsePacket>? OnRedirectResponse { get; set; }
     public Action<ServerInfo>? OnServerInfoRequest { get; set; }
@@ -72,10 +65,6 @@ public class Communicator
         switch (Type)
         {
             case CommunicatorType.Server:
-                AuthenticatingChildren = new();
-                Clients = new();
-                ToRemoveClients = new();
-
                 Socket.OnAccept += OnSocketAccept;
                 break;
 
@@ -120,7 +109,7 @@ public class Communicator
         {
             foreach (var id in ToRemoveClients)
             {
-                if (Clients!.TryGetValue(id, out var comm))
+                if (Clients.TryGetValue(id, out var comm))
                 {
                     comm.Close();
 
@@ -140,8 +129,8 @@ public class Communicator
             return;
         }
 
-        Clients!.Add(client.Data.Id, client);
-        AuthenticatingChildren!.Remove(client);
+        Clients.Add(client.Data.Id, client);
+        AuthenticatingChildren.Remove(client);
     }
 
     #region Socketing
@@ -156,7 +145,7 @@ public class Communicator
 
     private void OnSocketAccept(AsyncLengthedSocket socket)
     {
-        AuthenticatingChildren!.Add(new Communicator(socket, this));
+        AuthenticatingChildren.Add(new Communicator(socket, this));
     }
 
     private void OnSocketReceive(NonContiguousMemoryStream incomingStream, int length)
@@ -243,10 +232,10 @@ public class Communicator
     {
         if (Type == CommunicatorType.Server)
         {
-            foreach (var child in AuthenticatingChildren!)
+            foreach (var child in AuthenticatingChildren)
                 child.Close();
 
-            foreach (var client in Clients!)
+            foreach (var client in Clients)
                 client.Value.Close();
 
             AuthenticatingChildren.Clear();
@@ -262,7 +251,7 @@ public class Communicator
     {
         if (Type == CommunicatorType.Server)
         {
-            foreach (var client in Clients!)
+            foreach (var client in Clients)
             {
                 if ((DateTime.Now - client.Value.LastRequestTime).TotalMilliseconds > ServerInfoUpdateIntervalMs)
                     client.Value.RequestServerInfo();
@@ -287,7 +276,7 @@ public class Communicator
 
         if (Type == CommunicatorType.Server)
         {
-            if (Clients!.TryGetValue(serverId, out var client))
+            if (Clients.TryGetValue(serverId, out var client))
             {
                 client.RequestRedirection(serverId, request);
                 return;
@@ -315,23 +304,23 @@ public class Communicator
             return;
         }
 
-        if (Server.Clients!.ContainsKey(packet.Data.Id))
+        if (Server.Clients.ContainsKey(packet.Data.Id))
         {
             Logger.WriteLog(LogType.Debug, $"Communicator(Type = {Server.Type}) has a client (Id = {packet.Data.Id}) already connected!");
             return;
         }
 
-        var result = Server.OnLoginRequest(this, packet);
+        var success = Server.OnLoginRequest(this, packet);
 
         SendPacket(new LoginResponsePacket
         {
-            Result = result ? CommunicatorActionResult.Success : CommunicatorActionResult.Failure
+            Success = success
         });
 
-        if (!result)
+        if (!success)
         {
-            lock (Server.ToRemoveClients!)
-                Server.ToRemoveClients.Add(Data.Id);
+            lock (Server.AuthenticatingChildren)
+                Server.AuthenticatingChildren.Remove(this);
 
             return;
         }
@@ -350,7 +339,7 @@ public class Communicator
             return;
         }
 
-        if (packet.Result == CommunicatorActionResult.Failure)
+        if (!packet.Success)
         {
             Close();
 
@@ -358,7 +347,7 @@ public class Communicator
             return;
         }
 
-        OnLoginResponse?.Invoke(packet.Result);
+        OnLoginResponse?.Invoke(packet.Success);
     }
 
     private void MsgRedirectRequest(RedirectRequestPacket packet)
