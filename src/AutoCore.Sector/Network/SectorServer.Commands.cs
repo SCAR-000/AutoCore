@@ -7,7 +7,7 @@ public partial class SectorServer
 {
     private void RegisterCommands()
     {
-        CommandProcessor.RegisterCommand("exit", ProcessExitCommand);
+        CommandProcessor.RegisterCommand("sector.exit", ProcessExitCommand);
     }
 
     private void ProcessExitCommand(string[] parts)

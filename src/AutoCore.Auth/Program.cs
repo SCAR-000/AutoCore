@@ -18,8 +18,8 @@ public class Program : ExitableProgram
         Initialize(ExitHandlerProc);
 
         var builder = new ConfigurationBuilder()
-            .AddJsonFile("appsettings.json")
-            .AddJsonFile("appsettings.env.json", true);
+            .AddJsonFile("appsettings.auth.json")
+            .AddJsonFile("appsettings.auth.env.json", true);
 
         var config = new AuthConfig();
         var configRoot = builder.Build();

@@ -1,9 +1,15 @@
 ﻿namespace AutoCore.Global.Network;
 
 using AutoCore.Utils;
+using AutoCore.Utils.Commands;
 
 public partial class GlobalServer
 {
+    private void RegisterCommands()
+    {
+        CommandProcessor.RegisterCommand("global.exit", ProcessExitCommand);
+    }
+
     private void ProcessExitCommand(string[] parts)
     {
         var minutes = 0;

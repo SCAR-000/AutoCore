@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.31605.320
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.33530.505
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AutoCore.Auth", "AutoCore.Auth\AutoCore.Auth.csproj", "{C5C4FC9F-E206-4341-9BF8-A6D30AD98C3B}"
 EndProject
@@ -26,6 +26,8 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "lib", "lib", "{098C2A7E-0BFE-4311-8F31-C8F0CAE16C69}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TNL.NET", "..\lib\TNL.NET\TNL.NET\TNL.NET.csproj", "{F9E15C7F-5C65-4F25-8FEE-534008D72121}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutoCore.Launcher", "AutoCore.Launcher\AutoCore.Launcher.csproj", "{62B4725A-D4A7-4413-BDCF-DCA69020DE43}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -69,6 +71,10 @@ Global
 		{F9E15C7F-5C65-4F25-8FEE-534008D72121}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F9E15C7F-5C65-4F25-8FEE-534008D72121}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F9E15C7F-5C65-4F25-8FEE-534008D72121}.Release|Any CPU.Build.0 = Release|Any CPU
+		{62B4725A-D4A7-4413-BDCF-DCA69020DE43}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{62B4725A-D4A7-4413-BDCF-DCA69020DE43}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{62B4725A-D4A7-4413-BDCF-DCA69020DE43}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{62B4725A-D4A7-4413-BDCF-DCA69020DE43}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -83,6 +89,7 @@ Global
 		{B070F341-EFC7-499A-8D91-E4D7B6539608} = {6EC7095A-5FB5-4F16-9B50-F0FE453F8F04}
 		{5BFE636E-FD92-49DA-BEB7-A31DA5D440E1} = {6EC7095A-5FB5-4F16-9B50-F0FE453F8F04}
 		{F9E15C7F-5C65-4F25-8FEE-534008D72121} = {098C2A7E-0BFE-4311-8F31-C8F0CAE16C69}
+		{62B4725A-D4A7-4413-BDCF-DCA69020DE43} = {6EC7095A-5FB5-4F16-9B50-F0FE453F8F04}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {BA9952EA-4196-4EB7-9548-6C4CE62781A5}

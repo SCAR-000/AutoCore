@@ -9,8 +9,8 @@ public partial class AuthServer
 {
     private void RegisterConsoleCommands()
     {
-        CommandProcessor.RegisterCommand("exit", ProcessExitCommand);
-        CommandProcessor.RegisterCommand("create", ProcessCreateCommand);
+        CommandProcessor.RegisterCommand("auth.create", ProcessCreateCommand);
+        CommandProcessor.RegisterCommand("auth.exit", ProcessExitCommand);
     }
 
     private void ProcessExitCommand(string[] parts)

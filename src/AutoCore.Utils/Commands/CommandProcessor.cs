@@ -3,6 +3,9 @@
 public static class CommandProcessor
 {
     private static readonly Dictionary<string, Action<string[]>> Commands = new();
+    private static bool TrimScope = true;
+
+    public static bool UseScopes() => TrimScope = false;
 
     public static void ProcessCommand()
     {
@@ -14,9 +17,12 @@ public static class CommandProcessor
         if (parts.Length < 1)
             return;
 
-        if (Commands.ContainsKey(parts[0]))
+        if (TrimScope && parts[0].Contains('.'))
+            parts[0] = parts[0][(parts[0].IndexOf(".") + 1)..];
+
+        if (Commands.TryGetValue(parts[0], out var value))
         {
-            Commands[parts[0]](parts);
+            value(parts);
             return;
         }
 
@@ -53,12 +59,17 @@ public static class CommandProcessor
 
     public static void RegisterCommand(string name, Action<string[]> handler)
     {
+        if (TrimScope && name.Contains('.'))
+            name = name[(name.IndexOf(".") + 1)..];
+
         Commands.Add(name, handler);
     }
 
     public static void RemoveCommand(string name)
     {
-        if (Commands.ContainsKey(name))
-            Commands.Remove(name);
+        if (TrimScope && name.Contains('.'))
+            name = name[(name.IndexOf(".") + 1)..];
+
+        Commands.Remove(name);
     }
 }

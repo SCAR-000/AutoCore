@@ -31,7 +31,7 @@ public partial class GlobalServer : BaseServer, ILoopable
     {
         Loop = new MainLoop(this, MainLoopTime);
 
-        CommandProcessor.RegisterCommand("exit", ProcessExitCommand);
+        RegisterCommands();
     }
 
     ~GlobalServer() => Shutdown();
@@ -61,9 +61,6 @@ public partial class GlobalServer : BaseServer, ILoopable
 
         lock (_interfaceLock)
         {
-            if (Interface == null)
-                return;
-
             Interface.CheckIncomingPackets();
             Interface.ProcessConnections();
         }

@@ -20,8 +20,8 @@ public class Program : ExitableProgram
         Initialize(ExitHandlerProc);
 
         var builder = new ConfigurationBuilder()
-            .AddJsonFile("appsettings.json")
-            .AddJsonFile("appsettings.env.json", true);
+            .AddJsonFile("appsettings.global.json")
+            .AddJsonFile("appsettings.global.env.json", true);
 
         var config = new GlobalConfig();
         var configRoot = builder.Build();
