@@ -2,7 +2,7 @@
 
 using AutoCore.Game.Constants;
 
-public class DeleteCharacterPacket : BasePacket
+public class LoginDeleteCharacterPacket : BasePacket
 {
     public override GameOpcode Opcode => GameOpcode.LoginDeleteCharacter;
 

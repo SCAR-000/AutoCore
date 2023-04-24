@@ -28,12 +28,12 @@ public partial class TNLConnection
 
     private void HandleNewCharacterPacket(BinaryReader reader)
     {
-        var packet = new NewCharacterPacket();
+        var packet = new LoginNewCharacterPacket();
         packet.Read(reader);
 
         var (result, coid) = CharacterSelectionManager.CreateNewCharacter(this, packet);
 
-        SendGamePacket(new NewCharacterResponsePacket(result ? 0x80000000 : 0x1, coid));
+        SendGamePacket(new LoginNewCharacterResponsePacket(result ? 0x80000000 : 0x1, coid));
 
         if (result)
         {
@@ -43,7 +43,7 @@ public partial class TNLConnection
 
     private void HandleDeleteCharacterPacket(BinaryReader reader)
     {
-        var packet = new DeleteCharacterPacket();
+        var packet = new LoginDeleteCharacterPacket();
         packet.Read(reader);
 
         CharacterSelectionManager.DeleteCharacter(this, packet.CharacterCoid);

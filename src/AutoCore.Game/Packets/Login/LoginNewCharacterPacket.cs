@@ -3,9 +3,9 @@
 using AutoCore.Game.Constants;
 using AutoCore.Utils.Extensions;
 
-public class NewCharacterPacket : BasePacket
+public class LoginNewCharacterPacket : BasePacket
 {
-    public override GameOpcode Opcode => GameOpcode.LoginNewCharacterResponse;
+    public override GameOpcode Opcode => GameOpcode.LoginNewCharacter;
 
     public int CBID { get; set; }
     public string PlayerName { get; set; }

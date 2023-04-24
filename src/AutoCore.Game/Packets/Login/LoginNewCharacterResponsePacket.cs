@@ -2,14 +2,14 @@
 
 using AutoCore.Game.Constants;
 
-public class NewCharacterResponsePacket : BasePacket
+public class LoginNewCharacterResponsePacket : BasePacket
 {
     public override GameOpcode Opcode => GameOpcode.LoginNewCharacterResponse;
 
     public uint Result { get; set; }
     public long NewCharCoid { get; set; }
 
-    public NewCharacterResponsePacket(uint result, long coid)
+    public LoginNewCharacterResponsePacket(uint result, long coid)
     {
         Result = result;
         NewCharCoid = coid;
