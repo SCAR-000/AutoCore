@@ -61,6 +61,9 @@ public partial class GlobalServer : BaseServer, ILoopable
 
         lock (_interfaceLock)
         {
+            if (Interface == null)
+                return;
+
             Interface.CheckIncomingPackets();
             Interface.ProcessConnections();
         }

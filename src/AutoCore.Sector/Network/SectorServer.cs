@@ -55,6 +55,9 @@ public partial class SectorServer : BaseServer, ILoopable
 
         lock (_interfaceLock)
         {
+            if (Interface == null)
+                return;
+
             Interface.CheckIncomingPackets();
             Interface.ProcessConnections();
         }
