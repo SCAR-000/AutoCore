@@ -49,7 +49,6 @@ public class Character : Creature
         SetCoid(coid, true);
 
         DBData = context.Characters.Include(c => c.SimpleObjectBase).FirstOrDefault(c => c.Coid == coid);
-
         if (DBData == null)
             return false;
 
@@ -60,6 +59,14 @@ public class Character : Creature
         // TODO: set up stuff, fields, baseclasses, etc
 
         return true;
+    }
+
+    public void LoadCurrentVehicle(CharContext context)
+    {
+        CurrentVehicle = new();
+        if (!CurrentVehicle.LoadFromDB(context, ActiveVehicleCoid))
+            throw new Exception("Unable to load active vehicle!");
+
     }
 
     public override void WriteToPacket(CreateSimpleObjectPacket packet)

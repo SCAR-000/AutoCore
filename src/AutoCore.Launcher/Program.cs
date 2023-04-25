@@ -39,10 +39,10 @@ public class Program : ExitableProgram
         if (!AssetManager.Instance.Initialize(globalConfig.GamePath, ServerType.Both))
             throw new Exception("Unable to load assets!");
 
+        AssetManager.Instance.LoadAllData();
+
         if (!MapManager.Instance.Initialize())
             throw new Exception("Unable to load maps!");
-
-        AssetManager.Instance.LoadAllData();
 
         AuthServer.Setup(authConfig);
         if (!AuthServer.Start())

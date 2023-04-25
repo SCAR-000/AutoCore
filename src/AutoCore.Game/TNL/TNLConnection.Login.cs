@@ -4,6 +4,7 @@ using AutoCore.Game.Managers;
 using AutoCore.Game.Packets.Login;
 using AutoCore.Game.Packets.Global;
 using AutoCore.Utils;
+using System.Net;
 
 public partial class TNLConnection
 {
@@ -56,11 +57,16 @@ public partial class TNLConnection
 
         // TODO: check character
 
-        var response = new LoginAckPacket
+        SendGamePacket(new LoginAckPacket
         {
             Success = true
-        };
+        });
 
-        SendGamePacket(response);
+        SendGamePacket(new TransferToSectorPacket()
+        {
+            IPAddress = IPAddress.Loopback,
+            Port = 27001,
+            Flags = 0
+        });
     }
 }

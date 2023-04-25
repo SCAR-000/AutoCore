@@ -21,7 +21,7 @@ public class MapData
     public bool UseClouds { get; private set; }
     public bool UseTimeOfDay { get; private set; }
     public string SkyBoxName { get; private set; }
-    public float CullingStyle { get; private set; }
+    public float CullingScale { get; private set; }
     public int NumOfImports { get; private set; }
     #endregion
 
@@ -76,7 +76,7 @@ public class MapData
         }
 
         if (MapVersion >= 36)
-            CullingStyle = reader.ReadSingle();
+            CullingScale = reader.ReadSingle();
 
         if (MapVersion >= 45)
             NumOfImports = reader.ReadInt32();

@@ -69,7 +69,7 @@ public partial class TNLConnection : GhostConnection
         Logger.WriteLog(LogType.Network, "Client ({0} | {1}) disconnected", Account.Id, Account.Name);
     }
 
-    public void SendGamePacket(BasePacket packet, RPCGuaranteeType type = RPCGuaranteeType.RPCGuaranteedOrdered)
+    public void SendGamePacket(BasePacket packet, RPCGuaranteeType type = RPCGuaranteeType.RPCGuaranteedOrdered, bool skipOpcode = false)
     {
         Logger.WriteLog(LogType.Network, "Outgoing Packet: {0}", packet.Opcode);
 
@@ -79,7 +79,8 @@ public partial class TNLConnection : GhostConnection
 
         using (var writer = new BinaryWriter(new MemoryStream(dest)))
         {
-            writer.Write(packet.Opcode);
+            if (!skipOpcode)
+                writer.Write(packet.Opcode);
 
             packet.Write(writer);
 

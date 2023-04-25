@@ -36,10 +36,10 @@ public class Program : ExitableProgram
         if (!AssetManager.Instance.Initialize(config.GamePath, ServerType.Global))
             throw new Exception("Unable to load assets!");
 
+        AssetManager.Instance.LoadAllData();
+
         if (!MapManager.Instance.Initialize())
             throw new Exception("Unable to load maps!");
-
-        AssetManager.Instance.LoadAllData();
 
         if (!Server.Start())
         {

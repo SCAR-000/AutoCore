@@ -18,7 +18,7 @@ public class TransferToSectorPacket : BasePacket
         if (IPAddress.AddressFamily != AddressFamily.InterNetwork)
             throw new Exception("Unsupported AddressFamily!");
 
-        writer.Write(BitConverter.ToUInt32(IPAddress.GetAddressBytes()));
+        writer.Write(IPAddress.GetAddressBytes().Reverse().ToArray());
         writer.Write(Port);
         writer.Write(Flags);
     }
