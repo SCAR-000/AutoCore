@@ -4,9 +4,15 @@ namespace AutoCore.Utils.Extensions;
 
 public static class BinaryWriterExtensions
 {
-    public static void WriteUtf8NullString(this BinaryWriter writer, string value)
+    public static void WriteUtf8NullString(this BinaryWriter writer, string value, int maxLen = -1)
     {
-        writer.Write(Encoding.UTF8.GetBytes(value));
+        var bytes = Encoding.UTF8.GetBytes(value);
+        var len = bytes.Length;
+
+        if (maxLen != -1 && len >= maxLen)
+            len = maxLen - 1;
+
+        writer.Write(bytes, 0, len);
         writer.Write((byte)0);
     }
 
