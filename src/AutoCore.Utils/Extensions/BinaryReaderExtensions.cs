@@ -10,6 +10,18 @@ public static class BinaryReaderExtensions
         return len == 0 ? "" : Encoding.UTF8.GetString(reader.ReadBytes(len));
     }
 
+    public static string ReadUTF8NullString(this BinaryReader reader, int maxLength = -1)
+    {
+        var sb = new StringBuilder();
+
+        var i = 0;
+        byte b;
+        while ((b = reader.ReadByte()) != 0 && (maxLength == -1 || i++ < maxLength))
+            sb.Append((char)b);
+
+        return sb.ToString();
+    }
+
     public static string ReadUTF8StringOn(this BinaryReader reader, int length)
     {
         var bytes = reader.ReadBytes(length);
