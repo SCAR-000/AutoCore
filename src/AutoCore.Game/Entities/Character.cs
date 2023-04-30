@@ -34,14 +34,14 @@ public class Character : Creature
     #endregion
 
     public byte GMLevel { get; }
-    public TNLConnection Owner { get; }
+    public TNLConnection OwningConnection { get; }
     public Vehicle CurrentVehicle { get; private set; }
     public bool IsInCharacterSelection { get; }
     #endregion
 
-    public Character(TNLConnection owner, bool isInCharacterSelection = false)
+    public Character(TNLConnection owningConnection, bool isInCharacterSelection = false)
     {
-        Owner = owner;
+        OwningConnection = owningConnection;
         IsInCharacterSelection = isInCharacterSelection;
     }
 
