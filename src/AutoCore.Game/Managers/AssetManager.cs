@@ -51,8 +51,11 @@ public class AssetManager : Singleton<AssetManager>
             return GLMLoader.Load(GamePath);
         });
 
-        var loadWorldDBTask = Task<bool>.Factory.StartNew(() =>
+        var loadWorldDBTask = loadGLMTask.ContinueWith((prevTask) =>
         {
+            if (!prevTask.Result)
+                return false;
+
             return WorldDBLoader.Load();
         });
 
