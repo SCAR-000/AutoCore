@@ -2,6 +2,7 @@
 
 using AutoCore.Database.World.Models;
 using AutoCore.Game.Constants;
+using AutoCore.Game.Entities;
 using AutoCore.Game.Managers;
 using AutoCore.Game.Packets.Sector;
 using AutoCore.Game.Structures;
@@ -12,12 +13,16 @@ public class SectorMap
     public int ContinentId { get; }
     public MapData MapData { get; private set; }
     public ContinentObject ContinentObject => MapData.ContinentObject;
+    public Dictionary<TFID, ClonedObjectBase> LocalObjects { get; } = new();
     public Dictionary<TFID, GhostObject> GhostObjects { get; } = new();
 
     public SectorMap(int continentId)
     {
         ContinentId = continentId;
+
         MapData = AssetManager.Instance.GetMapData(ContinentId);
+
+        // TODO: create local objects from MapData's templates
     }
 
     public void Fill(MapInfoPacket packet)
@@ -43,5 +48,13 @@ public class SectorMap
         packet.PositionY = 0.0f;
         packet.PositionZ = 0.0f;
         packet.WeatherUpdateSize = 0;
+    }
+
+    public void AddLocalObject(ClonedObjectBase clonedObjectBase)
+    {
+        if (LocalObjects.ContainsKey(clonedObjectBase.ObjectId))
+            throw new Exception($"Local object {clonedObjectBase.ObjectId} already exists!");
+
+        LocalObjects.Add(clonedObjectBase.ObjectId, clonedObjectBase);
     }
 }
