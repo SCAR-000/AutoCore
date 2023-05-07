@@ -16,6 +16,7 @@ public class Armor : SimpleObject
     #endregion
 
     public Armor()
+        : base(GraphicsObjectType.Graphics)
     {
     }
 

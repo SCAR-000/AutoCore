@@ -28,7 +28,7 @@ public class Vehicle : SimpleObject
     #endregion
 
     public Vehicle(bool isInCharacterSelection = false)
-        : base()
+        : base(GraphicsObjectType.GraphicsPhysics)
     {
         IsInCharacterSelection = isInCharacterSelection;
     }
@@ -101,7 +101,7 @@ public class Vehicle : SimpleObject
 
         if (DBData.Ornament != 0)
         {
-            Ornament = new SimpleObject();
+            Ornament = new SimpleObject(GraphicsObjectType.Graphics);
             if (!Ornament.LoadFromDB(context, DBData.Ornament))
             {
                 return false;
@@ -110,7 +110,7 @@ public class Vehicle : SimpleObject
 
         if (DBData.RaceItem != 0)
         {
-            RaceItem = new SimpleObject();
+            RaceItem = new SimpleObject(GraphicsObjectType.Graphics);
             if (!RaceItem.LoadFromDB(context, DBData.RaceItem))
             {
                 return false;

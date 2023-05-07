@@ -16,6 +16,7 @@ public class WheelSet : SimpleObject
     #endregion
 
     public WheelSet()
+        : base(GraphicsObjectType.Graphics)
     {
     }
 

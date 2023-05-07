@@ -5,6 +5,11 @@ using AutoCore.Game.TNL.Ghost;
 
 public class Creature : SimpleObject
 {
+    public Creature()
+        : base(GraphicsObjectType.GraphicsPhysics)
+    {
+    }
+
     public override void WriteToPacket(CreateSimpleObjectPacket packet)
     {
         base.WriteToPacket(packet);

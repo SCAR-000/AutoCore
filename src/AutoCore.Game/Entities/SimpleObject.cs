@@ -5,7 +5,7 @@ using AutoCore.Database.Char.Models;
 using AutoCore.Game.Packets.Sector;
 using AutoCore.Game.TNL.Ghost;
 
-public class SimpleObject : ClonedObjectBase
+public class SimpleObject : GraphicsObject
 {
     #region Properties
     #region Database SimpleObject data
@@ -32,8 +32,8 @@ public class SimpleObject : ClonedObjectBase
     public override int GetMaximumHP() => MaxHP;
     public override int GetBareTeamFaction() => TeamFaction;
 
-    public SimpleObject()
-        : base()
+    public SimpleObject(GraphicsObjectType type)
+        : base(type)
     {
         MaxGadgets = 0;
         TeamFaction = 0;

@@ -17,6 +17,7 @@ public class Weapon : SimpleObject
     #endregion
 
     public Weapon()
+        : base(GraphicsObjectType.Graphics)
     {
     }
 

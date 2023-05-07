@@ -16,6 +16,7 @@ public class PowerPlant : SimpleObject
     #endregion
 
     public PowerPlant()
+        : base(GraphicsObjectType.Graphics)
     {
     }
 
