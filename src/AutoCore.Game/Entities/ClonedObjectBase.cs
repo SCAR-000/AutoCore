@@ -50,7 +50,7 @@ public abstract class ClonedObjectBase
     //public string MangledName { get; protected set; }
     public TFID ObjectId { get; protected set; }
     //public long CoidAssignedTo { get; protected set; }
-    public byte Layer { get; protected set; }
+    public byte Layer { get; set; }
     //public bool IsInKillQueue { get; protected set; }
     //public bool HasBeenDeleted { get; protected set; }
     //public bool TempItem { get; protected set; }
@@ -198,5 +198,22 @@ public abstract class ClonedObjectBase
 
     public virtual void WriteToPacket(CreateSimpleObjectPacket packet)
     {
+    }
+
+    public static int GetMoneyCBIDFromCredits(long credits)
+    {
+        if (credits >= 0x3B9ACA00) // Money Orb
+            return 2827;
+
+        if (credits >= 0xF4240) // Money Bars
+            return 2825;
+
+        if (credits >= 0x3E8) // Money Script
+            return 2828;
+
+        if (credits >= 1) // Money Clink
+            return 2826;
+
+        return -1;
     }
 }
