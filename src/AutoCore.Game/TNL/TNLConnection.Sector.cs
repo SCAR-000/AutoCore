@@ -64,6 +64,18 @@ public partial class TNLConnection
             return;
         }
 
+        if (character.Ghost == null)
+            character.CreateGhost();
+
+        SetScopeObject(character.Ghost);
+
+        if (character.CurrentVehicle.Ghost == null)
+            character.CurrentVehicle.CreateGhost();
+
+        ObjectLocalScopeAlways(character.CurrentVehicle.Ghost);
+
+        // TODO: check if these packets are not sent, will the objects appear?
+        // will it never enter the world?
         var charPacket = new CreateCharacterExtendedPacket();
         var vehiclePacket = new CreateVehicleExtendedPacket();
 

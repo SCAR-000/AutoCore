@@ -141,6 +141,6 @@ public class GhostCharacter : GhostObject
 
     public override void PerformScopeQuery(GhostConnection connection)
     {
-
+        // TODO: get map, every entity should be in scope for now
     }
 }
