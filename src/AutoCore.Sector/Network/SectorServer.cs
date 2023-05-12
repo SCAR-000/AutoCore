@@ -38,7 +38,7 @@ public partial class SectorServer : BaseServer, ILoopable
             Config = config;
 
         Logger.WriteLog(LogType.Initialize, "Initializing the TNL interface...");
-        Interface = new TNLInterface(Config.GameConfig.Port, true, 175, false);
+        Interface = new TNLInterface(Config.GameConfig.Port, true);
 
         Logger.WriteLog(LogType.Initialize, "Initializing the network...");
         PublicAddress = IPAddress.Parse(Config.GameConfig.PublicAddress);
@@ -58,8 +58,7 @@ public partial class SectorServer : BaseServer, ILoopable
             if (Interface == null)
                 return;
 
-            Interface.CheckIncomingPackets();
-            Interface.ProcessConnections();
+            Interface.Pulse();
         }
     }
 

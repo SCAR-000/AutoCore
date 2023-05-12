@@ -385,10 +385,7 @@ public partial class TNLConnection : GhostConnection
         
     }
     
-    public void DoScoping()
-    {
-        base.PrepareWritePacket();
-    }
+    public void DoScoping() => base.PrepareWritePacket();
 
     public void GetFixedRateParameters(out uint minPacketSendPeriod, out uint minPacketRecvPeriod, out uint maxSendBandwidth, out uint maxRecvBandwidth)
     {
@@ -405,7 +402,7 @@ public partial class TNLConnection : GhostConnection
         if (Interface is not TNLInterface tInterface)
             return;
 
-        stream.Write(tInterface.Version);
+        stream.Write(TNLInterface.Version);
         stream.Write(Key);
         stream.Write(PlayerCoid);
     }
@@ -415,10 +412,7 @@ public partial class TNLConnection : GhostConnection
         if (!base.ReadConnectRequest(stream, ref errorString))
             return false;
 
-        if (Interface is not TNLInterface tInterface)
-            return false;
-
-        if (!stream.Read(out int version) || version != tInterface.Version)
+        if (!stream.Read(out int version) || version != TNLInterface.Version)
         {
             errorString = "Incorrect Version";
             return false;
@@ -444,39 +438,21 @@ public partial class TNLConnection : GhostConnection
 
     public override void OnConnectionEstablished()
     {
-        if (Interface is TNLInterface tInterface && !tInterface.Adaptive)
+        base.OnConnectionEstablished();
+
+        if (Interface is TNLInterface tInterface && tInterface.DoGhosting)
         {
             SetGhostTo(false);
             SetGhostFrom(true);
             ActivateGhosting();
         }
 
-        SetIsAdaptive();
-        SetIsConnectionToClient();
-
         Logger.WriteLog(LogType.Network, "Client ({1}) connected from {0}", GetNetAddressString(), PlayerCoid);
     }
 
-    protected override void ComputeNegotiatedRate()
-    {
-        if (Interface is TNLInterface tnlInterface && tnlInterface.UnlimitedBandwith)
-        {
-            CurrentPacketSendSize = 1490U;
-            CurrentPacketSendPeriod = 1U;
-        }
-        else
-            base.ComputeNegotiatedRate();
-    }
+    public NetObject GetGhost() => GetScopeObject();
 
-    public NetObject GetGhost()
-    {
-        return GetScopeObject();
-    }
-
-    public int GetTimeSinceLastMessage()
-    {
-        return Interface.GetCurrentTime() - LastPacketRecvTime;
-    }
+    public int GetTimeSinceLastMessage() => Interface.GetCurrentTime() - LastPacketRecvTime;
 
     private void ProcessFragment(ByteBuffer theData, SFragmentData sFragment, uint _, ushort fragment, ushort fragmentId, ushort fragmentCount)
     {
@@ -525,16 +501,9 @@ public partial class TNLConnection : GhostConnection
 
     private class SFragmentData
     {
-        public uint FragmentId { get; set; }
-        public uint TotalSize { get; set; }
-        public readonly Dictionary<int, ByteBuffer> MapFragments;
-
-        public SFragmentData()
-        {
-            FragmentId = 0;
-            TotalSize = 0;
-            MapFragments = new Dictionary<int, ByteBuffer>();
-        }
+        public uint FragmentId { get; set; } = 0;
+        public uint TotalSize { get; set; } = 0;
+        public Dictionary<int, ByteBuffer> MapFragments { get; } = new();
     }
 
     #region RPC Classes
