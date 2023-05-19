@@ -13,6 +13,7 @@ public class Character : Creature
     #region Properties
     #region Database Character Data
     private CharacterData DBData { get; set; }
+    public uint AccountId => DBData.AccountId;
     public string Name => DBData.Name;
     public long ActiveVehicleCoid => DBData.ActiveVehicleCoid;
     public int BodyId => DBData.BodyId;
@@ -32,6 +33,9 @@ public class Character : Creature
     public uint SkinColor => DBData.SkinColor;
     public uint SpecialityColor => DBData.SpecialityColor;
     public float ScaleOffset => DBData.ScaleOffset;
+    public int LastTownId => DBData.LastTownId;
+    public int LastStationMapId => DBData.LastStationMapId;
+    public int LastStationId => DBData.LastStationId;
     public byte Level => DBData.Level;
     #endregion
 

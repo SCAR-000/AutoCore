@@ -12,6 +12,10 @@ public class Vehicle : SimpleObject
     #region Properties
     #region Database Vehicle Data
     private VehicleData DBData { get; set; }
+    public string Name => DBData.Name;
+    public uint PrimaryColor => DBData.PrimaryColor;
+    public uint SecondaryColor => DBData.SecondaryColor;
+    public byte Trim => DBData.Trim;
     #endregion
 
     public bool IsInCharacterSelection { get; }

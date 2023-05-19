@@ -10,6 +10,9 @@ public class Creature : SimpleObject
     {
     }
 
+    public override Creature GetAsCreature() => this;
+    public override Creature GetSuperCreature() => this;
+
     public override void WriteToPacket(CreateSimpleObjectPacket packet)
     {
         base.WriteToPacket(packet);
