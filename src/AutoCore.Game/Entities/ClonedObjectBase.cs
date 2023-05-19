@@ -141,14 +141,14 @@ public abstract class ClonedObjectBase
     {
         Ghost = ghost;
         Ghost.SetParent(this);
-        //LastServerUpdate = DateTime.Now.Ticks; // TODO: linux time or what?
+        //LastServerUpdate = Environment.TickCount; // TODO: linux time or what?
     }
 
     public void ClearGhost()
     {
         Ghost?.SetParent(null);
         Ghost = null;
-        //LastServerUpdate = DateTime.Now.Ticks; // TODO: linux time or what?
+        //LastServerUpdate = Environment.TickCount; // TODO: linux time or what?
     }
 
     public void SetMap(SectorMap map)
@@ -175,7 +175,7 @@ public abstract class ClonedObjectBase
 
     public void OnDeath(DeathType deathType)
     {
-        //TimeOfDeath = DateTime.Now.Ticks; // TODO: linux time or what?
+        //TimeOfDeath = Environment.TickCount; // TODO: linux time or what?
         Ghost?.SetMaskBits(8);
 
         IsCorpse = true;

@@ -120,7 +120,7 @@ public class Character : Creature
             charPacket.UsingTrailer = false;
             charPacket.IsPosessingCreature = false;
             charPacket.GMLevel = GMLevel;
-            charPacket.ServerTime = DateTime.Now.Ticks; // TODO
+            charPacket.ServerTime = Environment.TickCount; // TODO
             charPacket.Name = Name;
             charPacket.ClanName = ClanMemberDBData?.Clan?.Name ?? "";
             charPacket.CharacterScaleOffset = DBData.ScaleOffset;
@@ -133,7 +133,6 @@ public class Character : Creature
             extendedCharPacket.NumAchievements = 0;
             extendedCharPacket.NumDisciplines = 0;
             extendedCharPacket.NumSkills = 0;
-
         }
     }
 }
