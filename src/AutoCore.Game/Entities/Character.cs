@@ -4,7 +4,9 @@ namespace AutoCore.Game.Entities;
 
 using AutoCore.Database.Char;
 using AutoCore.Database.Char.Models;
+using AutoCore.Game.Map;
 using AutoCore.Game.Packets.Sector;
+using AutoCore.Game.Structures;
 using AutoCore.Game.TNL;
 using AutoCore.Game.TNL.Ghost;
 
@@ -121,7 +123,7 @@ public class Character : Creature
             charPacket.LastTownId = DBData.LastTownId;
             charPacket.LastStationMapId = DBData.LastStationMapId;
             charPacket.Level = DBData.Level;
-            charPacket.UsingVehicle = false; // TODO
+            charPacket.UsingVehicle = Map != null && !Map.MapData.ContinentObject.IsTown;
             charPacket.UsingTrailer = false;
             charPacket.IsPosessingCreature = false;
             charPacket.GMLevel = GMLevel;
@@ -139,5 +141,25 @@ public class Character : Creature
             extendedCharPacket.NumDisciplines = 0;
             extendedCharPacket.NumSkills = 0;
         }
+    }
+
+    public void EnterMap(SectorMap map, Vector3? position = null)
+    {
+        position ??= map.MapData.EntryPoint.ToVector3();
+
+        DBData.LastTownId = map.ContinentId;
+
+        Position = position.Value;
+        Rotation = Quaternion.Default;
+
+        DBData.PositionX = Position.X;
+        DBData.PositionY = Position.Y;
+        DBData.PositionZ = Position.Z;
+        DBData.RotationX = Rotation.X;
+        DBData.RotationY = Rotation.Y;
+        DBData.RotationZ = Rotation.Z;
+        DBData.RotationW = Rotation.W;
+
+        // TODO: save? new DB system? how to do it properly?
     }
 }
