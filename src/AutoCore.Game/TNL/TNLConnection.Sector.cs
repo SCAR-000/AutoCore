@@ -32,6 +32,10 @@ public partial class TNLConnection
         var mapInfoPacket = new MapInfoPacket();
 
         var map = MapManager.Instance.GetMap(character.LastTownId);
+
+        character.SetMap(map);
+        character.CurrentVehicle.SetMap(map);
+
         map.Fill(mapInfoPacket);
 
         SendGamePacket(mapInfoPacket, skipOpcode: true);
