@@ -4,7 +4,9 @@ namespace AutoCore.Game.Entities;
 
 using AutoCore.Database.Char;
 using AutoCore.Database.Char.Models;
+using AutoCore.Game.Map;
 using AutoCore.Game.Packets.Sector;
+using AutoCore.Game.Structures;
 using AutoCore.Game.TNL.Ghost;
 
 public class Vehicle : SimpleObject
@@ -93,6 +95,7 @@ public class Vehicle : SimpleObject
         }
 
         // Skip loading other unnecessary stuff from the DB, if we are displaying this Vehicle in the character selection
+        // TODO: or maybe just load/send everything always and no such workarounds are needed?
         if (isInCharacterSelection)
             return true;
 
@@ -175,7 +178,7 @@ public class Vehicle : SimpleObject
             vehiclePacket.KMTravelled = 0.0f;
             vehiclePacket.IsTrailer = false;
             vehiclePacket.IsInventory = false;
-            vehiclePacket.IsActive = true;
+            vehiclePacket.IsActive = Map != null && !Map.MapData.ContinentObject.IsTown;
             vehiclePacket.Trim = DBData.Trim;
 
             if (Ornament != null)
@@ -246,5 +249,19 @@ public class Vehicle : SimpleObject
         {
             // TODO
         }
+    }
+
+    public void EnterMap(SectorMap map, Vector3? position = null)
+    {
+        Position = position.Value;
+        Rotation = Quaternion.Default;
+
+        DBData.PositionX = Position.X;
+        DBData.PositionY = Position.Y;
+        DBData.PositionZ = Position.Z;
+        DBData.RotationX = Rotation.X;
+        DBData.RotationY = Rotation.Y;
+        DBData.RotationZ = Rotation.Z;
+        DBData.RotationW = Rotation.W;
     }
 }

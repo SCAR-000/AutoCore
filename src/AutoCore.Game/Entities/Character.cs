@@ -160,6 +160,8 @@ public class Character : Creature
         DBData.RotationZ = Rotation.Z;
         DBData.RotationW = Rotation.W;
 
+        CurrentVehicle.EnterMap(map, position);
+
         // TODO: save? new DB system? how to do it properly?
     }
 }
