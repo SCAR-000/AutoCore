@@ -50,7 +50,13 @@ public partial class AuthClient
 
         Timer.Add("timeout", 300_000, false, () =>
         {
-            Logger.WriteLog(LogType.Network, "*** Client timed out! Ip: {0}", Socket.RemoteAddress);
+            try
+            {
+                Logger.WriteLog(LogType.Network, "*** Client timed out! Ip: {0}", Socket.RemoteAddress);
+            }
+            catch (ObjectDisposedException)
+            {
+            }
 
             Close();
         });
@@ -87,7 +93,13 @@ public partial class AuthClient
 
         State = ClientState.Disconnected;
 
-        Socket.Close();
+        try
+        {
+            Socket.Close();
+        }
+        catch (ObjectDisposedException)
+        {
+        }
     }
 
     public void RedirectionResult(byte serverId, bool result)
