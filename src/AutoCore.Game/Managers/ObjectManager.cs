@@ -22,9 +22,13 @@ public class ObjectManager : Singleton<ObjectManager>
 
     public Character GetOrLoadCharacter(long coid, CharContext context)
     {
+        var character = GetCharacter(coid);
+        if (character != null)
+            return character;
+
         context ??= new CharContext();
 
-        var character = new Character();
+        character = new Character();
         if (!character.LoadFromDB(context, coid))
             return null;
 
