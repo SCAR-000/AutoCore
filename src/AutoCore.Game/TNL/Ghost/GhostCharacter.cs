@@ -54,19 +54,19 @@ public class GhostCharacter : GhostObject
             stream.WriteString(character.ClanName, 51); // ClanName
             stream.Write(character.Level);
             stream.Write(character.CurrentVehicle.ObjectId.Coid);
-            stream.Write(character.HeadId);
-            stream.Write(character.BodyId);
-            stream.Write(character.HeadDetail1);
-            stream.Write(character.HeadDetail2);
-            stream.Write(character.MouthId);
-            stream.Write(character.EyesId);
-            stream.Write(character.HelmetId);
-            stream.Write(character.HairId);
+            stream.WriteInt((uint)character.HeadId, 16);
+            stream.WriteInt((uint)character.BodyId, 16);
+            stream.WriteInt((uint)character.HeadDetail1, 16);
+            stream.WriteInt((uint)character.HeadDetail2, 16);
+            stream.WriteInt((uint)character.MouthId, 16);
+            stream.WriteInt((uint)character.EyesId, 16);
+            stream.WriteInt((uint)character.HelmetId, 16);
+            stream.WriteInt((uint)character.HairId, 16);
             stream.Write(character.ScaleOffset);
             stream.WriteInt(character.PrimaryColor, 24); // Character Color Primary
             stream.WriteInt(character.SecondaryColor, 24); // Character Color Secondary
             stream.WriteInt(character.SkinColor, 24); // Character Color Skin
-            stream.WriteInt(character.HairColor, 24); // Character Color Hair
+            stream.WriteInt(character.HairColor, 3); // Character Color Hair
 
             PackSkills(stream, character);
         }
@@ -114,7 +114,7 @@ public class GhostCharacter : GhostObject
 
         if (stream.WriteFlag((updateMask & TargetMask) != 0))
         {
-            if (Parent.Target == null)
+            if (Parent.Target != null)
             {
                 stream.Write(Parent.Target.ObjectId.Coid);
                 stream.WriteFlag(Parent.Target.ObjectId.Global);

@@ -169,16 +169,16 @@ public class GhostVehicle : GhostObject
                     stream.WriteString(characterOwner.Name, 17);
                     stream.WriteString(characterOwner.ClanName, 51);
                     stream.Write(characterOwner.Level);
-                    stream.WriteFlag(false); // TODO
+                    stream.WriteFlag(false); // IsPossessingCreature
                     stream.WriteString(parentVehicle.Name, 33);
-                    stream.Write(characterOwner.HeadId);
-                    stream.Write(characterOwner.BodyId);
-                    stream.Write(characterOwner.HeadDetail1);
-                    stream.Write(characterOwner.HeadDetail2);
-                    stream.Write(characterOwner.MouthId);
-                    stream.Write(characterOwner.EyesId);
-                    stream.Write(characterOwner.HelmetId);
-                    stream.Write(characterOwner.HairId);
+                    stream.WriteInt((uint)characterOwner.HeadId, 16);
+                    stream.WriteInt((uint)characterOwner.BodyId, 16);
+                    stream.WriteInt((uint)characterOwner.HeadDetail1, 16);
+                    stream.WriteInt((uint)characterOwner.HeadDetail2, 16);
+                    stream.WriteInt((uint)characterOwner.MouthId, 16);
+                    stream.WriteInt((uint)characterOwner.EyesId, 16);
+                    stream.WriteInt((uint)characterOwner.HelmetId, 16);
+                    stream.WriteInt((uint)characterOwner.HairId, 16);
                 }
                 else
                 {
@@ -274,7 +274,7 @@ public class GhostVehicle : GhostObject
 
         if (stream.WriteFlag((updateMask & PetCBIDMask) != 0 && false)) // TODO
         {
-            stream.WriteBits(32, BitConverter.GetBytes(0)); // Pet CBID
+            stream.WriteBits(16, BitConverter.GetBytes(0)); // Pet CBID
         }
 
         if (stream.WriteFlag((updateMask & MurdererMask) != 0)) // TODO

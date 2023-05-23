@@ -36,8 +36,6 @@ public class GhostObject : NetObject
     protected object MsgCreate { get; set; }
     protected object MsgCreateOwner { get; set; }
 
-    public TFID Guid { get; private set; } = new();
-
     public override NetClassRep GetClassRep()
     {
         return _dynClassRep;
@@ -208,19 +206,19 @@ public class GhostObject : NetObject
     public override ulong PackUpdate(GhostConnection connection, ulong updateMask, BitStream stream)
     {
         if (Parent == null)
-            throw new Exception($"PackUpdate for GhostObject without parent! TFID: ({Guid.Global}, {Guid.Coid})");
+            throw new Exception("PackUpdate for GhostObject without parent!");
 
         if (PIsInitialUpdate)
         {
-            stream.WriteFlag(Guid.Global);
+            stream.WriteFlag(Parent.ObjectId.Global); // local -> auto create packet in the client; global -> external create packets are needed!
 
-            if (Guid.Global)
-                stream.Write(Guid.Coid);
+            if (Parent.ObjectId.Global)
+                stream.Write(Parent.ObjectId.Coid);
             else
-                stream.WriteInt((uint)(Guid.Coid & 0xFFFFFFFF), 20);
+                stream.WriteInt((uint)(Parent.ObjectId.Coid & 0xFFFFFFFF), 20);
         }
 
-        if (stream.WriteFlag((updateMask & 8) != 0))
+        if (stream.WriteFlag((updateMask & HealthMask) != 0))
         {
             stream.WriteInt((uint)Parent.GetCurrentHP(), 18);
 
@@ -235,7 +233,7 @@ public class GhostObject : NetObject
             }
         }
 
-        if (stream.WriteFlag((updateMask & 2) != 0))
+        if (stream.WriteFlag((updateMask & PositionMask) != 0))
         {
             stream.Write(Parent.Position.X);
             stream.Write(Parent.Position.Y);
@@ -297,25 +295,9 @@ public class GhostObject : NetObject
         for (var i = 0; i < 0; ++i)
         {
             // TODO
-            stream.WriteBits(16, BitConverter.GetBytes(0)); // size
+            stream.WriteBits(16, BitConverter.GetBytes(56)); // size - 56 is the minimum size
 
             PackSingleSkill(stream, null, 0, 0);
         }
-    }
-
-    public static GhostObject CreateObject(TFID id, GhostType type)
-    {
-        var obj = type switch
-        {
-            GhostType.Creature => new GhostCreature(),
-            GhostType.Vehicle => new GhostVehicle(),
-            GhostType.Character => new GhostCharacter(),
-            GhostType.Object => new GhostObject(),
-            _ => throw new ArgumentException("Could not create GhostObject for not existing type!", "type"),
-        };
-
-        obj.Guid = id;
-
-        return obj;
     }
 }
