@@ -32,7 +32,7 @@ public class SectorMap
         packet.RegionLevel = 1;
         packet.LayerId = 0;
         packet.ObjectiveIndex = ContinentObject.Objective;
-        packet.MapName = $"{ContinentObject.MapFileName}.fam";
+        packet.MapName = ContinentObject.MapFileName;
         packet.IsTown = ContinentObject.IsTown;
         packet.IsArena = ContinentObject.IsArena;
         packet.OwningFaction = ContinentObject.OwningFaction;
