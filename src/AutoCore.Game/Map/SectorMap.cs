@@ -70,6 +70,21 @@ public class SectorMap
     {
         // TODO: proper space partitioning, select entities based on distance!
 
-        return Objects.Select(p => p.Value.Ghost).Where(g => g != null);
+        return Objects.Select(p => p.Value.Ghost).Where(g =>
+        {
+            if (g == null)
+                return false;
+
+            if (g == scopeObject) // Let itself (GhostCharacter) be in scope
+                return true;
+
+            if (g is GhostVehicle && MapData.ContinentObject.IsTown)
+                return false;
+
+            if (g is GhostCharacter && !MapData.ContinentObject.IsTown)
+                return false;
+
+            return true;
+        });
     }
 }
