@@ -36,8 +36,8 @@ public class GhostCreature : GhostObject
         {
             PackCommon(stream);
 
-            if (stream.WriteFlag(false)) // EnhancementId != -1
-                stream.WriteInt(0, 20); // EnhancementId
+            if (stream.WriteFlag(creature.EnhancementId != -1)) // EnhancementId != -1
+                stream.WriteInt((uint)creature.EnhancementId, 20); // EnhancementId
 
             if (stream.WriteFlag(false)) // CoidOnUseTrigger != -1
                 stream.WriteInt(0, 20); // CoidOnUseTrigger
@@ -118,7 +118,7 @@ public class GhostCreature : GhostObject
 
         if (stream.WriteFlag((updateMask & TargetMask) != 0))
         {
-            if (Parent.Target == null)
+            if (Parent.Target != null)
             {
                 stream.Write(Parent.Target.ObjectId.Coid);
                 stream.WriteFlag(Parent.Target.ObjectId.Global);

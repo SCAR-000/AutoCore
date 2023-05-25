@@ -5,6 +5,8 @@ using AutoCore.Game.TNL.Ghost;
 
 public class Creature : SimpleObject
 {
+    public int EnhancementId { get; private set; } = -1;
+
     public Creature()
         : base(GraphicsObjectType.GraphicsPhysics)
     {
