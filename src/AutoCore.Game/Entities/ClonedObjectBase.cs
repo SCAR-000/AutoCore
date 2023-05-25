@@ -137,6 +137,11 @@ public abstract class ClonedObjectBase
         ObjectId.Global = global;
     }
 
+    public void SetOwner(ClonedObjectBase owner)
+    {
+        Owner = owner;
+    }
+
     public void SetGhost(GhostObject ghost)
     {
         Ghost = ghost;

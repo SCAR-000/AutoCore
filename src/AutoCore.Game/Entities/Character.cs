@@ -92,6 +92,7 @@ public class Character : Creature
     public bool LoadCurrentVehicle(CharContext context, bool isInCharacterSelection = false)
     {
         CurrentVehicle = new();
+        CurrentVehicle.SetOwner(this);
 
         return CurrentVehicle.LoadFromDB(context, ActiveVehicleCoid, isInCharacterSelection);
     }
