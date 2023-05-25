@@ -148,7 +148,16 @@ public partial class TNLConnection : GhostConnection
         var reader = new BinaryReader(new MemoryStream(buffer.GetBuffer()));
         var gameOpcode = reader.ReadGameOpcode();
 
-        Logger.WriteLog(LogType.Network, "Incoming Packet: {0}", gameOpcode);
+        switch (gameOpcode)
+        {
+            case GameOpcode.CreatureMoved:
+            case GameOpcode.VehicleMoved:
+                break;
+
+            default:
+                Logger.WriteLog(LogType.Network, "Incoming Packet: {0}", gameOpcode);
+                break;
+        }
 
         try
         {
