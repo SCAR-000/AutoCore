@@ -341,7 +341,7 @@ public class GhostVehicle : GhostObject
 
         if (stream.WriteFlag((updateMask & ShieldMaxMask) != 0))
         {
-            stream.WriteBits(32, BitConverter.GetBytes(0)); // MaxShield
+            stream.WriteBits(32, BitConverter.GetBytes(100)); // MaxShield
         }
 
         if (stream.WriteFlag((updateMask & ShieldMask) != 0))
@@ -351,7 +351,7 @@ public class GhostVehicle : GhostObject
 
         if (stream.WriteFlag((updateMask & PowerMask) != 0)) // TODO
         {
-            stream.WriteBits(32, BitConverter.GetBytes(0)); // Power
+            stream.WriteBits(32, BitConverter.GetBytes(100)); // Power
         }
 
         if (stream.WriteFlag((updateMask & TokenMask) != 0))
