@@ -56,8 +56,6 @@ public partial class TNLConnection : GhostConnection
     {
         DeleteLocalGhosts();
 
-        //CharacterManager.LogoutCharacter(this);
-
         Logger.WriteLog(LogType.Network, "Client ({0} | {1}) disconnected", Account.Id, Account.Name);
     }
 
