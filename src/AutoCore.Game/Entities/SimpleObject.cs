@@ -60,6 +60,7 @@ public class SimpleObject : GraphicsObject
         LoadCloneBase(DBData.CBID);
 
         HP = MaxHP = CloneBaseObject.SimpleObjectSpecific.MaxHitPoint;
+        Faction = CloneBaseObject.SimpleObjectSpecific.Faction;
 
         return true;
     }

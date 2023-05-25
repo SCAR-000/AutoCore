@@ -51,6 +51,7 @@ public class Vehicle : SimpleObject
 
         Position = new(DBData.PositionX, DBData.PositionY, DBData.PositionZ);
         Rotation = new(DBData.RotationX, DBData.RotationY, DBData.RotationZ, DBData.RotationW);
+        HP = MaxHP = CloneBaseObject.SimpleObjectSpecific.MaxHitPoint;
 
         WheelSet = new WheelSet();
         if (!WheelSet.LoadFromDB(context, DBData.Wheelset))
