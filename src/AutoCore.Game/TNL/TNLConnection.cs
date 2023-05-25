@@ -183,7 +183,7 @@ public partial class TNLConnection : GhostConnection
                     break;
 
                 case GameOpcode.Disconnect:
-                    //HandleDisconnect(reader);
+                    HandleDisconnectPacket(reader);
                     break;
 
                 case GameOpcode.Chat:

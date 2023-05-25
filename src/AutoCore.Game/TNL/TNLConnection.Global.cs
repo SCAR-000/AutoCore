@@ -81,4 +81,12 @@ public partial class TNLConnection
             Flags = 0
         });
     }
+
+    public void HandleDisconnectPacket(BinaryReader reader)
+    {
+        var packet = new DisconnectPacket();
+        packet.Read(reader);
+
+        SendGamePacket(new DisconnectAckPacket());
+    }
 }
