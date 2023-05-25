@@ -175,7 +175,7 @@ public partial class TNLConnection : GhostConnection
                     break;
 
                 case GameOpcode.News:
-                    HandleNews(reader);
+                    HandleNewsPacket(reader);
                     break;
 
                 case GameOpcode.Login:
@@ -187,7 +187,7 @@ public partial class TNLConnection : GhostConnection
                     break;
 
                 case GameOpcode.Chat:
-                    ChatManager.Instance.HandleChat(this, reader);
+                    ChatManager.Instance.HandleChatPacket(this, reader);
                     break;
 
                 case GameOpcode.GetFriends:
@@ -234,17 +234,25 @@ public partial class TNLConnection : GhostConnection
                     //ConvoyManager.MissionsRequest(this);
                     break;
 
+                case GameOpcode.RequestClanName:
+                    ClanManager.Instance.HandleRequestClanNamePacket(CurrentCharacter, reader);
+                    break;
+
+                case GameOpcode.ClanUpdate:
+                    ClanManager.Instance.HandleClanUpdatePacket(CurrentCharacter, reader);
+                    break;
+
                 // Sector
                 case GameOpcode.TransferFromGlobal:
-                    HandleTransferFromGlobal(reader);
+                    HandleTransferFromGlobalPacket(reader);
                     break;
 
                 case GameOpcode.TransferFromGlobalStage2:
-                    HandleTransferFromGlobalStage2(reader);
+                    HandleTransferFromGlobalStage2Packet(reader);
                     break;
 
                 case GameOpcode.TransferFromGlobalStage3:
-                    HandleTransferFromGlobalStage3(reader);
+                    HandleTransferFromGlobalStage3Packet(reader);
                     break;
 
                 case GameOpcode.UpdateFirstTimeFlagsRequest:
@@ -252,15 +260,15 @@ public partial class TNLConnection : GhostConnection
                     break;
 
                 case GameOpcode.Broadcast:
-                    ChatManager.Instance.HandleBroadcast(this, reader);
+                    ChatManager.Instance.HandleBroadcastPacket(this, reader);
                     break;
 
                 case GameOpcode.CreatureMoved:
-                    HandleCreatureMoved(reader);
+                    HandleCreatureMovedPacket(reader);
                     break;
 
                 case GameOpcode.VehicleMoved:
-                    HandleVehicleMoved(reader);
+                    HandleVehicleMovedPacket(reader);
                     break;
 
                 default:

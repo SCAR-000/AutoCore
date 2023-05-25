@@ -6,7 +6,7 @@ using AutoCore.Game.Packets.Sector;
 
 public partial class TNLConnection
 {
-    private void HandleTransferFromGlobal(BinaryReader reader)
+    private void HandleTransferFromGlobalPacket(BinaryReader reader)
     {
         var packet = new TransferFromGlobalPacket();
         packet.Read(reader);
@@ -41,7 +41,7 @@ public partial class TNLConnection
         SendGamePacket(mapInfoPacket, skipOpcode: true);
     }
 
-    private void HandleTransferFromGlobalStage2(BinaryReader reader)
+    private void HandleTransferFromGlobalStage2Packet(BinaryReader reader)
     {
         var packet = new TransferFromGlobalPacket();
         packet.Read(reader);
@@ -64,7 +64,7 @@ public partial class TNLConnection
         });
     }
 
-    private void HandleTransferFromGlobalStage3(BinaryReader reader)
+    private void HandleTransferFromGlobalStage3Packet(BinaryReader reader)
     {
         var packet = new TransferFromGlobalStage3Packet();
         packet.Read(reader);
@@ -98,7 +98,7 @@ public partial class TNLConnection
         SendGamePacket(charPacket);
     }
 
-    private void HandleCreatureMoved(BinaryReader reader)
+    private void HandleCreatureMovedPacket(BinaryReader reader)
     {
         var packet = new CreatureMovedPacket();
         packet.Read(reader);
@@ -106,7 +106,7 @@ public partial class TNLConnection
         CurrentCharacter.HandleMovement(packet);
     }
 
-    private void HandleVehicleMoved(BinaryReader reader)
+    private void HandleVehicleMovedPacket(BinaryReader reader)
     {
         var packet = new VehicleMovedPacket();
         packet.Read(reader);

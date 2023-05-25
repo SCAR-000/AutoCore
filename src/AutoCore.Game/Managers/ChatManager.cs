@@ -7,7 +7,7 @@ using AutoCore.Utils.Memory;
 
 public class ChatManager : Singleton<ChatManager>
 {
-    public void HandleChat(TNLConnection connection, BinaryReader reader)
+    public void HandleChatPacket(TNLConnection connection, BinaryReader reader)
     {
         var chatPacket = new ChatPacket();
         chatPacket.Read(reader);
@@ -20,7 +20,7 @@ public class ChatManager : Singleton<ChatManager>
         // TODO: later: handle chat commands and send the chat packet to the proper recipient(s)
     }
 
-    public void HandleBroadcast(TNLConnection connection, BinaryReader reader)
+    public void HandleBroadcastPacket(TNLConnection connection, BinaryReader reader)
     {
         var broadcastPacket = new BroadcastPacket();
         broadcastPacket.Read(reader);

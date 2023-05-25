@@ -9,7 +9,7 @@ using AutoCore.Game.Packets.Global;
 
 public partial class TNLConnection
 {
-    private void HandleNews(BinaryReader reader)
+    private void HandleNewsPacket(BinaryReader reader)
     {
         var packet = new NewsPacket();
         packet.Read(reader);
