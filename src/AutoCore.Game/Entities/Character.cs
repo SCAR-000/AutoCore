@@ -73,12 +73,16 @@ public class Character : Creature
         if (DBData == null)
             return false;
 
-        Position = new(DBData.PositionX, DBData.PositionY, DBData.PositionZ);
-        Rotation = new(DBData.RotationX, DBData.RotationY, DBData.RotationZ, DBData.RotationW);
-
         LoadCloneBase(DBData.SimpleObjectBase.CBID);
 
         ClanMemberDBData = context.ClanMembers.Include(cm => cm.Clan).FirstOrDefault(cm => cm.CharacterCoid == coid);
+
+        Position = new(DBData.PositionX, DBData.PositionY, DBData.PositionZ);
+        Rotation = new(DBData.RotationX, DBData.RotationY, DBData.RotationZ, DBData.RotationW);
+
+        HP = MaxHP = CloneBaseObject.SimpleObjectSpecific.MaxHitPoint;
+        Faction = CloneBaseObject.SimpleObjectSpecific.Faction;
+        TeamFaction = CloneBaseObject.SimpleObjectSpecific.Faction;
 
         // TODO: set up stuff, fields, baseclasses, etc
 
