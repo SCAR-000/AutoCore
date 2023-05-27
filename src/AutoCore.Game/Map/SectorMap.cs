@@ -11,6 +11,7 @@ using AutoCore.Game.TNL.Ghost;
 public class SectorMap
 {
     public int ContinentId { get; }
+    public long LocalCoidCounter { get; set; }
     public MapData MapData { get; private set; }
     public ContinentObject ContinentObject => MapData.ContinentObject;
     public Dictionary<TFID, ClonedObjectBase> Objects { get; } = new();
@@ -20,18 +21,19 @@ public class SectorMap
         ContinentId = continentId;
 
         MapData = AssetManager.Instance.GetMapData(ContinentId);
+        LocalCoidCounter = MapData.HighestCoid + 1;
 
         // TODO: create local objects from MapData's templates
     }
 
     public void Fill(MapInfoPacket packet)
     {
-        packet.RegionId = 0;
+        packet.RegionId = -1;
         packet.RegionType = TilesetType.Universal;
         packet.RegionLevel = 1;
-        packet.LayerId = 0;
+        packet.LayerId = 0; // TODO: CVOGCharacter::ChooseLayer
         packet.ObjectiveIndex = ContinentObject.Objective;
-        packet.MapName = ContinentObject.MapFileName;
+        packet.MapName = $"{ContinentObject.MapFileName}.fam";
         packet.IsTown = ContinentObject.IsTown;
         packet.IsArena = ContinentObject.IsArena;
         packet.OwningFaction = ContinentObject.OwningFaction;
@@ -52,8 +54,7 @@ public class SectorMap
     public void EnterMap(ClonedObjectBase clonedObject)
     {
         if (Objects.ContainsKey(clonedObject.ObjectId))
-            Objects.Remove(clonedObject.ObjectId); // TEMP
-        //    throw new InvalidOperationException("This object is already on the map!");
+            throw new InvalidOperationException("This object is already on the map!");
 
         Objects.Add(clonedObject.ObjectId, clonedObject);
     }
