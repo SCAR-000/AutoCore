@@ -37,8 +37,7 @@ public class SimpleObject : GraphicsObject
     {
         MaxGadgets = 0;
         TeamFaction = 0;
-        HP = 0;
-        MaxHP = 500;
+        HP = MaxHP = 500;
         InventoryPositionX = 0;
         InventoryPositionY = 0;
         AlreadyAssembled = false;
@@ -59,10 +58,15 @@ public class SimpleObject : GraphicsObject
 
         LoadCloneBase(DBData.CBID);
 
-        HP = MaxHP = CloneBaseObject.SimpleObjectSpecific.MaxHitPoint;
-        Faction = CloneBaseObject.SimpleObjectSpecific.Faction;
+        SetupCBFields();
 
         return true;
+    }
+
+    public void SetupCBFields()
+    {
+        HP = MaxHP = CloneBaseObject.SimpleObjectSpecific.MaxHitPoint;
+        Faction = CloneBaseObject.SimpleObjectSpecific.Faction;
     }
 
     public override void CreateGhost()
