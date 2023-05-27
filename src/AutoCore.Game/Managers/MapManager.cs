@@ -1,6 +1,10 @@
 ﻿namespace AutoCore.Game.Managers;
 
+using AutoCore.Game.Entities;
 using AutoCore.Game.Map;
+using AutoCore.Game.Packets.Sector;
+using AutoCore.Game.Structures;
+using AutoCore.Utils;
 using AutoCore.Utils.Memory;
 
 public class MapManager : Singleton<MapManager>
@@ -32,5 +36,38 @@ public class MapManager : Singleton<MapManager>
             return sectorMap;
 
         throw new Exception($"Unknown map ({continentId}) requested!");
+    }
+
+    public void HandleTransferRequestPacket(Character character, BinaryReader reader)
+    {
+        var packet = new MapTransferRequestPacket();
+        packet.Read(reader);
+
+        if (packet.Type != MapTransferType.ContinentObject)
+        {
+            Logger.WriteLog(LogType.Error, $"Not implemented map transfer type: {packet.Type}!");
+            return;
+        }
+
+        var map = GetMap(packet.Data);
+        if (map == null)
+        {
+            Logger.WriteLog(LogType.Error, $"Trying to transfer to non-existant map: {packet.Data}!");
+            return;
+        }
+
+        var mapInfoPacket = new MapInfoPacket();
+        map.Fill(mapInfoPacket);
+
+        character.OwningConnection.ResetGhosting();
+        character.OwningConnection.SendGamePacket(mapInfoPacket, skipOpcode: true);
+
+        character.SetMap(map);
+        character.Position = map.MapData.EntryPoint.ToVector3();
+        character.Rotation = Quaternion.Default;
+
+        character.CurrentVehicle.SetMap(map);
+        character.CurrentVehicle.Position = character.Position;
+        character.CurrentVehicle.Rotation = character.Rotation;
     }
 }
