@@ -5,6 +5,7 @@ namespace AutoCore.Game.EntityTemplates;
 using AutoCore.Game.Entities;
 using AutoCore.Game.Structures;
 using AutoCore.Utils.Extensions;
+using System.Linq;
 
 public class SpawnPointTemplate : GraphicsObjectTemplate
 {
@@ -29,6 +30,20 @@ public class SpawnPointTemplate : GraphicsObjectTemplate
     public SpawnPointTemplate()
         : base(GraphicsObjectType.Graphics)
     {
+    }
+
+    public override ClonedObjectBase Create()
+    {
+        var spawnPoint = new SpawnPoint(this)
+        {
+            Layer = Layer,
+            Position = Location.ToVector3(),
+            Rotation = Rotation
+        };
+
+        // TODO: moar fields?
+
+        return spawnPoint;
     }
 
     public override void Read(BinaryReader reader, int mapVersion)
@@ -73,6 +88,21 @@ public class SpawnPointTemplate : GraphicsObjectTemplate
 
         if (mapVersion >= 32)
             MaybeChampionName = reader.ReadLengthedString();
+    }
+
+    private Random TempRandom = new();
+    public SpawnList GetSpawn()
+    {
+        // TODO: not 100% chance to spawn?
+
+        var realSpawns = Spawns.Where(s => s.SpawnType != -1);
+        if (!realSpawns.Any())
+            return null;
+
+        if (realSpawns.Count() == 1)
+            return Spawns.FirstOrDefault(s => s.SpawnType != -1);
+
+        return realSpawns.Skip(TempRandom.Next(0, realSpawns.Count())).Take(1).FirstOrDefault();
     }
 
     public class SpawnList
