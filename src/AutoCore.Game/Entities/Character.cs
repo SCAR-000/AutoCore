@@ -48,7 +48,7 @@ public class Character : Creature
     public int ClanRank => ClanMemberDBData?.Rank ?? -1;
     #endregion
 
-    public byte GMLevel { get; }
+    public byte GMLevel { get; set; }
     public TNLConnection OwningConnection { get; private set; }
     public Vehicle CurrentVehicle { get; private set; }
     #endregion

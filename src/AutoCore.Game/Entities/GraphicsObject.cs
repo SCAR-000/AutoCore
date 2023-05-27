@@ -6,7 +6,7 @@ public enum GraphicsObjectType
     Graphics
 }
 
-public abstract class GraphicsObject : ClonedObjectBase
+public class GraphicsObject : ClonedObjectBase
 {
     public GraphicsObjectType ObjectType { get; }
 
@@ -14,4 +14,8 @@ public abstract class GraphicsObject : ClonedObjectBase
     {
         ObjectType = objectType;
     }
+
+    public override int GetCurrentHP() => CloneBaseObject.SimpleObjectSpecific.MaxHitPoint;
+    public override int GetMaximumHP() => CloneBaseObject.SimpleObjectSpecific.MaxHitPoint;
+    public override int GetBareTeamFaction() => Faction;
 }

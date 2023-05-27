@@ -14,20 +14,20 @@ public abstract class ClonedObjectBase
     public CloneBaseObjectType Type => CloneBaseObject.Type;
     public int CBID => CloneBaseObject.CloneBaseSpecific.CloneBaseId;
     
-    public int Faction { get; protected set; }
+    public int Faction { get; set; }
     public GhostObject Ghost { get; protected set; }
     //public int LastServerUpdate { get; protected set; }
     //public int TimeOfDeath { get; protected set; }
     public TFID Murderer { get; protected set; }
     //public TFID LastMurderer { get; protected set; }
     //public float DamageByMurderer { get; protected set; }
-    public Vector3 Position { get; protected set; }
-    public Quaternion Rotation { get; protected set; }
+    public Vector3 Position { get; set; }
+    public Quaternion Rotation { get; set; }
     public ClonedObjectBase Target { get; protected set; }
     public SectorMap Map { get; protected set; }
     public ClonedObjectBase Owner { get; protected set; }
     //public ushort StatusBitField { get; protected set; }
-    public float Scale { get; protected set; }
+    public float Scale { get; set; }
     //public float TerrainOffset { get; protected set; }
     //public float GameMass { get; protected set; }
     public int Value { get; protected set; }
@@ -116,7 +116,7 @@ public abstract class ClonedObjectBase
         Murderer = new();
     }
 
-    protected void LoadCloneBase(int cbid)
+    public void LoadCloneBase(int cbid)
     {
         CloneBaseObject = AssetManager.Instance.GetCloneBase<CloneBaseObject>(cbid);
 
@@ -131,7 +131,7 @@ public abstract class ClonedObjectBase
         UsesLeft = CloneBaseObject.SimpleObjectSpecific.MaxUses;
     }
 
-    protected void SetCoid(long coid, bool global)
+    public void SetCoid(long coid, bool global)
     {
         ObjectId.Coid = coid;
         ObjectId.Global = global;
@@ -169,12 +169,10 @@ public abstract class ClonedObjectBase
                 oldMap.LeaveMap(this);
             }
 
-            // might need to TODO later
-        }
-
-        if (Map != null)
-        {
-            Map.EnterMap(this);
+            if (Map != null)
+            {
+                Map.EnterMap(this);
+            }
         }
     }
 
