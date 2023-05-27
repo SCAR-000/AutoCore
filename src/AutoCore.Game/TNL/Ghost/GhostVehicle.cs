@@ -255,9 +255,9 @@ public class GhostVehicle : GhostObject
             stream.Write(parentVehicle.Armor.CloneBaseArmor.ArmorSpecific.Resistances.Damage[5]);
         }
 
-        if (stream.WriteFlag((updateMask & GMMask) != 0 && false)) // TODO
+        if (stream.WriteFlag((updateMask & GMMask) != 0 && superCharacter != null))
         {
-            stream.WriteInt(0, 4); // GMLevel if owner is character
+            stream.WriteInt(superCharacter.GMLevel, 4);
         }
 
         if (stream.WriteFlag((updateMask & ClanMask) != 0 && false)) // TODO
