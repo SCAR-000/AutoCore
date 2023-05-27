@@ -29,7 +29,7 @@ public class GLMLoader
         return false;
     }
 
-    public BinaryReader GetReader(string fileName)
+    public MemoryStream GetStream(string fileName)
     {
         if (GLMEntries.TryGetValue(MiscGLM, out var miscGlmEntry))
         {
@@ -40,7 +40,7 @@ public class GLMLoader
                 miscGlmEntry.FileStream.Seek(fileEntry.Offset, SeekOrigin.Begin);
                 miscGlmEntry.FileStream.Read(data, 0, fileEntry.Size);
 
-                return new BinaryReader(new MemoryStream(data), Encoding.UTF8, false);
+                return new MemoryStream(data);
             }
         }
 
@@ -53,12 +53,14 @@ public class GLMLoader
                 glmEntry.Value.FileStream.Seek(fileEntry.Offset, SeekOrigin.Begin);
                 glmEntry.Value.FileStream.Read(data, 0, fileEntry.Size);
 
-                return new BinaryReader(new MemoryStream(data), Encoding.UTF8, false);
-            }    
+                return new MemoryStream(data);
+            }
         }
 
         return null;
     }
+
+    public BinaryReader GetReader(string fileName) => new(GetStream(fileName), Encoding.UTF8, false);
 
     public bool CanGetReader(string fileName)
     {
