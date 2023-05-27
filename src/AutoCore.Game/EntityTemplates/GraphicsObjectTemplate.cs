@@ -1,6 +1,7 @@
 ﻿namespace AutoCore.Game.EntityTemplates;
 
 using AutoCore.Game.Entities;
+using AutoCore.Game.Map;
 using AutoCore.Game.Structures;
 using AutoCore.Utils.Extensions;
 
@@ -31,6 +32,20 @@ public class GraphicsObjectTemplate : ObjectTemplate
         Scale = reader.ReadSingle();
         TerrainOffset = reader.ReadSingle();
         IsActive = reader.ReadBoolean();
+    }
+
+    public override ClonedObjectBase Create()
+    {
+        var obj = new GraphicsObject(ObjectType);
+        obj.SetCoid(COID, false);
+        obj.LoadCloneBase(CBID);
+        obj.Faction = Faction;
+        obj.Scale = Scale;
+        obj.Layer = Layer;
+        obj.Position = Location.ToVector3();
+        obj.Rotation = Rotation;
+
+        return obj;
     }
 
     private void GraphicsBase_UnserializeCreateEffect(BinaryReader reader, int mapVersion)
