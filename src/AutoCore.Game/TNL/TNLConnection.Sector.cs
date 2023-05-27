@@ -33,6 +33,8 @@ public partial class TNLConnection
 
         var map = MapManager.Instance.GetMap(CurrentCharacter.LastTownId);
 
+        CurrentCharacter.SetOwningConnection(this);
+        CurrentCharacter.GMLevel = Account.Level;
         CurrentCharacter.SetMap(map);
         CurrentCharacter.CurrentVehicle.SetMap(map);
 
