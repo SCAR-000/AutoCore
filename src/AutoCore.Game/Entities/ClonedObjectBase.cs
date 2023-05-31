@@ -158,16 +158,14 @@ public abstract class ClonedObjectBase
 
     public void SetMap(SectorMap map)
     {
-        var oldMap = Map;
-
-        Map = map;
-
-        if (oldMap != map)
+        if (Map != map)
         {
-            if (oldMap != null)
+            if (Map != null)
             {
-                oldMap.LeaveMap(this);
+                Map.LeaveMap(this);
             }
+
+            Map = map;
 
             if (Map != null)
             {
