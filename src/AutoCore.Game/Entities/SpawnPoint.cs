@@ -62,6 +62,8 @@ public class SpawnPoint : ClonedObjectBase
 
     private Creature SpawnCreature(int cbid)
     {
+        // TODO: faction of the creature should be the faction of the spawnpoint?
+
         var creature = new Creature();
         creature.SetCoid(Map.LocalCoidCounter++, false);
         creature.LoadCloneBase(cbid);

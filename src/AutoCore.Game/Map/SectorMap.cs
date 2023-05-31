@@ -25,7 +25,6 @@ public class SectorMap
         LocalCoidCounter = MapData.HighestCoid + 1;
 
         InitializeLocalObjects();
-        // TODO: create local objects from MapData's templates
     }
 
     private void InitializeLocalObjects()
