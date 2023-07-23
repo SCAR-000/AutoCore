@@ -5,6 +5,8 @@ using AutoCore.Game.CloneBases;
 using AutoCore.Game.Constants;
 using AutoCore.Game.Managers.Asset;
 using AutoCore.Game.Map;
+using AutoCore.Game.Mission;
+using AutoCore.Game.Structures;
 using AutoCore.Utils;
 using AutoCore.Utils.Memory;
 
@@ -93,6 +95,10 @@ public class AssetManager : Singleton<AssetManager>
     {
         return GetCloneBase(CBID) as T;
     }
+
+    public IEnumerable<CloneBase> GetCloneBases() => WADLoader.CloneBases.Values;
+    public IEnumerable<Mission> GetMissions() => WADLoader.Missions.Values;
+    public IEnumerable<Skill> GetSkills() => WADLoader.Skills.Values;
     #endregion
 
     #region GLM
