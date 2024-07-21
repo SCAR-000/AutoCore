@@ -275,6 +275,10 @@ public partial class TNLConnection : GhostConnection
                     MapManager.Instance.HandleTransferRequestPacket(CurrentCharacter, reader);
                     break;
 
+                case GameOpcode.ChangeCombatModeRequest:
+                    MapManager.Instance.HandleChangeCombatModeRequest(CurrentCharacter, reader);
+                    break;
+
                 default:
                     Logger.WriteLog(LogType.Error, "Unhandled Opcode: {0}", gameOpcode);
                     break;

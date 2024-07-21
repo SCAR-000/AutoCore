@@ -70,4 +70,22 @@ public class MapManager : Singleton<MapManager>
         character.CurrentVehicle.Position = character.Position;
         character.CurrentVehicle.Rotation = character.Rotation;
     }
+
+    public void HandleChangeCombatModeRequest(Character character, BinaryReader reader)
+    {
+        var packet = new ChangeCombatModeRequestPacket();
+        packet.Read(reader);
+
+        // TODO: Update the Character
+
+        // Always send true as success, false isn't implemented correctly and the client doesn't update, keeping the previous values, but updates the UI
+        var response = new ChangeCombatModeResponsePacket
+        {
+            CharacterCoid = packet.CharacterCoid,
+            Mode = packet.Mode,
+            Success = true
+        };
+
+        character.OwningConnection.SendGamePacket(response);
+    }
 }
