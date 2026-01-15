@@ -114,6 +114,29 @@ public class AssetManager : Singleton<AssetManager>
     public IEnumerable<ContinentObject> GetContinentObjects()
     {
         return WorldDBLoader.ContinentObjects.Values;
+    }   
+
+    /// <summary>
+    /// Looks up a continent object directly from wad.xml, bypassing the filter.
+    /// Used for error messages when a map transfer fails because the map file is missing.
+    /// </summary>
+    public ContinentObject GetContinentObjectFromWad(int continentObjectId)
+    {
+        try
+        {
+            var wadXmlPath = Path.Combine(GamePath, "wad.xml");
+            if (!File.Exists(wadXmlPath))
+                return null;
+
+            var allContinents = WadXmlWorldDataLoader.LoadContinentObjects(wadXmlPath);
+            if (allContinents.TryGetValue(continentObjectId, out var result))
+                return result;
+        }
+        catch
+        {
+            // Ignore errors - this is just for diagnostics
+        }
+        return null;
     }
 
     public MapData GetMapData(int mapId)

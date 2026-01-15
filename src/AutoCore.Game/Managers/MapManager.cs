@@ -30,10 +30,48 @@ public class MapManager : Singleton<MapManager>
         SectorMaps[continentId] = new SectorMap(continentId);
     }
 
+    private bool TrySetupMap(int continentId, out string error)
+    {
+        error = null;
+
+        if (SectorMaps.ContainsKey(continentId))
+            return true;
+
+        var continentObject = AssetManager.Instance.GetContinentObject(continentId);
+        if (continentObject == null)
+        {
+            var wadContinent = AssetManager.Instance.GetContinentObjectFromWad(continentId);
+            if (wadContinent != null)
+            {
+                var mapFileName = $"{wadContinent.MapFileName}.fam";
+                error = $"Map '{wadContinent.DisplayName}' (continent {continentId}) cannot be loaded - map file '{mapFileName}' not found in GLM archives";
+            }
+            else
+            {
+                error = $"Continent object {continentId} not found in database";
+            }
+            return false;
+        }
+
+        var famFileName = $"{continentObject.MapFileName}.fam";
+        if (!AssetManager.Instance.HasFileInGLMs(famFileName))
+        {
+            error = $"Map file '{famFileName}' not found in GLM archives for continent {continentId} ({continentObject.DisplayName})";
+            return false;
+        }
+
+        SectorMaps[continentId] = new SectorMap(continentId);
+        Logger.WriteLog(LogType.Initialize, $"MapManager: Dynamically loaded map {continentId} ({continentObject.DisplayName})");
+        return true;
+    }
+
     public SectorMap GetMap(int continentId)
     {
         if (SectorMaps.TryGetValue(continentId, out var sectorMap))
             return sectorMap;
+
+        if (TrySetupMap(continentId, out var error))
+            return SectorMaps[continentId];
 
         throw new Exception($"Unknown map ({continentId}) requested!");
     }
