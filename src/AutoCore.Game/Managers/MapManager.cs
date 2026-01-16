@@ -38,6 +38,50 @@ public class MapManager : Singleton<MapManager>
         throw new Exception($"Unknown map ({continentId}) requested!");
     }
 
+    /// <summary>
+    /// Server-side helper used by GM chat commands (e.g. /warp) to transfer a character to another map.
+    /// Mirrors the behavior of <see cref="HandleTransferRequestPacket"/> but returns success/failure.
+    /// </summary>
+    public bool TransferCharacterToMap(Character character, int continentId)
+    {
+        try
+        {
+            if (character == null || character.OwningConnection == null)
+                return false;
+
+            if (!TrySetupMap(continentId, out _))
+                return false;
+
+            var map = GetMap(continentId);
+            if (map == null)
+                return false;
+
+            var mapInfoPacket = new MapInfoPacket();
+            map.Fill(mapInfoPacket);
+
+            character.OwningConnection.ResetGhosting();
+            character.OwningConnection.SendGamePacket(mapInfoPacket, skipOpcode: true);
+
+            character.SetMap(map);
+            character.Position = map.MapData.EntryPoint.ToVector3();
+            character.Rotation = Quaternion.Default;
+
+            if (character.CurrentVehicle != null)
+            {
+                character.CurrentVehicle.SetMap(map);
+                character.CurrentVehicle.Position = character.Position;
+                character.CurrentVehicle.Rotation = character.Rotation;
+            }
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Logger.WriteLog(LogType.Error, $"TransferCharacterToMap failed: {ex.Message}");
+            return false;
+        }
+    }
+
     public void HandleTransferRequestPacket(Character character, BinaryReader reader)
     {
         var packet = new MapTransferRequestPacket();

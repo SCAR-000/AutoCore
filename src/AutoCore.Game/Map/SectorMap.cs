@@ -68,6 +68,23 @@ public class SectorMap
         return null;
     }
 
+    // Compatibility helpers (AutoCore naming) used by combat/loot code.
+    public ClonedObjectBase GetObject(long coid)
+        => GetObjectByCoid(coid);
+
+    public ClonedObjectBase GetObjectByCoid(long coid)
+    {
+        // Prefer exact lookup first
+        if (Objects.TryGetValue(new TFID(coid, false), out var local))
+            return local;
+        if (Objects.TryGetValue(new TFID(coid, true), out var global))
+            return global;
+
+        // Fallback: match on COID regardless of global flag
+        var found = Objects.FirstOrDefault(o => o.Key.Coid == coid);
+        return found.Value;
+    }
+
     public void Fill(MapInfoPacket packet)
     {
         packet.RegionId = -1;

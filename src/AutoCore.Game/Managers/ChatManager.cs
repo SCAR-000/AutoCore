@@ -1,5 +1,7 @@
 ﻿namespace AutoCore.Game.Managers;
 
+using System.Linq;
+using AutoCore.Database.Char;
 using AutoCore.Game.Constants;
 using AutoCore.Game.Entities;
 using AutoCore.Game.Packets.Global;
@@ -122,6 +124,531 @@ public class ChatManager : Singleton<ChatManager>
 
                         connection.SendGamePacket(createPacket);
                     }
+                }
+                break;
+
+            case "/maps":
+                if (character?.Map == null)
+                {
+                    respPacket.Message = "You are not in a map!";
+                    break;
+                }
+
+                var currentMapId = character.Map.ContinentId;
+                var allMaps = AssetManager.Instance.GetContinentObjects().OrderBy(m => m.Id).ToList();
+
+                var mapList = new System.Text.StringBuilder();
+                mapList.Append($"Current Map ID: {currentMapId}\n");
+                
+                if (allMaps.Count > 0)
+                {
+                    mapList.Append($"\nAll Available Maps ({allMaps.Count} total):\n");
+                    
+                    foreach (var map in allMaps)
+                    {
+                        var isCurrent = map.Id == currentMapId ? " [CURRENT]" : "";
+                        var mapType = "";
+                        if (map.IsTown) mapType = " [Town]";
+                        else if (map.IsArena) mapType = " [Arena]";
+                        
+                        var displayName = string.IsNullOrWhiteSpace(map.DisplayName) ? "Unnamed" : map.DisplayName;
+                        mapList.Append($"  ID: {map.Id} - {displayName}{mapType}{isCurrent}\n");
+                    }
+                }
+                else
+                {
+                    mapList.Append("\nNo maps available.");
+                }
+
+                respPacket.Message = mapList.ToString().TrimEnd();
+                break;
+
+            case "/warp":
+                if (character?.Map == null)
+                {
+                    respPacket.Message = "You are not in a map!";
+                    break;
+                }
+
+                if (parts.Length < 2)
+                {
+                    respPacket.Message = "Invalid warp command! Usage: /warp <mapid>";
+                    break;
+                }
+
+                if (!int.TryParse(parts[1], out var targetMapId))
+                {
+                    respPacket.Message = $"Invalid map ID: {parts[1]}. Map ID must be a number.";
+                    break;
+                }
+
+                // Check if map exists
+                var targetMap = AssetManager.Instance.GetContinentObject(targetMapId);
+                if (targetMap == null)
+                {
+                    respPacket.Message = $"Map ID {targetMapId} does not exist. Use /maps to see available maps.";
+                    break;
+                }
+
+                // Check if we're already on that map
+                if (character.Map.ContinentId == targetMapId)
+                {
+                    respPacket.Message = $"You are already on map {targetMapId}!";
+                    break;
+                }
+
+                // Attempt to transfer
+                var transferSuccess = MapManager.Instance.TransferCharacterToMap(character, targetMapId);
+                if (transferSuccess)
+                {
+                    var mapName = string.IsNullOrWhiteSpace(targetMap.DisplayName) ? "Unnamed" : targetMap.DisplayName;
+                    respPacket.Message = $"Warped to map {targetMapId} ({mapName})";
+                }
+                else
+                {
+                    respPacket.Message = $"Failed to warp to map {targetMapId}. The map may not be loaded or available.";
+                }
+                break;
+
+            case "/kill":
+                if (character?.CurrentVehicle == null)
+                {
+                    respPacket.Message = "You are not in a vehicle!";
+                    break;
+                }
+
+                var vehicle = character.CurrentVehicle;
+                if (vehicle.Target == null)
+                {
+                    respPacket.Message = "You have no target!";
+                    break;
+                }
+
+                var target = vehicle.Target;
+                if (target.IsCorpse || target.IsInvincible)
+                {
+                    respPacket.Message = "Cannot damage target (corpse or invincible)!";
+                    break;
+                }
+
+                // Deal 10000 damage
+                const int killDamage = 10000;
+                var actualDamage = target.TakeDamage(killDamage);
+
+                // Send damage packet to show the damage
+                try
+                {
+                    connection.SendGamePacket(new DamagePacket
+                    {
+                        Target = target.ObjectId,
+                        Source = vehicle.ObjectId,
+                        Damage = actualDamage,
+                        DamageType = 0,
+                        Flags = 0
+                    });
+                }
+                catch (System.Exception ex)
+                {
+                    Logger.WriteLog(LogType.Error, $"Failed to send damage packet: {ex.Message}");
+                }
+
+                // Check if target died
+                if (target.GetCurrentHP() <= 0)
+                {
+                    // Set the murderer for loot attribution
+                    target.SetMurderer(character.CurrentVehicle ?? (ClonedObjectBase)character);
+                    target.OnDeath(DeathType.Silent);
+                    respPacket.Message = $"Killed {target.GetType().Name}#{target.ObjectId.Coid} with {actualDamage} damage!";
+                }
+                else
+                {
+                    respPacket.Message = $"Dealt {actualDamage} damage to {target.GetType().Name}#{target.ObjectId.Coid} (HP: {target.GetCurrentHP()}/{target.GetMaximumHP()})";
+                }
+                break;
+
+            
+            case "/xp":
+            case "/experience":
+                if (parts.Length < 2)
+                {
+                    respPacket.Message = "Invalid XP command! Usage: /xp <amount>";
+                    break;
+                }
+
+                if (!int.TryParse(parts[1], out var xpAmount))
+                {
+                    respPacket.Message = $"Invalid XP amount: {parts[1]}. Must be a number.";
+                    break;
+                }
+
+                try
+                {
+                    CharacterStatManager.Instance.Update(character.ObjectId.Coid, stats => stats.Experience = xpAmount);
+                    connection.SendGamePacket(CharacterStatManager.Instance.BuildPacket(character));
+                    respPacket.Message = $"Set Experience to {xpAmount}!";
+                }
+                catch (System.Exception ex)
+                {
+                    Logger.WriteLog(LogType.Error, $"Failed to set XP: {ex.Message}");
+                    respPacket.Message = $"Failed to set XP: {ex.Message}";
+                }
+                break;
+                
+            case "/level":
+                if (parts.Length < 2)
+                {
+                    respPacket.Message = "Invalid level command! Usage: /level <level>";
+                    break;
+                }
+
+                if (!byte.TryParse(parts[1], out var level) || level < 1 || level > 255)
+                {
+                    respPacket.Message = $"Invalid level: {parts[1]}. Must be a number between 1 and 255.";
+                    break;
+                }
+
+                try
+                {
+                    var oldLevel = character.Level;
+                    var levelsGained = level - oldLevel;
+
+                    // Persist level to CharacterData table
+                    using (var context = new CharContext())
+                    {
+                        var charData = context.Characters.FirstOrDefault(c => c.Coid == character.ObjectId.Coid);
+                        if (charData != null)
+                        {
+                            charData.Level = level;
+                            context.SaveChanges();
+                        }
+                    }
+
+                    // Update in-memory character level
+                    character.SetLevel(level);
+
+                    // Apply level-up rewards if level increased
+                    if (levelsGained > 0)
+                    {
+                        CharacterStatManager.Instance.ApplyLevelUpRewards(character.ObjectId.Coid, levelsGained);
+                    }
+
+                    // Send full stats packet with updated level
+                    var packet = CharacterStatManager.Instance.BuildPacket(character);
+                    packet.Level = level;
+                    connection.SendGamePacket(packet);
+                    
+                    if (levelsGained > 0)
+                    {
+                        respPacket.Message = $"Leveled up from {oldLevel} to {level}! Gained {levelsGained} level(s) with rewards.";
+                    }
+                    else if (levelsGained < 0)
+                    {
+                        respPacket.Message = $"Set level to {level} (reduced from {oldLevel}).";
+                    }
+                    else
+                    {
+                        respPacket.Message = $"Set level to {level}!";
+                    }
+                }
+                catch (System.Exception ex)
+                {
+                    Logger.WriteLog(LogType.Error, $"Failed to set level: {ex.Message}");
+                    respPacket.Message = $"Failed to set level: {ex.Message}";
+                }
+                break;
+
+            case "/resetcharacter":
+                try
+                {
+                    // Reset level to 1
+                    using (var context = new CharContext())
+                    {
+                        var charData = context.Characters.FirstOrDefault(c => c.Coid == character.ObjectId.Coid);
+                        if (charData != null)
+                        {
+                            charData.Level = 1;
+                            context.SaveChanges();
+                        }
+                    }
+
+                    // Update in-memory character level
+                    character.SetLevel(1);
+
+                    // Reset all stats to starting values
+                    CharacterStatManager.Instance.Update(character.ObjectId.Coid, stats =>
+                    {
+                        stats.Currency = 0;
+                        stats.Experience = 0;
+                        stats.CurrentMana = 100;
+                        stats.MaxMana = 100;
+                        stats.AttributeTech = 1;
+                        stats.AttributeCombat = 1;
+                        stats.AttributeTheory = 1;
+                        stats.AttributePerception = 1;
+                        stats.AttributePoints = 0;
+                        stats.SkillPoints = 0;
+                        stats.ResearchPoints = 0;
+                    });
+
+                    // Send full stats packet with reset values
+                    var resetPacket = CharacterStatManager.Instance.BuildPacket(character);
+                    resetPacket.Level = 1;
+                    connection.SendGamePacket(resetPacket);
+                    respPacket.Message = "Character stats reset to starting values!";
+                }
+                catch (System.Exception ex)
+                {
+                    Logger.WriteLog(LogType.Error, $"Failed to reset character: {ex.Message}");
+                    respPacket.Message = $"Failed to reset character: {ex.Message}";
+                }
+                break;
+
+            case "/currency":
+                if (parts.Length < 5)
+                {
+                    respPacket.Message = "Invalid currency command! Usage: /currency <globes> <bars> <scrip> <clink>";
+                    break;
+                }
+
+                if (!long.TryParse(parts[1], out var globes) || !int.TryParse(parts[2], out var bars) || 
+                    !int.TryParse(parts[3], out var scrip) || !int.TryParse(parts[4], out var clink))
+                {
+                    respPacket.Message = "Invalid currency values! All values must be numbers.";
+                    break;
+                }
+
+                try
+                {
+                    var currencyValue = CharacterStatsPacket.BuildCurrency(globes, bars, scrip, clink);
+                    CharacterStatManager.Instance.Update(character.ObjectId.Coid, stats => stats.Currency = currencyValue);
+                    connection.SendGamePacket(CharacterStatManager.Instance.BuildPacket(character));
+                    respPacket.Message = $"Set currency to {globes} Globes, {bars} Bars, {scrip} Scrip, {clink} Clink!";
+                }
+                catch (System.Exception ex)
+                {
+                    Logger.WriteLog(LogType.Error, $"Failed to set currency: {ex.Message}");
+                    respPacket.Message = $"Failed to set currency: {ex.Message}";
+                }
+                break;
+
+            case "/mana":
+                if (parts.Length < 2)
+                {
+                    respPacket.Message = "Invalid mana command! Usage: /mana <current> [max]";
+                    break;
+                }
+
+                if (!short.TryParse(parts[1], out var currentMana))
+                {
+                    respPacket.Message = $"Invalid current mana: {parts[1]}. Must be a number.";
+                    break;
+                }
+
+                short maxMana = currentMana;
+                if (parts.Length >= 3 && !short.TryParse(parts[2], out maxMana))
+                {
+                    respPacket.Message = $"Invalid max mana: {parts[2]}. Must be a number.";
+                    break;
+                }
+
+                try
+                {
+                    CharacterStatManager.Instance.Update(character.ObjectId.Coid, stats =>
+                    {
+                        stats.CurrentMana = currentMana;
+                        stats.MaxMana = maxMana;
+                    });
+                    connection.SendGamePacket(CharacterStatManager.Instance.BuildPacket(character));
+                    respPacket.Message = $"Set mana to {currentMana}/{maxMana}!";
+                }
+                catch (System.Exception ex)
+                {
+                    Logger.WriteLog(LogType.Error, $"Failed to set mana: {ex.Message}");
+                    respPacket.Message = $"Failed to set mana: {ex.Message}";
+                }
+                break;
+
+            case "/tech":
+                if (parts.Length < 2)
+                {
+                    respPacket.Message = "Invalid tech command! Usage: /tech <value>";
+                    break;
+                }
+
+                if (!short.TryParse(parts[1], out var tech))
+                {
+                    respPacket.Message = $"Invalid tech value: {parts[1]}. Must be a number.";
+                    break;
+                }
+
+                try
+                {
+                    CharacterStatManager.Instance.Update(character.ObjectId.Coid, stats => stats.AttributeTech = tech);
+                    connection.SendGamePacket(CharacterStatManager.Instance.BuildPacket(character));
+                    respPacket.Message = $"Set Tech to {tech}!";
+                }
+                catch (System.Exception ex)
+                {
+                    Logger.WriteLog(LogType.Error, $"Failed to set tech: {ex.Message}");
+                    respPacket.Message = $"Failed to set tech: {ex.Message}";
+                }
+                break;
+
+            case "/combat":
+                if (parts.Length < 2)
+                {
+                    respPacket.Message = "Invalid combat command! Usage: /combat <value>";
+                    break;
+                }
+
+                if (!short.TryParse(parts[1], out var combat))
+                {
+                    respPacket.Message = $"Invalid combat value: {parts[1]}. Must be a number.";
+                    break;
+                }
+
+                try
+                {
+                    CharacterStatManager.Instance.Update(character.ObjectId.Coid, stats => stats.AttributeCombat = combat);
+                    connection.SendGamePacket(CharacterStatManager.Instance.BuildPacket(character));
+                    respPacket.Message = $"Set Combat to {combat}!";
+                }
+                catch (System.Exception ex)
+                {
+                    Logger.WriteLog(LogType.Error, $"Failed to set combat: {ex.Message}");
+                    respPacket.Message = $"Failed to set combat: {ex.Message}";
+                }
+                break;
+
+            case "/theory":
+                if (parts.Length < 2)
+                {
+                    respPacket.Message = "Invalid theory command! Usage: /theory <value>";
+                    break;
+                }
+
+                if (!short.TryParse(parts[1], out var theory))
+                {
+                    respPacket.Message = $"Invalid theory value: {parts[1]}. Must be a number.";
+                    break;
+                }
+
+                try
+                {
+                    CharacterStatManager.Instance.Update(character.ObjectId.Coid, stats => stats.AttributeTheory = theory);
+                    connection.SendGamePacket(CharacterStatManager.Instance.BuildPacket(character));
+                    respPacket.Message = $"Set Theory to {theory}!";
+                }
+                catch (System.Exception ex)
+                {
+                    Logger.WriteLog(LogType.Error, $"Failed to set theory: {ex.Message}");
+                    respPacket.Message = $"Failed to set theory: {ex.Message}";
+                }
+                break;
+
+            case "/perception":
+                if (parts.Length < 2)
+                {
+                    respPacket.Message = "Invalid perception command! Usage: /perception <value>";
+                    break;
+                }
+
+                if (!short.TryParse(parts[1], out var perception))
+                {
+                    respPacket.Message = $"Invalid perception value: {parts[1]}. Must be a number.";
+                    break;
+                }
+
+                try
+                {
+                    CharacterStatManager.Instance.Update(character.ObjectId.Coid, stats => stats.AttributePerception = perception);
+                    connection.SendGamePacket(CharacterStatManager.Instance.BuildPacket(character));
+                    respPacket.Message = $"Set Perception to {perception}!";
+                }
+                catch (System.Exception ex)
+                {
+                    Logger.WriteLog(LogType.Error, $"Failed to set perception: {ex.Message}");
+                    respPacket.Message = $"Failed to set perception: {ex.Message}";
+                }
+                break;
+
+            case "/attrpoints":
+            case "/attributepoints":
+                if (parts.Length < 2)
+                {
+                    respPacket.Message = "Invalid attribute points command! Usage: /attrpoints <value>";
+                    break;
+                }
+
+                if (!short.TryParse(parts[1], out var attrPoints))
+                {
+                    respPacket.Message = $"Invalid attribute points value: {parts[1]}. Must be a number.";
+                    break;
+                }
+
+                try
+                {
+                    CharacterStatManager.Instance.Update(character.ObjectId.Coid, stats => stats.AttributePoints = attrPoints);
+                    connection.SendGamePacket(CharacterStatManager.Instance.BuildPacket(character));
+                    respPacket.Message = $"Set Attribute Points to {attrPoints}!";
+                }
+                catch (System.Exception ex)
+                {
+                    Logger.WriteLog(LogType.Error, $"Failed to set attribute points: {ex.Message}");
+                    respPacket.Message = $"Failed to set attribute points: {ex.Message}";
+                }
+                break;
+
+            case "/skillpoints":
+                if (parts.Length < 2)
+                {
+                    respPacket.Message = "Invalid skill points command! Usage: /skillpoints <value>";
+                    break;
+                }
+
+                if (!short.TryParse(parts[1], out var skillPoints))
+                {
+                    respPacket.Message = $"Invalid skill points value: {parts[1]}. Must be a number.";
+                    break;
+                }
+
+                try
+                {
+                    CharacterStatManager.Instance.Update(character.ObjectId.Coid, stats => stats.SkillPoints = skillPoints);
+                    connection.SendGamePacket(CharacterStatManager.Instance.BuildPacket(character));
+                    respPacket.Message = $"Set Skill Points to {skillPoints}!";
+                }
+                catch (System.Exception ex)
+                {
+                    Logger.WriteLog(LogType.Error, $"Failed to set skill points: {ex.Message}");
+                    respPacket.Message = $"Failed to set skill points: {ex.Message}";
+                }
+                break;
+
+            case "/research":
+            case "/researchpoints":
+                if (parts.Length < 2)
+                {
+                    respPacket.Message = "Invalid research points command! Usage: /research <value>";
+                    break;
+                }
+
+                if (!short.TryParse(parts[1], out var researchPoints))
+                {
+                    respPacket.Message = $"Invalid research points value: {parts[1]}. Must be a number.";
+                    break;
+                }
+
+                try
+                {
+                    CharacterStatManager.Instance.Update(character.ObjectId.Coid, stats => stats.ResearchPoints = researchPoints);
+                    connection.SendGamePacket(CharacterStatManager.Instance.BuildPacket(character));
+                    respPacket.Message = $"Set Research Points to {researchPoints}!";
+                }
+                catch (System.Exception ex)
+                {
+                    Logger.WriteLog(LogType.Error, $"Failed to set research points: {ex.Message}");
+                    respPacket.Message = $"Failed to set research points: {ex.Message}";
                 }
                 break;
 

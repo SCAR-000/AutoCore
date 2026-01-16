@@ -38,8 +38,10 @@ public class Character : Creature
     public int LastTownId => DBData.LastTownId;
     public int LastStationMapId => DBData.LastStationMapId;
     public int LastStationId => DBData.LastStationId;
-    public byte Level => DBData.Level;
+    public new byte Level => DBData.Level;
     #endregion
+
+    public override byte GetLevel() => Level;
 
     #region Database Clan Data
     private ClanMember ClanMemberDBData { get; set; }
@@ -60,6 +62,15 @@ public class Character : Creature
     public void SetOwningConnection(TNLConnection owningConnection)
     {
         OwningConnection = owningConnection;
+    }
+
+    /// <summary>
+    /// Updates the character's level in-memory. Does not persist to database.
+    /// </summary>
+    public void SetLevel(byte level)
+    {
+        if (DBData != null)
+            DBData.Level = level;
     }
 
     public override Character GetAsCharacter() => this;
