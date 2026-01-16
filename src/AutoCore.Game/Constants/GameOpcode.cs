@@ -44,6 +44,7 @@ public enum GameOpcode : uint
     CreateCharacter = 0x2015,
     CreateCharacterExtended = 0x2016,
     CharacterLevel = 0x2017,
+    CharacterStats = 0x2017, // Alias for CharacterLevel
     CreatePowerPlant = 0x2018,
     CreateGadget = 0x2019,
     CreateTinkeringKit = 0x201A,

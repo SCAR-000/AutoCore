@@ -38,6 +38,9 @@ public class Program : ExitableProgram
 
         AssetManager.Instance.LoadAllData();
 
+        // Initialize the loot manager (builds item index from CloneBase data)
+        AutoCore.Game.Managers.LootManager.Instance.Initialize();
+
         if (!MapManager.Instance.Initialize())
             throw new Exception("Unable to load maps!");
 

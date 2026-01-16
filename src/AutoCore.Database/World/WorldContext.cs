@@ -12,6 +12,7 @@ public class WorldContext : DbContext
     public DbSet<ContinentArea> ContinentAreas { get; set; }
     public DbSet<ContinentObject> ContinentObjects { get; set; }
     public DbSet<ExperienceLevel> ExperienceLevels { get; set; }
+    public DbSet<LootTable> LootTables { get; set; }
 
     public WorldContext()
     {
