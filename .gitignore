@@ -286,12 +286,3 @@ __pycache__/
 *.btm.cs
 *.odx.cs
 *.xsd.cs
-src/AutoCore.Auth/appsettings.auth.json
-src/AutoCore.Global/appsettings.global.json
-src/AutoCore.Launcher/appsettings.auth.json
-src/AutoCore.Launcher/appsettings.global.json
-src/AutoCore.Launcher/appsettings.sector.json
-src/AutoCore.Sector/appsettings.sector.json
-/reports
-/reports2
-src/AutoCore.Auth/appsettings.auth.json
