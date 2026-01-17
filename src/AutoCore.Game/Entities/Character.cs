@@ -4,6 +4,7 @@ namespace AutoCore.Game.Entities;
 
 using AutoCore.Database.Char;
 using AutoCore.Database.Char.Models;
+using AutoCore.Game.Managers;
 using AutoCore.Game.Map;
 using AutoCore.Game.Packets.Sector;
 using AutoCore.Game.Structures;
@@ -91,9 +92,12 @@ public class Character : Creature
         Position = new(DBData.PositionX, DBData.PositionY, DBData.PositionZ);
         Rotation = new(DBData.RotationX, DBData.RotationY, DBData.RotationZ, DBData.RotationW);
 
-        HP = MaxHP = CloneBaseObject.SimpleObjectSpecific.MaxHitPoint;
         Faction = CloneBaseObject.SimpleObjectSpecific.Faction;
         TeamFaction = CloneBaseObject.SimpleObjectSpecific.Faction;
+
+        // Character HP is not used by the client for the HUD (vehicle HP is).
+        // Keep whatever the clonebase specifies so packets remain sane.
+        HP = MaxHP = CloneBaseObject.SimpleObjectSpecific.MaxHitPoint;
 
         // TODO: set up stuff, fields, baseclasses, etc
 

@@ -1,6 +1,5 @@
-﻿using System.Diagnostics;
-
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
+using System.Diagnostics;
 
 namespace AutoCore.Sector;
 
@@ -16,6 +15,7 @@ using AutoCore.Global.Network;
 using AutoCore.Sector.Config;
 using AutoCore.Sector.Network;
 using AutoCore.Utils;
+using AutoCore.Utils.Commands;
 using AutoCore.Utils.Server;
 
 public class Program : ExitableProgram
@@ -26,6 +26,9 @@ public class Program : ExitableProgram
 
     public static void Main()
     {
+        // Disable scope trimming so commands remain scoped (auth.exit, global.exit, sector.exit)
+        CommandProcessor.UseScopes();
+
         Initialize(ExitHandlerProc);
 
         var authConfig = GetAuthConfig();

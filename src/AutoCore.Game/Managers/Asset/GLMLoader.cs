@@ -11,6 +11,17 @@ public class GLMLoader
 
     private Dictionary<string, GLMEntry> GLMEntries { get; } = new();
 
+    public IReadOnlyCollection<string> ListFileNames()
+    {
+        var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var glmEntry in GLMEntries.Values)
+        {
+            foreach (var fileName in glmEntry.FileEntries.Keys)
+                set.Add(fileName);
+        }
+        return set.ToList();
+    }
+
     public bool Load(string directoryPath)
     {
         try

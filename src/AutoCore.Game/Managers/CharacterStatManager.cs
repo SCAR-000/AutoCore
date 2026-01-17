@@ -162,6 +162,9 @@ public class CharacterStatManager : Singleton<CharacterStatManager>
                 stats.CurrentMana = stats.MaxMana;
             }
         });
+        
+        // Note: HP update is handled by the caller if they have access to the Character object
+        // This method doesn't have access to the Character, so HP update must be done elsewhere
     }
 
     /// <summary>
@@ -267,6 +270,9 @@ public class CharacterStatManager : Singleton<CharacterStatManager>
                     stats.CurrentMana = stats.MaxMana;
                 }
             });
+
+            // Tech increases by levelsGained; vehicle HP is derived from Tech and is what the client HUD uses.
+            killer.CurrentVehicle?.UpdateHPFromOwnerTechLevel();
         }
 
         // Send packets to killer
@@ -324,4 +330,5 @@ public class CharacterStatsState
         ResearchPoints = dbData.ResearchPoints;
     }
 }
+
 

@@ -8,22 +8,33 @@ namespace AutoCore.Game.Entities;
 
 using AutoCore.Database.Char;
 using AutoCore.Database.Char.Models;
+using AutoCore.Game.CloneBases;
 using AutoCore.Game.Constants;
 using AutoCore.Game.Managers;
 using AutoCore.Game.Map;
 using AutoCore.Game.Packets.Sector;
 using AutoCore.Game.Structures;
 using AutoCore.Game.TNL.Ghost;
+using AutoCore.Utils;
 
 public class Vehicle : SimpleObject
 {
     #region Properties
     #region Database Vehicle Data
     private VehicleData DBData { get; set; }
-    public string Name => DBData.Name;
-    public uint PrimaryColor => DBData.PrimaryColor;
-    public uint SecondaryColor => DBData.SecondaryColor;
-    public byte Trim => DBData.Trim;
+    
+    // NPC vehicle support: backing fields when DBData is null
+    private string _npcName = string.Empty;
+    private uint _npcPrimaryColor = 0;
+    private uint _npcSecondaryColor = 0;
+    private byte _npcTrim = 0;
+    private int _templateId = -1;
+    
+    public string Name => DBData?.Name ?? _npcName;
+    public uint PrimaryColor => DBData?.PrimaryColor ?? _npcPrimaryColor;
+    public uint SecondaryColor => DBData?.SecondaryColor ?? _npcSecondaryColor;
+    public byte Trim => DBData?.Trim ?? _npcTrim;
+    public int TemplateId => _templateId;
     #endregion
 
     public Armor Armor { get; private set; }
@@ -111,6 +122,133 @@ public class Vehicle : SimpleObject
 
     public override Vehicle GetAsVehicle() => this;
 
+    public static int CalculateMaxHPFromTech(short techLevel)
+    {
+        var t = Math.Max((short)1, techLevel);
+        return 100 + (t - 1) * 3;
+    }
+
+    /// <summary>
+    /// Player HUD health is vehicle HP. Apply Tech-based HP (100 base at Tech=1, +3 per Tech above 1)
+    /// for player-owned vehicles.
+    /// </summary>
+    public void UpdateHPFromOwnerTechLevel()
+    {
+        if (Owner is not Character ownerChar)
+            return;
+
+        var stats = CharacterStatManager.Instance.GetOrLoad(ownerChar.ObjectId.Coid);
+        short tech;
+        lock (stats)
+        {
+            tech = stats.AttributeTech;
+        }
+
+        var newMax = CalculateMaxHPFromTech(tech);
+
+        // Set to full to avoid client/UI desync (e.g., stuck at 1/1).
+        MaxHP = newMax;
+        HP = newMax;
+
+        if (Ghost != null)
+            Ghost.SetMaskBits(GhostObject.HealthMask | GhostObject.HealthMaxMask);
+    }
+
+    /// <summary>
+    /// Initializes this vehicle as an NPC from a template, without requiring database data.
+    /// </summary>
+    public void InitializeNpc(int baseCbid, MiniCatalogTemplate? template = null, int? weaponFrontCbid = null, int? weaponTurretCbid = null, int? weaponRearCbid = null, int? weaponMeleeCbid = null)
+    {
+        LoadCloneBase(baseCbid);
+        SetupCBFields();
+        
+        var vehicleCloneBase = CloneBaseObject as CloneBaseVehicle;
+        if (vehicleCloneBase == null)
+        {
+            Logger.WriteLog(LogType.Error, $"Vehicle.InitializeNpc: CBID {baseCbid} is not a vehicle!");
+            return;
+        }
+
+        // Set template ID if provided
+        if (template != null)
+            _templateId = template.TemplateId;
+
+        // Set default colors from vehicle clonebase
+        if (vehicleCloneBase.VehicleSpecific.DefaultColors != null && vehicleCloneBase.VehicleSpecific.DefaultColors.Length > 0)
+        {
+            var defaultColor = vehicleCloneBase.VehicleSpecific.DefaultColors[0];
+            // Convert RGB float (0-1) to uint32 color (0-255 per channel)
+            var r = (byte)Math.Clamp((int)(defaultColor.R * 255), 0, 255);
+            var g = (byte)Math.Clamp((int)(defaultColor.G * 255), 0, 255);
+            var b = (byte)Math.Clamp((int)(defaultColor.B * 255), 0, 255);
+            _npcPrimaryColor = (uint)((r << 16) | (g << 8) | b);
+            if (vehicleCloneBase.VehicleSpecific.DefaultColors.Length > 1)
+            {
+                var defaultColor2 = vehicleCloneBase.VehicleSpecific.DefaultColors[1];
+                var r2 = (byte)Math.Clamp((int)(defaultColor2.R * 255), 0, 255);
+                var g2 = (byte)Math.Clamp((int)(defaultColor2.G * 255), 0, 255);
+                var b2 = (byte)Math.Clamp((int)(defaultColor2.B * 255), 0, 255);
+                _npcSecondaryColor = (uint)((r2 << 16) | (g2 << 8) | b2);
+            }
+        }
+
+        // Set default name from clonebase
+        var shortDesc = CloneBaseObject.CloneBaseSpecific.ShortDesc;
+        var uniqueName = CloneBaseObject.CloneBaseSpecific.UniqueName;
+        _npcName = !string.IsNullOrWhiteSpace(shortDesc)
+            ? shortDesc
+            : (!string.IsNullOrWhiteSpace(uniqueName) ? uniqueName : $"NPC Vehicle {baseCbid}");
+
+        // Initialize wheelset from default
+        var defaultWheelsetCbid = vehicleCloneBase.VehicleSpecific.DefaultWheelset;
+        if (defaultWheelsetCbid > 0)
+        {
+            WheelSet = new WheelSet();
+            WheelSet.LoadCloneBase(defaultWheelsetCbid);
+        }
+        else
+        {
+            Logger.WriteLog(LogType.Debug, $"Vehicle.InitializeNpc: No default wheelset for vehicle CBID {baseCbid}");
+        }
+
+        // Attach weapons from template or provided CBIDs
+        var frontCbid = template?.WeaponFrontCBID ?? weaponFrontCbid;
+        var turretCbid = template?.WeaponTurretCBID ?? weaponTurretCbid;
+        var rearCbid = template?.WeaponRearCBID ?? weaponRearCbid;
+        var meleeCbid = template?.WeaponMeleeCBID ?? weaponMeleeCbid;
+
+        if (frontCbid.HasValue && frontCbid.Value > 0)
+        {
+            WeaponFront = new Weapon();
+            WeaponFront.LoadCloneBase(frontCbid.Value);
+        }
+
+        if (turretCbid.HasValue && turretCbid.Value > 0)
+        {
+            WeaponTurret = new Weapon();
+            WeaponTurret.LoadCloneBase(turretCbid.Value);
+        }
+
+        if (rearCbid.HasValue && rearCbid.Value > 0)
+        {
+            WeaponRear = new Weapon();
+            WeaponRear.LoadCloneBase(rearCbid.Value);
+        }
+
+        if (meleeCbid.HasValue && meleeCbid.Value > 0)
+        {
+            WeaponMelee = new Weapon();
+            WeaponMelee.LoadCloneBase(meleeCbid.Value);
+        }
+
+        // Set HP from clonebase
+        HP = MaxHP = CloneBaseObject.SimpleObjectSpecific.MaxHitPoint;
+
+        // Ensure spawned NPC vehicles are not too fragile
+        if (HP <= 50)
+            HP = MaxHP = 51;
+    }
+
     public override bool LoadFromDB(CharContext context, long coid, bool isInCharacterSelection = false)
     {
         SetCoid(coid, true);
@@ -125,6 +263,9 @@ public class Vehicle : SimpleObject
         Position = new(DBData.PositionX, DBData.PositionY, DBData.PositionZ);
         Rotation = new(DBData.RotationX, DBData.RotationY, DBData.RotationZ, DBData.RotationW);
         HP = MaxHP = CloneBaseObject.SimpleObjectSpecific.MaxHitPoint;
+
+        // Override for player-owned vehicles (HUD HP)
+        UpdateHPFromOwnerTechLevel();
 
         WheelSet = new WheelSet();
         if (!WheelSet.LoadFromDB(context, DBData.Wheelset))
@@ -227,14 +368,14 @@ public class Vehicle : SimpleObject
 
         if (packet is CreateVehiclePacket vehiclePacket)
         {
-            vehiclePacket.CoidCurrentOwner = DBData.CharacterCoid;
+            vehiclePacket.CoidCurrentOwner = DBData?.CharacterCoid ?? -1;
             vehiclePacket.CoidSpawnOwner = -1;
 
             for (var i = 0; i < 8; ++i)
                 vehiclePacket.Tricks[i] = -1;
 
-            vehiclePacket.PrimaryColor = DBData.PrimaryColor;
-            vehiclePacket.SecondaryColor = DBData.SecondaryColor;
+            vehiclePacket.PrimaryColor = PrimaryColor;
+            vehiclePacket.SecondaryColor = SecondaryColor;
             vehiclePacket.ArmorAdd = 0;
             vehiclePacket.PowerMaxAdd = 0;
             vehiclePacket.HeatMaxAdd = 0;
@@ -256,7 +397,7 @@ public class Vehicle : SimpleObject
             vehiclePacket.IsTrailer = false;
             vehiclePacket.IsInventory = false;
             vehiclePacket.IsActive = Map != null && !Map.MapData.ContinentObject.IsTown;
-            vehiclePacket.Trim = DBData.Trim;
+            vehiclePacket.Trim = Trim;
 
             if (Ornament != null)
             {
@@ -276,8 +417,11 @@ public class Vehicle : SimpleObject
                 PowerPlant.WriteToPacket(vehiclePacket.CreatePowerPlant);
             }
 
-            vehiclePacket.CreateWheelSet = new CreateWheelSetPacket();
-            WheelSet.WriteToPacket(vehiclePacket.CreateWheelSet);
+            if (WheelSet != null)
+            {
+                vehiclePacket.CreateWheelSet = new CreateWheelSetPacket();
+                WheelSet.WriteToPacket(vehiclePacket.CreateWheelSet);
+            }
 
             if (Armor != null)
             {
@@ -314,12 +458,12 @@ public class Vehicle : SimpleObject
             vehiclePacket.PatrolDistance = 0.0f;
             vehiclePacket.PathReversing = false;
             vehiclePacket.PathIsRoad = false;
-            vehiclePacket.TemplateId = -1;
+            vehiclePacket.TemplateId = _templateId;
             vehiclePacket.MurdererCoid = -1L;
             vehiclePacket.WeaponsCBID[0] = WeaponFront?.CBID ?? -1;
             vehiclePacket.WeaponsCBID[1] = WeaponTurret?.CBID ?? -1;
             vehiclePacket.WeaponsCBID[2] = WeaponRear?.CBID ?? -1;
-            vehiclePacket.Name = DBData.Name;
+            vehiclePacket.Name = Name;
         }
 
         if (packet is CreateVehicleExtendedPacket extendedPacket)
@@ -415,6 +559,10 @@ public class Vehicle : SimpleObject
         if (Ghost == null)
             return;
 
+        // Prevent NPCs from attacking players (combat is only processed for player-owned vehicles).
+        if (Owner is not Character ownerChar || ownerChar.OwningConnection == null)
+            return;
+
         // Process combat when firing (server authoritative)
         if (Firing > 0 && Target != null && !Target.IsCorpse && !Target.IsInvincible)
         {
@@ -426,6 +574,11 @@ public class Vehicle : SimpleObject
     {
         // Process combat when firing (server authoritative)
         if (Firing <= 0 || Target == null || Target.IsCorpse || Target.IsInvincible)
+            return;
+
+        // Only player-owned vehicles can deal damage.
+        var attackerChar = Owner as Character;
+        if (attackerChar?.OwningConnection == null)
             return;
 
         // Determine which weapon is firing (bit flags: 1=front, 2=turret, 4=rear)
@@ -469,8 +622,7 @@ public class Vehicle : SimpleObject
         }
 
         // Hit chance
-        var attackerLevel = Owner?.GetAsCreature()?.GetLevel() ?? 1;
-        var attackerChar = Owner?.GetAsCharacter();
+        var attackerLevel = attackerChar.GetLevel();
         var attackRating = weaponSpec.OffenseBonus + (weaponSpec.HitBonusPerLevel * attackerLevel);
         var targetDefenseBonus = 0;
         if (Target is Vehicle targetVeh && targetVeh.Armor?.CloneBaseArmor?.ArmorSpecific != null)
@@ -533,6 +685,32 @@ public class Vehicle : SimpleObject
                 DamageType = 0,
                 Flags = 0
             });
+        }
+        catch { }
+
+        // Victim-side notifications (PvP feedback).
+        try
+        {
+            Character? victimChar = null;
+            if (Target is Character directChar)
+                victimChar = directChar;
+            else if (Target is Vehicle targetVeh2 && targetVeh2.Owner is Character vehOwner)
+                victimChar = vehOwner;
+
+            if (victimChar?.OwningConnection != null)
+            {
+                victimChar.OwningConnection.SendGamePacket(new DamagePacket
+                {
+                    Target = Target.ObjectId,
+                    Source = ObjectId,
+                    Damage = actualDamage,
+                    DamageType = 0,
+                    Flags = 0
+                });
+
+                // Also send a combat log message (helps verify hits even if floating text isn't implemented)
+                TrySendCombatMessage(victimChar, $"-{actualDamage}", ChatType.CombatMessage_Health);
+            }
         }
         catch { }
 

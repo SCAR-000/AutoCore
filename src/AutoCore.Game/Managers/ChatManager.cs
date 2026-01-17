@@ -481,11 +481,22 @@ public class ChatManager : Singleton<ChatManager>
                     break;
                 }
 
+                if (tech < 1)
+                    tech = 1;
+
                 try
                 {
+                    // Persist tech
                     CharacterStatManager.Instance.Update(character.ObjectId.Coid, stats => stats.AttributeTech = tech);
+
+                    // Recompute vehicle HP immediately (this is what the client HUD uses)
+                    character.CurrentVehicle?.UpdateHPFromOwnerTechLevel();
+
+                    // Send updated stats back to the client
                     connection.SendGamePacket(CharacterStatManager.Instance.BuildPacket(character));
-                    respPacket.Message = $"Set Tech to {tech}!";
+
+                    respPacket.Message =
+                        $"Set Tech to {tech}! Vehicle HP is now {character.CurrentVehicle?.GetCurrentHP()}/{character.CurrentVehicle?.GetMaximumHP()}.";
                 }
                 catch (System.Exception ex)
                 {
@@ -657,8 +668,15 @@ public class ChatManager : Singleton<ChatManager>
                 break;
         }
 
-        respPacket.MessageLength = (short)respPacket.Message.Length;
+        if (string.IsNullOrWhiteSpace(respPacket.Message))
+            return;
 
+        // MessageLength is bytes (plus null terminator), not chars
+        respPacket.MessageLength = (short)(System.Text.Encoding.UTF8.GetByteCount(respPacket.Message) + 1);
         connection.SendGamePacket(respPacket);
     }
 }
+
+
+
+

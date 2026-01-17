@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Text;
 
 namespace AutoCore.Game.Map;
 
@@ -11,11 +12,15 @@ using AutoCore.Game.Structures;
 using AutoCore.Game.Weather;
 using AutoCore.Utils;
 using AutoCore.Utils.Extensions;
+using System.Linq;
 
 public class MapData
 {
     public ContinentObject ContinentObject { get; }
     public Dictionary<long, ObjectTemplate> Templates { get; } = new();
+
+    public string? MiniCatalogSource { get; private set; }
+    public Dictionary<int, MiniCatalogTemplate> MiniCatalogTemplates { get; } = new();
 
     public int MapVersion { get; private set; }
     public int IterationVersion { get; private set; }
@@ -289,16 +294,145 @@ public class MapData
 
     private void ReadMiniCatalog(BinaryReader reader)
     {
-        if (MapVersion >= 49)
+        if (MapVersion < 49)
+            return;
+
+        var templateIds = Templates.Values
+            .OfType<SpawnPointTemplate>()
+            .SelectMany(sp => sp.Spawns)
+            .Where(s => s.IsTemplate && s.SpawnType != -1)
+            .Select(s => s.SpawnType)
+            .Distinct()
+            .ToArray();
+
+        var start = reader.BaseStream.Position;
+        var remaining = reader.BaseStream.Length - start;
+        if (remaining <= 0)
+            return;
+
+        byte[]? catalogBytes = null;
+        string? source = null;
+
+        // Always consume the remaining bytes (this section is at EOF anyway) but try to interpret it.
+        var tailBytes = reader.ReadBytes((int)remaining);
+
+        try
         {
-            if (MapVersion < 52)
+            if (MapVersion >= 52)
             {
-                // TODO: do we need this?
+                // Strategy:
+                // - Treat the map tail as "metadata" and try to find an external catalog file name within it
+                //   (either as a length-prefixed string at the start, or as an embedded ASCII substring).
+                // - If found, load that file from GLMs and use it as the real catalog blob.
+                // - Otherwise, fall back to using the tail bytes directly.
+
+                var maybeExternal = TryReadLengthedStringFromBytes(tailBytes);
+                var external = FindExternalCatalogFileName(maybeExternal, tailBytes);
+
+                if (!string.IsNullOrWhiteSpace(external))
+                {
+                    using var ext = AssetManager.Instance.GetFileStreamFromGLMs(external);
+                    catalogBytes = ext?.ToArray();
+                    source = $"glm:{external}";
+                }
+
+                if (catalogBytes == null)
+                {
+                    catalogBytes = tailBytes;
+                    source = $"{ContinentObject.MapFileName}.fam:tail";
+                }
             }
             else
             {
-                // load external catalog
+                catalogBytes = tailBytes;
+                source = $"{ContinentObject.MapFileName}.fam:embedded";
             }
         }
+        catch
+        {
+            // Never break map parsing because of catalog heuristics.
+            MiniCatalogSource = $"{ContinentObject.MapFileName}.fam:tail(unparsed)";
+            return;
+        }
+
+        if (catalogBytes == null || catalogBytes.Length == 0 || templateIds.Length == 0)
+        {
+            MiniCatalogSource = source;
+            return;
+        }
+
+        MiniCatalogSource = source;
+        var resolved = MiniCatalogParser.ResolveTemplateLoadouts(templateIds, catalogBytes);
+        foreach (var kvp in resolved)
+            MiniCatalogTemplates[kvp.Key] = kvp.Value;
+    }
+
+    private static string? TryReadLengthedStringFromBytes(byte[] tailBytes)
+    {
+        if (tailBytes.Length < 4)
+            return null;
+
+        var len = BitConverter.ToInt32(tailBytes, 0);
+        if (len < 0 || len > 4096 || 4 + len > tailBytes.Length)
+            return null;
+
+        if (len == 0)
+            return string.Empty;
+
+        return Encoding.UTF8.GetString(tailBytes, 4, len);
+    }
+
+    private string? FindExternalCatalogFileName(string? maybeExternal, byte[] tailBytes)
+    {
+        // 1) If the first item looks like a file/path, try it first.
+        if (!string.IsNullOrWhiteSpace(maybeExternal) && MiniCatalogParser.LooksLikePrintablePath(maybeExternal))
+        {
+            var normalized = MiniCatalogParser.NormalizeFileName(maybeExternal);
+            foreach (var cand in new[] { maybeExternal, normalized }.Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                if (AssetManager.Instance.HasFileInGLMs(cand))
+                    return cand;
+
+                var suffixMatch = AssetManager.Instance.ListGlmFiles()
+                    .FirstOrDefault(f => f.EndsWith(cand, StringComparison.OrdinalIgnoreCase));
+                if (!string.IsNullOrWhiteSpace(suffixMatch))
+                    return suffixMatch;
+            }
+        }
+
+        // 2) Otherwise, scan tail bytes for ASCII-ish substrings and look for exact GLM file-name matches.
+        // This is a best-effort heuristic for maps that embed the catalog resource name without a clean prefix.
+        var files = new HashSet<string>(AssetManager.Instance.ListGlmFiles(), StringComparer.OrdinalIgnoreCase);
+
+        var sb = new StringBuilder();
+        for (var i = 0; i < tailBytes.Length; i++)
+        {
+            var b = tailBytes[i];
+            var ch = (char)b;
+            var printable = b >= 0x20 && b <= 0x7E;
+
+            if (printable)
+            {
+                sb.Append(ch);
+                continue;
+            }
+
+            if (sb.Length >= 5)
+            {
+                var s = sb.ToString();
+                if (s.Contains('.') && MiniCatalogParser.LooksLikePrintablePath(s))
+                {
+                    var normalized = MiniCatalogParser.NormalizeFileName(s);
+                    if (files.Contains(s))
+                        return s;
+                    if (files.Contains(normalized))
+                        return normalized;
+                }
+            }
+
+            sb.Clear();
+        }
+
+        return null;
     }
 }
