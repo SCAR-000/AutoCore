@@ -30,6 +30,52 @@ public class MapManager : Singleton<MapManager>
         SectorMaps[continentId] = new SectorMap(continentId);
     }
 
+    private bool TrySetupMap(int continentId, out string error)
+    {
+        error = null;
+
+        if (SectorMaps.ContainsKey(continentId))
+            return true; // Already loaded
+
+        // Check if the continent object exists in the loaded (filtered) database
+        var continentObject = AssetManager.Instance.GetContinentObject(continentId);
+        if (continentObject == null)
+        {
+            // Try to look up from wad.xml for a better error message
+            var wadContinent = AssetManager.Instance.GetContinentObjectFromWad(continentId);
+            if (wadContinent != null)
+            {
+                var mapFileName = $"{wadContinent.MapFileName}.fam";
+                error = $"Map '{wadContinent.DisplayName}' (continent {continentId}) cannot be loaded - map file '{mapFileName}' not found in GLM archives";
+            }
+            else
+            {
+                error = $"Continent object {continentId} not found in database";
+            }
+            return false;
+        }
+
+        // Check if the map file exists
+        var famFileName = $"{continentObject.MapFileName}.fam";
+        if (!AssetManager.Instance.HasFileInGLMs(famFileName))
+        {
+            error = $"Map file '{famFileName}' not found in GLM archives for continent {continentId} ({continentObject.DisplayName})";
+            return false;
+        }
+
+        try
+        {
+            SectorMaps[continentId] = new SectorMap(continentId);
+            Logger.WriteLog(LogType.Initialize, $"MapManager: Dynamically loaded map {continentId} ({continentObject.DisplayName})");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            error = $"Failed to load map {continentId}: {ex.Message}";
+            return false;
+        }
+    }
+
     public SectorMap GetMap(int continentId)
     {
         if (SectorMaps.TryGetValue(continentId, out var sectorMap))

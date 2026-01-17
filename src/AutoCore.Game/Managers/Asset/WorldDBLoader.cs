@@ -3,6 +3,7 @@
 using AutoCore.Database.World;
 using AutoCore.Database.World.Models;
 using AutoCore.Game.Constants;
+using AutoCore.Utils;
 
 public class WorldDBLoader
 {
@@ -30,8 +31,6 @@ public class WorldDBLoader
             ExperienceLevels = worldContext.ExperienceLevels.ToDictionary(el => el.Level);
         }
 
-<<<<<<< Updated upstream
-=======
         // If the World DB is empty (common for fresh setups), bootstrap core world data from `wad.xml` in GamePath.
         // AA-Server’s `wad.xml` contains authoritative tables like `tConfigNewCharacters`, `tContinentObject`, etc.
         try
@@ -93,7 +92,6 @@ public class WorldDBLoader
             Logger.WriteLog(LogType.Error, $"WorldDBLoader: Failed to bootstrap from wad.xml: {ex}");
         }
 
->>>>>>> Stashed changes
         return true;
     }
 

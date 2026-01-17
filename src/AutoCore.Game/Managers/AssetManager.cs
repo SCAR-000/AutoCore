@@ -78,6 +78,27 @@ public class AssetManager : Singleton<AssetManager>
 
         return true;
     }
+
+    /// <summary>
+    /// Loads only `clonebase.wad` and all `.glm` archives, without requiring any DB connections.
+    /// Intended for offline tooling / reports.
+    /// </summary>
+    public bool LoadWadAndGlmOnly()
+    {
+        var loadWadTask = Task<bool>.Factory.StartNew(() =>
+        {
+            return WADLoader.Load(Path.Combine(GamePath, "clonebase.wad"));
+        });
+
+        var loadGLMTask = Task<bool>.Factory.StartNew(() =>
+        {
+            return GLMLoader.Load(GamePath);
+        });
+
+        Task.WaitAll(loadWadTask, loadGLMTask);
+
+        return loadWadTask.Result && loadGLMTask.Result;
+    }
     #endregion
 
     #region WAD
@@ -103,6 +124,7 @@ public class AssetManager : Singleton<AssetManager>
     public BinaryReader GetFileReaderFromGLMs(string fileName) => GLMLoader.GetReader(fileName);
     public MemoryStream GetFileStreamFromGLMs(string fileName) => GLMLoader.GetStream(fileName);
     public bool HasFileInGLMs(string fileName) => GLMLoader.CanGetReader(fileName);
+    public IReadOnlyCollection<string> ListGlmFiles() => GLMLoader.ListFileNames();
     #endregion
 
     #region WorldDB
@@ -118,6 +140,29 @@ public class AssetManager : Singleton<AssetManager>
     public IEnumerable<ContinentObject> GetContinentObjects()
     {
         return WorldDBLoader.ContinentObjects.Values;
+    }
+
+    /// <summary>
+    /// Looks up a continent object directly from wad.xml, bypassing the filter.
+    /// Used for error messages when a map transfer fails because the map file is missing.
+    /// </summary>
+    public ContinentObject GetContinentObjectFromWad(int continentObjectId)
+    {
+        try
+        {
+            var wadXmlPath = Path.Combine(GamePath, "wad.xml");
+            if (!File.Exists(wadXmlPath))
+                return null;
+
+            var allContinents = WadXmlWorldDataLoader.LoadContinentObjects(wadXmlPath);
+            if (allContinents.TryGetValue(continentObjectId, out var result))
+                return result;
+        }
+        catch
+        {
+            // Ignore errors - this is just for diagnostics
+        }
+        return null;
     }
 
     public MapData GetMapData(int mapId)
