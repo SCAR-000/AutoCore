@@ -115,7 +115,6 @@ public class AssetManager : Singleton<AssetManager>
         return GetCloneBase(CBID) as T;
     }
 
-    // Used by LootManager to build the generatable-item index.
     public IReadOnlyDictionary<int, CloneBase> GetAllCloneBases()
         => WADLoader.CloneBases;
     #endregion
@@ -184,25 +183,6 @@ public class AssetManager : Singleton<AssetManager>
         return null;
     }
 
-    public LootTable GetLootTable(int lootTableId)
-    {
-        if (WorldDBLoader.LootTables == null)
-            return null;
-
-        if (WorldDBLoader.LootTables.TryGetValue(lootTableId, out var result))
-            return result;
-
-        return null;
-    }
-
-    public IEnumerable<LootTable> GetAllLootTables()
-    {
-        if (WorldDBLoader.LootTables == null)
-            return Enumerable.Empty<LootTable>();
-
-        return WorldDBLoader.LootTables.Values;
-    }
-
     public ExperienceLevel GetExperienceLevel(byte level)
     {
         if (WorldDBLoader.ExperienceLevels == null)
@@ -214,19 +194,5 @@ public class AssetManager : Singleton<AssetManager>
         return null;
     }
 
-    /// <summary>
-    /// Gets the XP awarded for killing a creature of the specified level.
-    /// Returns 0 if the creature level is not found in the table.
-    /// </summary>
-    public uint GetCreatureKillXP(byte creatureLevel)
-    {
-        if (WorldDBLoader.CreatureExperienceLevels == null)
-            return 0;
-
-        if (WorldDBLoader.CreatureExperienceLevels.TryGetValue(creatureLevel, out var xp))
-            return xp;
-
-        return 0;
-    }
     #endregion
 }

@@ -66,13 +66,9 @@ public class Character : Creature
     }
 
     /// <summary>
-    /// Updates the character's level in-memory. Does not persist to database.
+    /// Updates the character's level in-memory. Does not persist to database. For Testing purposes only.
     /// </summary>
-    public void SetLevel(byte level)
-    {
-        if (DBData != null)
-            DBData.Level = level;
-    }
+    public void SetLevel(byte level) => DBData.Level = level;
 
     public override Character GetAsCharacter() => this;
     public override Character GetSuperCharacter(bool includeSummons) => this;

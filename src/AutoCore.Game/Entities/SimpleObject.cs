@@ -4,7 +4,6 @@ using AutoCore.Database.Char;
 using AutoCore.Database.Char.Models;
 using AutoCore.Game.Packets.Sector;
 using AutoCore.Game.TNL.Ghost;
-using AutoCore.Utils;
 
 public class SimpleObject : GraphicsObject
 {
@@ -32,20 +31,6 @@ public class SimpleObject : GraphicsObject
     public override int GetCurrentHP() => HP;
     public override int GetMaximumHP() => MaxHP;
     public override int GetBareTeamFaction() => TeamFaction;
-
-    public override int TakeDamage(int damage)
-    {
-        if (IsInvincible || IsCorpse)
-            return 0;
-
-        var actualDamage = Math.Min(damage, HP);
-        HP = Math.Max(0, HP - actualDamage);
-
-        if (Ghost != null)
-            Ghost.SetMaskBits(8); // Health mask
-
-        return actualDamage;
-    }
 
     public SimpleObject(GraphicsObjectType type)
         : base(type)
@@ -95,12 +80,6 @@ public class SimpleObject : GraphicsObject
 
     public override void WriteToPacket(CreateSimpleObjectPacket packet)
     {
-        if (CloneBaseObject == null)
-        {
-            Logger.WriteLog(LogType.Error, $"SimpleObject.WriteToPacket: CloneBaseObject is null for object with COID {ObjectId.Coid}. Cannot write packet.");
-            throw new InvalidOperationException($"CloneBaseObject is null. Object was not properly loaded.");
-        }
-
         packet.CBID = CBID;
         packet.ObjectId = ObjectId;
         packet.CurrentHealth = HP;

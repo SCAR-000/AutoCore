@@ -42,7 +42,7 @@ public class SpawnPoint : ClonedObjectBase
 
         if (cloneBase.Type == CloneBaseObjectType.Creature)
         {
-            var creature = SpawnCreature(cloneBase.CloneBaseSpecific.CloneBaseId, spawnList);
+            var creature = SpawnCreature(cloneBase.CloneBaseSpecific.CloneBaseId);
             if (creature == null)
                 return false;
         }
@@ -60,7 +60,7 @@ public class SpawnPoint : ClonedObjectBase
         return true;
     }
 
-    private Creature SpawnCreature(int cbid, SpawnPointTemplate.SpawnList spawnList)
+    private Creature SpawnCreature(int cbid)
     {
         // TODO: faction of the creature should be the faction of the spawnpoint?
 
@@ -68,26 +68,6 @@ public class SpawnPoint : ClonedObjectBase
         creature.SetCoid(Map.LocalCoidCounter++, false);
         creature.LoadCloneBase(cbid);
         creature.SetupCBFields();
-        
-        // Calculate creature level: BaseLevel + LevelOffset
-        var cloneBaseCreature = creature.CloneBaseObject as CloneBases.CloneBaseCreature;
-        if (cloneBaseCreature != null)
-        {
-            var baseLevel = cloneBaseCreature.CreatureSpecific.BaseLevel;
-            var levelOffset = spawnList.LevelOffset;
-            var calculatedLevel = baseLevel + levelOffset;
-            // Ensure level is at least 1 and within byte range
-            creature.Level = (byte)Math.Max(1, Math.Min(255, (int)calculatedLevel));
-            
-            // Scale health based on level difference from base level
-            creature.ScaleHealthForLevel((byte)baseLevel);
-        }
-        else
-        {
-            creature.Level = 1;
-            Logger.WriteLog(LogType.Error, $"SpawnPoint.SpawnCreature: Creature CBID={cbid} is not a CloneBaseCreature, defaulting to level 1");
-        }
-        
         creature.Layer = Layer;
         creature.Position = Position;
         creature.Rotation = Rotation;
