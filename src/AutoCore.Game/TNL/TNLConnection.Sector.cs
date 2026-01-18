@@ -4,6 +4,8 @@ using AutoCore.Database.Char;
 using AutoCore.Database.Char.Models;
 using AutoCore.Game.Managers;
 using AutoCore.Game.Packets.Sector;
+using AutoCore.Utils;
+using global::TNL.Utils;
 
 public partial class TNLConnection
 {
@@ -132,8 +134,9 @@ public partial class TNLConnection
         {
             var updatePacket = new QuickBarUpdatePacket
             {
-                SlotIndex = quickBarSkill.SlotIndex,
-                SkillId = quickBarSkill.SkillId,
+                SlotIndex = HotBarManager.Instance.EncodeSlotIndex(quickBarSkill.SlotIndex),
+                OpOrFlags = 0x0082,
+                SkillId = (ushort)quickBarSkill.SkillId,
                 ItemCoid = 0
             };
             SendGamePacket(updatePacket);
@@ -295,10 +298,34 @@ public partial class TNLConnection
         {
             SendGamePacket(new QuickBarUpdatePacket
             {
-                SlotIndex = insertedQuickbarSlot,
-                SkillId = packet.SkillID,
+                SlotIndex = HotBarManager.Instance.EncodeSlotIndex(insertedQuickbarSlot),
+                OpOrFlags = 0x0082,
+                SkillId = (ushort)packet.SkillID,
                 ItemCoid = 0
             });
         }
+    }
+
+    private void HandleQuickBarUpdatePacket(BinaryReader reader)
+    {
+        var packet = new QuickBarUpdatePacket();
+        packet.Read(reader);
+
+        if (CurrentCharacter == null)
+            return;
+
+        // Persist hotbar update (and enforce uniqueness: one skill can only exist in one slot)
+        var applied = HotBarManager.Instance.ApplySkillSlotUpdate(CurrentCharacter.ObjectId.Coid, packet.SlotIndex, packet.SkillId);
+        if (!applied)
+            return;
+
+        // Echo the update back to client to confirm
+        SendGamePacket(new QuickBarUpdatePacket
+        {
+            SlotIndex = packet.SlotIndex,
+            OpOrFlags = packet.OpOrFlags,
+            SkillId = packet.SkillId,
+            ItemCoid = packet.ItemCoid
+        });
     }
 }

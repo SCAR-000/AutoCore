@@ -283,6 +283,10 @@ public partial class TNLConnection : GhostConnection
                     HandleSkillIncrementPacket(reader);
                     break;
 
+                case GameOpcode.QuickBarUpdate:
+                    HandleQuickBarUpdatePacket(reader);
+                    break;
+
                 default:
                     Logger.WriteLog(LogType.Error, "Unhandled Opcode: {0}", gameOpcode);
                     break;
