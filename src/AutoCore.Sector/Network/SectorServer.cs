@@ -13,6 +13,7 @@ using System.Net;
 public partial class SectorServer : BaseServer, ILoopable
 {
     public const int MainLoopTime = 100; // Milliseconds
+    private const int ManaRegenTickMs = 1000;
 
     public SectorConfig Config { get; private set; } = new();
     public IPAddress PublicAddress { get; private set; }
@@ -21,6 +22,7 @@ public partial class SectorServer : BaseServer, ILoopable
     public override bool IsRunning => Loop != null && Loop.Running;
     public TNLInterface Interface { get; private set; }
     private readonly object _interfaceLock = new();
+    private long _manaRegenAccumulator;
 
     public SectorServer()
         : base("Sector")
@@ -49,6 +51,13 @@ public partial class SectorServer : BaseServer, ILoopable
     public void MainLoop(long delta)
     {
         Timer.Update(delta);
+        _manaRegenAccumulator += delta;
+        if (_manaRegenAccumulator >= ManaRegenTickMs)
+        {
+            var ticks = _manaRegenAccumulator / ManaRegenTickMs;
+            _manaRegenAccumulator %= ManaRegenTickMs;
+            CharacterStatManager.Instance.RegenerateMana(ticks * ManaRegenTickMs);
+        }
 
         if (Interface == null)
             return;

@@ -3,6 +3,8 @@
 using AutoCore.Database.Char;
 using AutoCore.Game.Managers;
 using AutoCore.Game.Packets.Sector;
+using AutoCore.Game.TNL.Ghost;
+using AutoCore.Utils;
 
 public partial class TNLConnection
 {
@@ -90,6 +92,8 @@ public partial class TNLConnection
         ObjectLocalScopeAlways(character.Ghost);
         ObjectLocalScopeAlways(character.CurrentVehicle.Ghost);
 
+        CharacterStatManager.Instance.UpdatePowerFromCharacter(character);
+
         var charPacket = new CreateCharacterExtendedPacket();
         var vehiclePacket = new CreateVehicleExtendedPacket();
 
@@ -98,6 +102,8 @@ public partial class TNLConnection
 
         SendGamePacket(vehiclePacket);
         SendGamePacket(charPacket);
+        SendGamePacket(CharacterStatManager.Instance.BuildPacket(character));
+        character.CurrentVehicle.Ghost?.SetMaskBits(GhostVehicle.PowerMask);
     }
 
     private void HandleCreatureMovedPacket(BinaryReader reader)

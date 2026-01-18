@@ -18,8 +18,8 @@ public class CreateCharacterExtendedPacket : CreateCharacterPacket
     public long Credits { get; set; }
     public long CreditDebt { get; set; }
     public int XP { get; set; }
-    public short CurrentMana { get; set; }
-    public short MaximumMana { get; set; }
+    public short CurrentPower { get; set; }
+    public short MaximumPower { get; set; }
     public short AttributePoints { get; set; }
     public short AttributeTech { get; set; }
     public short AttributeCombat { get; set; }
@@ -81,7 +81,7 @@ public class CreateCharacterExtendedPacket : CreateCharacterPacket
         writer.Write(Credits);
         writer.Write(CreditDebt);
         writer.Write(XP);
-        writer.Write(CurrentMana);
+        writer.Write(CurrentPower);
         writer.Write(CurrentHealth);
         writer.Write(AttributePoints);
         writer.Write(AttributeTech);

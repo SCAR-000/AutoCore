@@ -23,8 +23,8 @@ using AutoCore.Game.Structures;
 ///   Offset 0x20: Currency (8 bytes) - Globes/Bars/Scrip/Clink
 ///   Offset 0x28: Experience (4 bytes)
 ///   Offset 0x2C: Unknown_0x2C (8 bytes)
-///   Offset 0x34: CurrentMana (2 bytes)
-///   Offset 0x36: MaxMana (2 bytes)
+///   Offset 0x34: CurrentPower (2 bytes)
+///   Offset 0x36: MaxPower (2 bytes)
 ///   Offset 0x38: AttributeTech (2 bytes)
 ///   Offset 0x3A: AttributeCombat (2 bytes)
 ///   Offset 0x3C: AttributeTheory (2 bytes)
@@ -48,8 +48,8 @@ public class CharacterStatsPacket : BasePacket
     public long Unknown_0x2C { get; set; } = 0;
     
     // Attributes and stats
-    public short CurrentMana { get; set; } = 100;
-    public short MaxMana { get; set; } = 100;
+    public short CurrentPower { get; set; } = 100;
+    public short MaxPower { get; set; } = 100;
     public short AttributeTech { get; set; } = 0;
     public short AttributeCombat { get; set; } = 0;
     public short AttributeTheory { get; set; } = 0;
@@ -82,8 +82,8 @@ public class CharacterStatsPacket : BasePacket
         writer.Write(Unknown_0x2C);
         
         // Short fields
-        writer.Write(CurrentMana);
-        writer.Write(MaxMana);
+        writer.Write(CurrentPower);
+        writer.Write(MaxPower);
         writer.Write(AttributeTech);
         writer.Write(AttributeCombat);
         writer.Write(AttributeTheory);

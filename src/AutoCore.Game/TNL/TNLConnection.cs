@@ -279,6 +279,25 @@ public partial class TNLConnection : GhostConnection
                     MapManager.Instance.HandleChangeCombatModeRequest(CurrentCharacter, reader);
                     break;
 
+                case GameOpcode.InventoryEquip:
+                case GameOpcode.InventoryUnequip:
+                    // TODO: Implement inventory equip/unequip handlers
+                    // When implemented, call: CurrentCharacter?.RecalculateHPAndPower();
+                    Logger.WriteLog(LogType.Error, "Unhandled Opcode: {0} - Inventory equip/unequip not yet implemented", gameOpcode);
+                    break;
+
+                case GameOpcode.SkillIncrement:
+                    // TODO: Implement skill increment handler
+                    // When implemented, call: CurrentCharacter?.RecalculateHPAndPower();
+                    Logger.WriteLog(LogType.Error, "Unhandled Opcode: {0} - Skill increment not yet implemented", gameOpcode);
+                    break;
+
+                case GameOpcode.AttributeIncrement:
+                    // TODO: Implement attribute increment handler
+                    // When implemented, call: CurrentCharacter?.RecalculateHPAndPower();
+                    Logger.WriteLog(LogType.Error, "Unhandled Opcode: {0} - Attribute increment not yet implemented", gameOpcode);
+                    break;
+
                 default:
                     Logger.WriteLog(LogType.Error, "Unhandled Opcode: {0}", gameOpcode);
                     break;

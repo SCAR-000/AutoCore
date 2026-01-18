@@ -11,8 +11,8 @@ public class CharacterStatsData
 
     public long Currency { get; set; } = 0;
     public int Experience { get; set; } = 0;
-    public short CurrentMana { get; set; } = 100;
-    public short MaxMana { get; set; } = 100;
+    public short CurrentPower { get; set; } = 100;
+    public short MaxPower { get; set; } = 100;
     public short AttributeTech { get; set; } = 1;
     public short AttributeCombat { get; set; } = 1;
     public short AttributeTheory { get; set; } = 1;

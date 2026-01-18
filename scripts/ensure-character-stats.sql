@@ -6,13 +6,13 @@
 -- Formula: 100 + (Tech - 1) * 3
 
 -- Insert missing stats entries for characters that don't have them
-INSERT IGNORE INTO character_stats (CharacterCoid, Currency, Experience, CurrentMana, MaxMana, AttributeTech, AttributeCombat, AttributeTheory, AttributePerception, AttributePoints, SkillPoints, ResearchPoints)
+INSERT IGNORE INTO character_stats (CharacterCoid, Currency, Experience, CurrentPower, MaxPower, AttributeTech, AttributeCombat, AttributeTheory, AttributePerception, AttributePoints, SkillPoints, ResearchPoints)
 SELECT 
     c.Coid AS CharacterCoid,
     0 AS Currency,
     0 AS Experience,
-    100 AS CurrentMana,
-    100 AS MaxMana,
+    100 AS CurrentPower,
+    100 AS MaxPower,
     1 AS AttributeTech,  -- Default to Tech level 1
     1 AS AttributeCombat,
     1 AS AttributeTheory,

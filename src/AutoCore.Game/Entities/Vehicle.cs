@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 
 namespace AutoCore.Game.Entities;
 
@@ -62,6 +62,10 @@ public class Vehicle : SimpleObject
         Position = new(DBData.PositionX, DBData.PositionY, DBData.PositionZ);
         Rotation = new(DBData.RotationX, DBData.RotationY, DBData.RotationZ, DBData.RotationW);
         HP = MaxHP = CloneBaseObject.SimpleObjectSpecific.MaxHitPoint;
+
+        // Player HUD health comes from vehicle HP. If this vehicle is owned by a Character,
+        // initialize HP/MaxHP from the owner's Tech immediately (do not wait until packet serialization).
+        UpdateHPFromOwnerTechLevel();
 
         WheelSet = new WheelSet();
         if (!WheelSet.LoadFromDB(context, DBData.Wheelset))
@@ -173,7 +177,6 @@ public class Vehicle : SimpleObject
             vehiclePacket.PrimaryColor = DBData.PrimaryColor;
             vehiclePacket.SecondaryColor = DBData.SecondaryColor;
             vehiclePacket.ArmorAdd = 0;
-            vehiclePacket.PowerMaxAdd = 0;
             vehiclePacket.HeatMaxAdd = 0;
             vehiclePacket.CooldownAdd = 0;
             vehiclePacket.InventorySlots = 0;
@@ -194,6 +197,19 @@ public class Vehicle : SimpleObject
             vehiclePacket.IsInventory = false;
             vehiclePacket.IsActive = Map != null && !Map.MapData.ContinentObject.IsTown;
             vehiclePacket.Trim = DBData.Trim;
+
+            // Power calculations
+            var chassisPowerAdd = (CloneBaseObject as CloneBaseVehicle)?.VehicleSpecific.PowerMaxAdd ?? 0;
+            var theoryBonus = 0;
+            if (Owner is Character ownerChar)
+            {
+                var stats = CharacterStatManager.Instance.GetOrLoad(ownerChar.ObjectId.Coid);
+                lock (stats)
+                {
+                    theoryBonus = stats.AttributeTheory * 2;
+                }
+            }
+            vehiclePacket.PowerMaxAdd = chassisPowerAdd + theoryBonus;
 
             if (Ornament != null)
             {

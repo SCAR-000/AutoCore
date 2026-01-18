@@ -154,6 +154,12 @@ public class Character : Creature
 
         if (packet is CreateCharacterExtendedPacket extendedCharPacket)
         {
+            var stats = CharacterStatManager.Instance.GetOrLoad(ObjectId.Coid);
+            lock (stats)
+            {
+                extendedCharPacket.CurrentPower = stats.CurrentPower;
+                extendedCharPacket.MaximumPower = stats.MaxPower;
+            }
             extendedCharPacket.NumCompletedQuests = 0;
             extendedCharPacket.NumCurrentQuests = 0;
             extendedCharPacket.NumAchievements = 0;

@@ -72,6 +72,11 @@ public class ObjectManager : Singleton<ObjectManager>
         return null;
     }
 
+    public IEnumerable<Character> GetCharacters()
+    {
+        return Objects.Values.OfType<Character>().ToList();
+    }
+
     public Character? GetCharacterByName(string name)
     {
         return Objects.Values.Where(o => o is Character objChar && objChar.Name == name).Select(o => o as Character).FirstOrDefault();

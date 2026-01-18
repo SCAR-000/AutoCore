@@ -13,8 +13,8 @@ public class PowerPlantSpecific
         {
             HeatMaximum = br.ReadInt32(),
             PowerMaximum = br.ReadInt32(),
-            PowerRegenRate = br.ReadInt16(),
-            CoolRate = br.ReadInt16()
+            CoolRate = br.ReadInt16(),
+            PowerRegenRate = br.ReadInt16()
         };
     }
 
@@ -22,7 +22,7 @@ public class PowerPlantSpecific
     {
         writer.Write(HeatMaximum);
         writer.Write(PowerMaximum);
-        writer.Write(PowerRegenRate);
         writer.Write(CoolRate);
+        writer.Write(PowerRegenRate);
     }
 }
