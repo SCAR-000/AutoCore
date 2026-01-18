@@ -23,6 +23,7 @@ public class CreatureSpecific
     public int HasTurret;
     public float HearingRange;
     public int IsNPC;
+    public int LootTableId;
     public int NPCCanGamble;
     public string NPCIntro;
     public short OffensiveBonus;
@@ -59,8 +60,8 @@ public class CreatureSpecific
             Flags = reader.ReadByte(),
             BossType = reader.ReadByte(),
             DifficultyAdjust = reader.ReadInt16(),
+            BaseLootChance = reader.ReadByte(),
             Skills = new Dictionary<byte, List<SkillSet>>(),
-            BaseLootChance = reader.ReadByte(), // skipped for now
         };
 
         reader.ReadBytes(3);
@@ -71,7 +72,7 @@ public class CreatureSpecific
         c.Color3 = reader.ReadInt32();
         c.OffensiveBonus = reader.ReadInt16();
         c.DefensiveBonus = reader.ReadInt16();
-        reader.ReadInt32(); // LootTableId (skipped)
+        c.LootTableId = reader.ReadInt32();
 
         var asd = reader.ReadInt32();
 
