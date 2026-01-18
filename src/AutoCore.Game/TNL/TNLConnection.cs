@@ -279,6 +279,10 @@ public partial class TNLConnection : GhostConnection
                     MapManager.Instance.HandleChangeCombatModeRequest(CurrentCharacter, reader);
                     break;
 
+                case GameOpcode.SkillIncrement:
+                    HandleSkillIncrementPacket(reader);
+                    break;
+
                 default:
                     Logger.WriteLog(LogType.Error, "Unhandled Opcode: {0}", gameOpcode);
                     break;

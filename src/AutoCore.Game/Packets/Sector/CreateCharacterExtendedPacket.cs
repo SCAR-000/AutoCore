@@ -40,9 +40,18 @@ public class CreateCharacterExtendedPacket : CreateCharacterPacket
     public int RespecsBought { get; set; }
     public long LastRespecTime { get; set; }
     public int FreeRespecs { get; set; }
+    
+    /// <summary>
+    /// List of skills the character has learned. Each entry contains (SkillId, SkillLevel/Rank).
+    /// </summary>
+    public List<(int SkillId, short SkillLevel)> Skills { get; set; } = new();
 
     public override void Write(BinaryWriter writer)
     {
+        // Keep variable-length sections consistent with their counts to avoid desync.
+        // (Client will read exactly NumSkills entries; writing more/less breaks parsing.)
+        NumSkills = (byte)Math.Min(Skills.Count, byte.MaxValue);
+
         base.Write(writer);
 
         writer.Write(NumCompletedQuests);
@@ -82,7 +91,7 @@ public class CreateCharacterExtendedPacket : CreateCharacterPacket
         writer.Write(CreditDebt);
         writer.Write(XP);
         writer.Write(CurrentMana);
-        writer.Write(CurrentHealth);
+        writer.Write(MaximumMana);
         writer.Write(AttributePoints);
         writer.Write(AttributeTech);
         writer.Write(AttributeCombat);
@@ -126,8 +135,14 @@ public class CreateCharacterExtendedPacket : CreateCharacterPacket
 
         if (NumSkills > 0)
         {
-            // TODO: write skills ({skillid, skilllevel, 2B padding}[])
-            writer.BaseStream.Position += 8 * NumSkills;
+            // Write skills: {int SkillId (4B), short SkillLevel (2B), 2B padding}[]
+            for (var i = 0; i < NumSkills; i++)
+            {
+                var skill = Skills[i];
+                writer.Write(skill.SkillId);
+                writer.Write(skill.SkillLevel);
+                writer.BaseStream.Position += 2; // 2 bytes padding
+            }
         }
 
         if (NumCompletedQuests > 0)

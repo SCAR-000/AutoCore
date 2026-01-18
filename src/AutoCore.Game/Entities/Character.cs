@@ -159,6 +159,67 @@ public class Character : Creature
             extendedCharPacket.NumAchievements = 0;
             extendedCharPacket.NumDisciplines = 0;
             extendedCharPacket.NumSkills = 0;
+
+            // Load QuickBarSkills from database
+            List<CharacterQuickBarSkillData> quickBarSkills;
+            try
+            {
+                using var context = new CharContext();
+                quickBarSkills = context.Set<CharacterQuickBarSkillData>()
+                    .Where(qb => qb.CharacterCoid == ObjectId.Coid)
+                    .ToList();
+            }
+            catch (Exception ex) when (ex.Message.Contains("character_quickbar_skills") && ex.Message.Contains("doesn't exist"))
+            {
+                CharContext.EnsureCreated();
+
+                using var context = new CharContext();
+                quickBarSkills = context.Set<CharacterQuickBarSkillData>()
+                    .Where(qb => qb.CharacterCoid == ObjectId.Coid)
+                    .ToList();
+            }
+
+            // Initialize QuickBarSkills array (defaults to 0)
+            for (int i = 0; i < 100; i++)
+            {
+                extendedCharPacket.QuickBarSkills[i] = 0;
+            }
+
+            // Populate QuickBarSkills from database
+            foreach (var quickBarSkill in quickBarSkills)
+            {
+                if (quickBarSkill.SlotIndex >= 0 && quickBarSkill.SlotIndex < 100)
+                {
+                    extendedCharPacket.QuickBarSkills[quickBarSkill.SlotIndex] = quickBarSkill.SkillId;
+                }
+            }
+
+            // Load learned skills from character_skill_rank
+            List<CharacterSkillRankData> skillRanks;
+            try
+            {
+                using var skillContext = new CharContext();
+                skillRanks = skillContext.Set<CharacterSkillRankData>()
+                    .Where(sr => sr.CharacterCoid == ObjectId.Coid)
+                    .ToList();
+            }
+            catch (Exception ex) when (ex.Message.Contains("character_skill_rank") && ex.Message.Contains("doesn't exist"))
+            {
+                CharContext.EnsureCreated();
+
+                using var skillContext = new CharContext();
+                skillRanks = skillContext.Set<CharacterSkillRankData>()
+                    .Where(sr => sr.CharacterCoid == ObjectId.Coid)
+                    .ToList();
+            }
+
+            // Populate Skills list from database
+            extendedCharPacket.NumSkills = (byte)Math.Min(skillRanks.Count, 255);
+            extendedCharPacket.Skills.Clear();
+            foreach (var skillRank in skillRanks.Take(extendedCharPacket.NumSkills))
+            {
+                extendedCharPacket.Skills.Add((skillRank.SkillId, skillRank.Rank));
+            }
         }
     }
 

@@ -5,6 +5,7 @@ using AutoCore.Game.CloneBases;
 using AutoCore.Game.Constants;
 using AutoCore.Game.Managers.Asset;
 using AutoCore.Game.Map;
+using AutoCore.Game.Structures;
 using AutoCore.Utils;
 using AutoCore.Utils.Memory;
 
@@ -117,6 +118,14 @@ public class AssetManager : Singleton<AssetManager>
 
     public IReadOnlyDictionary<int, CloneBase> GetAllCloneBases()
         => WADLoader.CloneBases;
+
+    public Skill GetSkill(int skillId)
+    {
+        if (WADLoader.Skills.TryGetValue(skillId, out Skill value))
+            return value;
+
+        return null;
+    }
     #endregion
 
     #region GLM

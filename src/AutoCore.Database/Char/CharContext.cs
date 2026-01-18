@@ -13,6 +13,8 @@ public class CharContext : DbContext
     public DbSet<CharacterExploration> CharacterExplorations { get; set; }
     public DbSet<CharacterSocial> CharacterSocials { get; set; }
     public DbSet<CharacterStatsData> CharacterStats { get; set; }
+    public DbSet<CharacterQuickBarSkillData> CharacterQuickBarSkills { get; set; }
+    public DbSet<CharacterSkillRankData> CharacterSkillRanks { get; set; }
     public DbSet<VehicleData> Vehicles { get; set; }
     public DbSet<Clan> Clans { get; set; }
     public DbSet<ClanMember> ClanMembers { get; set; }
@@ -38,6 +40,8 @@ public class CharContext : DbContext
         using var context = new CharContext();
         context.Database.EnsureCreated();
         EnsureCharacterStatsSchema(context);
+        EnsureCharacterQuickBarSkillsSchema(context);
+        EnsureCharacterSkillRankSchema(context);
     }
 
     public static void EnsureCharacterStatsSchema(CharContext context)
@@ -99,6 +103,50 @@ public class CharContext : DbContext
         }
     }
 
+    public static void EnsureCharacterQuickBarSkillsSchema(CharContext context)
+    {
+        try
+        {
+            // Try to create table - IF NOT EXISTS handles existing tables gracefully
+            context.Database.ExecuteSqlRaw(@"
+                CREATE TABLE IF NOT EXISTS `character_quickbar_skills` (
+                    `CharacterCoid` BIGINT NOT NULL,
+                    `SlotIndex` INT NOT NULL,
+                    `SkillId` INT NOT NULL,
+                    PRIMARY KEY (`CharacterCoid`, `SlotIndex`),
+                    CONSTRAINT `FK_character_quickbar_skills_character` FOREIGN KEY (`CharacterCoid`) REFERENCES `character`(`Coid`) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            ");
+        }
+        catch (Exception ex)
+        {
+            // Log error but don't fail startup - table might already exist with different schema
+            System.Diagnostics.Debug.WriteLine($"Warning: Could not ensure character_quickbar_skills schema: {ex.Message}");
+        }
+    }
+
+    public static void EnsureCharacterSkillRankSchema(CharContext context)
+    {
+        try
+        {
+            // Try to create table - IF NOT EXISTS handles existing tables gracefully
+            context.Database.ExecuteSqlRaw(@"
+                CREATE TABLE IF NOT EXISTS `character_skill_rank` (
+                    `CharacterCoid` BIGINT NOT NULL,
+                    `SkillId` INT NOT NULL,
+                    `Rank` SMALLINT NOT NULL DEFAULT 0,
+                    PRIMARY KEY (`CharacterCoid`, `SkillId`),
+                    CONSTRAINT `FK_character_skill_rank_character` FOREIGN KEY (`CharacterCoid`) REFERENCES `character`(`Coid`) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            ");
+        }
+        catch (Exception ex)
+        {
+            // Log error but don't fail startup - table might already exist with different schema
+            System.Diagnostics.Debug.WriteLine($"Warning: Could not ensure character_skill_rank schema: {ex.Message}");
+        }
+    }
+
     protected override void OnConfiguring(DbContextOptionsBuilder options) => options.UseMySql(ConnectionString, ServerVersion.AutoDetect(ConnectionString));
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -108,5 +156,7 @@ public class CharContext : DbContext
         modelBuilder.Entity<CharacterExploration>().HasKey(ce => new { ce.CharacterCoid, ce.ContinentId });
         modelBuilder.Entity<CharacterSocial>().HasKey(cs => new { cs.CharacterCoid, cs.TargetCoid });
         modelBuilder.Entity<ClanMember>().HasKey(cm => new { cm.ClanId, cm.CharacterCoid });
+        modelBuilder.Entity<CharacterQuickBarSkillData>().HasKey(qb => new { qb.CharacterCoid, qb.SlotIndex });
+        modelBuilder.Entity<CharacterSkillRankData>().HasKey(sr => new { sr.CharacterCoid, sr.SkillId });
     }
 }
