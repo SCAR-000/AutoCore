@@ -90,6 +90,9 @@ public partial class TNLConnection
         ObjectLocalScopeAlways(character.Ghost);
         ObjectLocalScopeAlways(character.CurrentVehicle.Ghost);
 
+        // Prime character stats cache before building packets
+        CharacterStatManager.Instance.GetOrLoad(character.ObjectId.Coid);
+
         var charPacket = new CreateCharacterExtendedPacket();
         var vehiclePacket = new CreateVehicleExtendedPacket();
 
@@ -98,6 +101,9 @@ public partial class TNLConnection
 
         SendGamePacket(vehiclePacket);
         SendGamePacket(charPacket);
+        
+        // Send character stats packet so client receives attribute points and other stats
+        SendGamePacket(CharacterStatManager.Instance.BuildPacket(character));
     }
 
     private void HandleCreatureMovedPacket(BinaryReader reader)
