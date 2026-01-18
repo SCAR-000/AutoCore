@@ -58,19 +58,7 @@ public partial class SectorServer : BaseServer, ILoopable
             if (Interface == null)
                 return;
 
-            Interface.Pulse();
-
-            // Server-side combat tick: decouple firing from VehicleMoved packet arrival rate.
-            // This fixes "clicking fires faster than holding" when the client sends fewer movement packets while stationary.
-            try
-            {
-                foreach (var kvp in Interface.MapConnections)
-                {
-                    var conn = kvp.Value;
-                    conn?.CurrentCharacter?.CurrentVehicle?.ProcessCombatIfFiring();
-                }
-            }
-            catch { }
+            Interface.Pulse();            
         }
     }
 

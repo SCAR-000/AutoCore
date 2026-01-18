@@ -1,7 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
-using System.Diagnostics;
-
-namespace AutoCore.Sector;
+﻿namespace AutoCore.Sector;
 
 using AutoCore.Auth.Config;
 using AutoCore.Auth.Network;
@@ -17,6 +14,8 @@ using AutoCore.Sector.Network;
 using AutoCore.Utils;
 using AutoCore.Utils.Commands;
 using AutoCore.Utils.Server;
+using Microsoft.Extensions.Configuration;
+using System.Diagnostics;
 
 public class Program : ExitableProgram
 {
@@ -43,9 +42,6 @@ public class Program : ExitableProgram
             throw new Exception("Unable to load assets!");
 
         AssetManager.Instance.LoadAllData();
-
-        // Initialize the loot manager (builds item index from CloneBase data)
-        AutoCore.Game.Managers.LootManager.Instance.Initialize();
 
         if (!MapManager.Instance.Initialize())
             throw new Exception("Unable to load maps!");

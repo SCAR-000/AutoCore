@@ -1,4 +1,4 @@
-﻿namespace AutoCore.Game.Packets.Sector;
+namespace AutoCore.Game.Packets.Sector;
 
 using AutoCore.Game.Constants;
 
