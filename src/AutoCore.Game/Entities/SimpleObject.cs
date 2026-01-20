@@ -32,6 +32,64 @@ public class SimpleObject : GraphicsObject
     public override int GetMaximumHP() => MaxHP;
     public override int GetBareTeamFaction() => TeamFaction;
 
+    /// <summary>
+    /// Sets the current HP of this SimpleObject.
+    /// </summary>
+    /// <param name="hp">The new HP value to set</param>
+    /// <param name="triggerGhostUpdate">If true, notifies clients of the HP change via ghost mask update</param>
+    public void SetCurrentHP(int hp, bool triggerGhostUpdate = true)
+    {
+        // Clamp HP to valid range: between 0 and MaxHP (or 0 if MaxHP is negative)
+        var newHp = Math.Clamp(hp, 0, Math.Max(MaxHP, 0));
+
+        // Early return if HP hasn't changed to avoid unnecessary updates
+        if (HP == newHp)
+            return;
+
+        HP = newHp;
+
+        // Notify clients of HP change if requested
+        if (triggerGhostUpdate)
+            Ghost?.SetMaskBits(GhostObject.HealthMask);
+    }
+
+    /// <summary>
+    /// Sets the maximum HP of this SimpleObject and adjusts current HP if necessary.
+    /// </summary>
+    /// <param name="maxHp">The new maximum HP value to set</param>
+    /// <param name="triggerGhostUpdate">If true, notifies clients of HP changes via ghost mask updates</param>
+    public void SetMaximumHP(int maxHp, bool triggerGhostUpdate = true)
+    {
+        // Ensure MaxHP is non-negative
+        var newMax = Math.Max(maxHp, 0);
+        
+        // If MaxHP hasn't changed, only adjust current HP if it exceeds the maximum, then return early
+        if (MaxHP == newMax)
+        {
+            if (HP > MaxHP)
+                SetCurrentHP(MaxHP, triggerGhostUpdate);
+
+            return;
+        }
+
+        MaxHP = newMax;
+
+        // Clamp current HP if needed (in case MaxHP was reduced below current HP)
+        var oldHp = HP;
+        HP = Math.Clamp(HP, 0, MaxHP);
+
+        // Skip ghost updates if not requested
+        if (!triggerGhostUpdate)
+            return;
+
+        // Notify clients that MaxHP has changed
+        Ghost?.SetMaskBits(GhostObject.HealthMaxMask);
+
+        // If current HP was adjusted due to MaxHP change, notify clients of HP change too
+        if (HP != oldHp)
+            Ghost?.SetMaskBits(GhostObject.HealthMask);
+    }
+
     public SimpleObject(GraphicsObjectType type)
         : base(type)
     {

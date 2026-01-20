@@ -21,6 +21,7 @@ public partial class SectorServer : BaseServer, ILoopable
     public override bool IsRunning => Loop != null && Loop.Running;
     public TNLInterface Interface { get; private set; }
     private readonly object _interfaceLock = new();
+    private long _regenTimer = 0;
 
     public SectorServer()
         : base("Sector")
@@ -59,6 +60,20 @@ public partial class SectorServer : BaseServer, ILoopable
                 return;
 
             Interface.Pulse();
+        }
+
+        // Regeneration happens every second (1000ms)
+        _regenTimer += delta;
+        if (_regenTimer >= 1000)
+        {
+            _regenTimer -= 1000;
+
+            // Regenerate shield and power/mana for all vehicles
+            foreach (var vehicle in ObjectManager.Instance.GetAllVehicles())
+            {
+                vehicle.RegenerateShield();
+                // TODO: Finish mana implementation and add mana regen as well
+            }
         }
     }
 

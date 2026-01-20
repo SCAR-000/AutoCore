@@ -82,6 +82,86 @@ public class ChatManager : Singleton<ChatManager>
 
         switch (parts[0])
         {
+            case "/hp":
+            {
+                if (character?.CurrentVehicle == null)
+                {
+                    respPacket.Message = "No active character/vehicle.";
+                    break;
+                }
+
+                if (parts.Length < 2 || !int.TryParse(parts[1], out var hp))
+                {
+                    respPacket.Message = "Usage: /hp <value>";
+                    break;
+                }
+
+                character.CurrentVehicle.SetCurrentHP(hp);
+
+                respPacket.Message = $"Vehicle HP set to {hp} (VehicleHP={character.CurrentVehicle.GetCurrentHP()}/{character.CurrentVehicle.GetMaximumHP()})";
+                break;
+            }
+
+            case "/mhp":
+            {
+                if (character?.CurrentVehicle == null)
+                {
+                    respPacket.Message = "No active character/vehicle.";
+                    break;
+                }
+
+                if (parts.Length < 2 || !int.TryParse(parts[1], out var maxHp))
+                {
+                    respPacket.Message = "Usage: /mhp <value>";
+                    break;
+                }
+
+                character.CurrentVehicle.SetMaximumHP(maxHp);
+
+                respPacket.Message = $"Vehicle MaxHP set to {maxHp} (VehicleHP={character.CurrentVehicle.GetCurrentHP()}/{character.CurrentVehicle.GetMaximumHP()})";
+                break;
+            }
+
+            case "/shield":
+            {
+                if (character?.CurrentVehicle == null)
+                {
+                    respPacket.Message = "No active character/vehicle.";
+                    break;
+                }
+
+                if (parts.Length < 2 || !int.TryParse(parts[1], out var shield))
+                {
+                    respPacket.Message = "Usage: /shield <value>";
+                    break;
+                }
+
+                character.CurrentVehicle.SetCurrentShield(shield);
+
+                respPacket.Message = $"Vehicle Shield set to {shield} (VehicleShield={character.CurrentVehicle.CurrentShield}/{character.CurrentVehicle.MaxShield})";
+                break;
+            }
+
+            case "/mshield":
+            {
+                if (character?.CurrentVehicle == null)
+                {
+                    respPacket.Message = "No active character/vehicle.";
+                    break;
+                }
+
+                if (parts.Length < 2 || !int.TryParse(parts[1], out var maxShield))
+                {
+                    respPacket.Message = "Usage: /mshield <value>";
+                    break;
+                }
+
+                character.CurrentVehicle.SetMaximumShield(maxShield);
+
+                respPacket.Message = $"Vehicle MaxShield set to {maxShield} (VehicleShield={character.CurrentVehicle.CurrentShield}/{character.CurrentVehicle.MaxShield})";
+                break;
+            }
+
             case "/loot":
                 if (parts.Length < 2)
                 {

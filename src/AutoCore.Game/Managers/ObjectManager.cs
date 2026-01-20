@@ -84,4 +84,9 @@ public class ObjectManager : Singleton<ObjectManager>
 
         return null;
     }
+
+    public IEnumerable<Vehicle> GetAllVehicles()
+    {
+        return Objects.Values.OfType<Vehicle>();
+    }
 }

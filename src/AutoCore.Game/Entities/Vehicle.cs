@@ -38,6 +38,88 @@ public class Vehicle : SimpleObject
     public float WantedTurretDirection { get; set; }
     public byte Firing { get; set; }
     public VehicleMovedFlags VehicleFlags { get; set; }
+    public int CurrentShield { get; private set; }
+    public int MaxShield { get; private set; }
+    public int ShieldRegenRate { get; private set; }
+
+    /// <summary>
+    /// Sets the current shield of this Vehicle.
+    /// </summary>
+    /// <param name="shield">The new shield value to set</param>
+    /// <param name="triggerGhostUpdate">If true, notifies clients of the shield change via ghost mask update</param>
+    public void SetCurrentShield(int shield, bool triggerGhostUpdate = true)
+    {
+        // Clamp shield to valid range: between 0 and MaxShield (or 0 if MaxShield is negative)
+        var newShield = Math.Clamp(shield, 0, Math.Max(MaxShield, 0));
+
+        // Early return if shield hasn't changed to avoid unnecessary updates
+        if (CurrentShield == newShield)
+            return;
+
+        CurrentShield = newShield;
+
+        // Notify clients of shield change if requested and ghost exists
+        if (triggerGhostUpdate && Ghost != null)
+            Ghost.SetMaskBits(GhostVehicle.ShieldMask);
+    }
+
+    /// <summary>
+    /// Sets the maximum shield of this Vehicle and adjusts current shield if necessary.
+    /// </summary>
+    /// <param name="maxShield">The new maximum shield value to set</param>
+    /// <param name="triggerGhostUpdate">If true, notifies clients of shield changes via ghost mask updates</param>
+    public void SetMaximumShield(int maxShield, bool triggerGhostUpdate = true)
+    {
+        // Ensure MaxShield is non-negative
+        var newMax = Math.Max(maxShield, 0);
+        
+        // If MaxShield hasn't changed, only adjust current shield if it exceeds the maximum
+        if (MaxShield == newMax)
+        {
+            if (CurrentShield > MaxShield)
+                SetCurrentShield(MaxShield, triggerGhostUpdate);
+
+            return;
+        }
+
+        MaxShield = newMax;
+
+        // Clamp current shield if needed (in case MaxShield was reduced below current shield)
+        var oldShield = CurrentShield;
+        CurrentShield = Math.Clamp(CurrentShield, 0, MaxShield);
+
+        // Skip ghost updates if not requested
+        if (!triggerGhostUpdate)
+            return;
+
+        // Notify clients that MaxShield has changed
+        if (Ghost != null)
+        {
+            Ghost.SetMaskBits(GhostVehicle.ShieldMaxMask);
+
+            // If current shield was adjusted due to MaxShield change, notify clients of shield change too
+            if (CurrentShield != oldShield)
+                Ghost.SetMaskBits(GhostVehicle.ShieldMask);
+        }
+    }
+
+    /// <summary>
+    /// Regenerates shield by the configured regeneration rate, up to the maximum shield.
+    /// </summary>
+    public void RegenerateShield()
+    {
+        // Early return if regeneration is disabled or vehicle has no shield capacity
+        if (ShieldRegenRate <= 0 || MaxShield <= 0)
+            return;
+
+        // Early return if shield is already at maximum
+        if (CurrentShield >= MaxShield)
+            return;
+
+        // Increase shield by regen rate, but don't exceed MaxShield
+        var newShield = Math.Min(CurrentShield + ShieldRegenRate, MaxShield);
+        SetCurrentShield(newShield);
+    }
     #endregion
 
     public Vehicle()
@@ -60,7 +142,6 @@ public class Vehicle : SimpleObject
 
         Position = new(DBData.PositionX, DBData.PositionY, DBData.PositionZ);
         Rotation = new(DBData.RotationX, DBData.RotationY, DBData.RotationZ, DBData.RotationW);
-        HP = MaxHP = CloneBaseObject.SimpleObjectSpecific.MaxHitPoint;
 
         WheelSet = new WheelSet();
         if (!WheelSet.LoadFromDB(context, DBData.Wheelset))
@@ -107,7 +188,13 @@ public class Vehicle : SimpleObject
         // Skip loading other unnecessary stuff from the DB, if we are displaying this Vehicle in the character selection
         // TODO: or maybe just load/send everything always and no such workarounds are needed?
         if (isInCharacterSelection)
+        {
+            // Set HP from base MaxHitPoint when in character selection (Armor not loaded)
+            HP = MaxHP = CloneBaseObject.SimpleObjectSpecific.MaxHitPoint;
+            // Shield stays at 0 for character selection (RaceItem not loaded)
+            ShieldRegenRate = 0;
             return true;
+        }
 
         if (DBData.Armor != 0)
         {
@@ -116,6 +203,16 @@ public class Vehicle : SimpleObject
             {
                 return false;
             }
+        }
+
+        // Set HP and MaxHP from equipped Armor's ArmorFactor, or fall back to base MaxHitPoint
+        if (Armor != null && Armor.CloneBaseArmor != null)
+        {
+            HP = MaxHP = Armor.CloneBaseArmor.ArmorSpecific.ArmorFactor;
+        }
+        else
+        {
+            HP = MaxHP = CloneBaseObject.SimpleObjectSpecific.MaxHitPoint;
         }
 
         if (DBData.Ornament != 0)
@@ -134,6 +231,20 @@ public class Vehicle : SimpleObject
             {
                 return false;
             }
+        }
+
+        // Set Shield and MaxShield from equipped Shielding (RaceItem)'s RaceShieldFactor, or fall back to 0
+        if (RaceItem != null && RaceItem.CloneBaseObject != null)
+        {
+            MaxShield = RaceItem.CloneBaseObject.SimpleObjectSpecific.RaceShieldFactor;
+            CurrentShield = MaxShield; // Start at full shield
+            ShieldRegenRate = RaceItem.CloneBaseObject.SimpleObjectSpecific.RaceShieldRegenerate;
+        }
+        else
+        {
+            MaxShield = 0;
+            CurrentShield = 0;
+            ShieldRegenRate = 0;
         }
 
         if (DBData.PowerPlant != 0)
