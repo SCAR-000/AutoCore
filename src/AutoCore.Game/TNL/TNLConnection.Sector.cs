@@ -3,6 +3,7 @@
 using AutoCore.Database.Char;
 using AutoCore.Game.Managers;
 using AutoCore.Game.Packets.Sector;
+using AutoCore.Game.TNL.Ghost;
 
 public partial class TNLConnection
 {
@@ -90,14 +91,20 @@ public partial class TNLConnection
         ObjectLocalScopeAlways(character.Ghost);
         ObjectLocalScopeAlways(character.CurrentVehicle.Ghost);
 
+        // Initialize mana from power plant
+        CharacterLevelManager.Instance.UpdatePowerFromCharacter(character, setCurrentToMax: true);
+
         var charPacket = new CreateCharacterExtendedPacket();
         var vehiclePacket = new CreateVehicleExtendedPacket();
+        var levelPacket = CharacterLevelManager.Instance.BuildPacket(character); 
 
         character.WriteToPacket(charPacket);
         character.CurrentVehicle.WriteToPacket(vehiclePacket);
 
         SendGamePacket(vehiclePacket);
         SendGamePacket(charPacket);
+        SendGamePacket(levelPacket); // Sends mana/power to client
+        character.CurrentVehicle.Ghost?.SetMaskBits(GhostVehicle.PowerMask); // Mark dirty so ghost will replicate
     }
 
     private void HandleCreatureMovedPacket(BinaryReader reader)

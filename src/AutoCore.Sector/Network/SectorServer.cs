@@ -13,6 +13,7 @@ using System.Net;
 public partial class SectorServer : BaseServer, ILoopable
 {
     public const int MainLoopTime = 100; // Milliseconds
+    private const int ManaRegenTickMs = 1000;
 
     public SectorConfig Config { get; private set; } = new();
     public IPAddress PublicAddress { get; private set; }
@@ -64,16 +65,20 @@ public partial class SectorServer : BaseServer, ILoopable
 
         // Regeneration happens every second (1000ms)
         _regenTimer += delta;
-        if (_regenTimer >= 1000)
+        if (_regenTimer >= ManaRegenTickMs)
         {
-            _regenTimer -= 1000;
+            var ticks = _regenTimer / ManaRegenTickMs;
+            _regenTimer %= ManaRegenTickMs;
 
-            // Regenerate shield and power/mana for all vehicles
+            // Regenerate shield for all vehicles
             foreach (var vehicle in ObjectManager.Instance.GetAllVehicles())
             {
                 vehicle.RegenerateShield();
-                // TODO: Finish mana implementation and add mana regen as well
             }
+
+            // Regenerate mana
+            // Mana regen is seperate from vehicle, because technically mana/power is a Character property, not a vehicle property.
+            CharacterLevelManager.Instance.RegenerateMana(ticks * ManaRegenTickMs);
         }
     }
 
