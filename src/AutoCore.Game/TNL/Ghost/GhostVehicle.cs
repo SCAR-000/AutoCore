@@ -5,6 +5,7 @@ using TNL.Utils;
 namespace AutoCore.Game.TNL.Ghost;
 
 using AutoCore.Game.Entities;
+using AutoCore.Game.Managers;
 
 public class GhostVehicle : GhostObject
 {
@@ -358,9 +359,20 @@ public class GhostVehicle : GhostObject
             stream.WriteBits(32, BitConverter.GetBytes(parentVehicle.CurrentShield));
         }
 
-        if (stream.WriteFlag((updateMask & PowerMask) != 0)) // TODO
+        // Mana/Power implementation
+        if (stream.WriteFlag((updateMask & PowerMask) != 0))
         {
-            stream.WriteBits(32, BitConverter.GetBytes(100)); // Power
+            var currentPower = 0;
+            if (owner is Character ownerChar)
+            {
+                var state = CharacterLevelManager.Instance.GetOrCreate(ownerChar.ObjectId.Coid);
+                lock (state)
+                {
+                    currentPower = state.CurrentMana;
+                }
+            }
+
+            stream.WriteBits(32, BitConverter.GetBytes(currentPower));
         }
 
         if (stream.WriteFlag((updateMask & TokenMask) != 0))

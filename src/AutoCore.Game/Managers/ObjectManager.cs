@@ -89,4 +89,9 @@ public class ObjectManager : Singleton<ObjectManager>
     {
         return Objects.Values.OfType<Vehicle>();
     }
+
+    public IEnumerable<Character> GetCharacters()
+    {
+        return Objects.Values.OfType<Character>();
+    }
 }

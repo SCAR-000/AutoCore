@@ -5,6 +5,7 @@ using AutoCore.Game.Entities;
 using AutoCore.Game.Packets.Global;
 using AutoCore.Game.Packets.Sector;
 using AutoCore.Game.TNL;
+using AutoCore.Game.TNL.Ghost;
 using AutoCore.Utils;
 using AutoCore.Utils.Memory;
 
@@ -159,6 +160,65 @@ public class ChatManager : Singleton<ChatManager>
                 character.CurrentVehicle.SetMaximumShield(maxShield);
 
                 respPacket.Message = $"Vehicle MaxShield set to {maxShield} (VehicleShield={character.CurrentVehicle.CurrentShield}/{character.CurrentVehicle.MaxShield})";
+                break;
+            }
+
+            case "/power":
+            {
+                if (character == null)
+                {
+                    respPacket.Message = "No active character.";
+                    break;
+                }
+
+                if (parts.Length < 2 || !short.TryParse(parts[1], out var power))
+                {
+                    respPacket.Message = "Usage: /power <value>";
+                    break;
+                }
+
+                var state = CharacterLevelManager.Instance.GetOrCreate(character.ObjectId.Coid);
+                lock (state)
+                {
+                    state.CurrentMana = power;
+                }
+
+                connection.SendGamePacket(CharacterLevelManager.Instance.BuildPacket(character));
+                character.CurrentVehicle?.Ghost?.SetMaskBits(GhostVehicle.PowerMask);
+
+                respPacket.Message = $"Mana set to {power} (CurrentPower={state.CurrentMana}/{state.MaxMana})";
+                break;
+            }
+
+            case "/mpower":
+            {
+                if (character == null)
+                {
+                    respPacket.Message = "No active character.";
+                    break;
+                }
+
+                if (parts.Length < 2 || !short.TryParse(parts[1], out var maxPower))
+                {
+                    respPacket.Message = "Usage: /mpower <value>";
+                    break;
+                }
+
+                var state = CharacterLevelManager.Instance.GetOrCreate(character.ObjectId.Coid);
+                lock (state)
+                {
+                    state.MaxMana = maxPower;
+                    // Clamp current power to new max if needed
+                    if (state.CurrentMana > maxPower)
+                    {
+                        state.CurrentMana = maxPower;
+                    }
+                }
+
+                connection.SendGamePacket(CharacterLevelManager.Instance.BuildPacket(character));
+                character.CurrentVehicle?.Ghost?.SetMaskBits(GhostVehicle.PowerMask);
+
+                respPacket.Message = $"Max Mana set to {maxPower} (CurrentPower={state.CurrentMana}/{state.MaxMana})";
                 break;
             }
 
