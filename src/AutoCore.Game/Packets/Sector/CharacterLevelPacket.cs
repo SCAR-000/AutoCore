@@ -5,7 +5,7 @@ using AutoCore.Game.Extensions;
 using AutoCore.Game.Structures;
 
 /// <summary>
-/// CharacterStats (0x2017)
+/// CharacterLevelPacket (0x2017)
 /// </summary>
 public class CharacterLevelPacket : BasePacket
 {
