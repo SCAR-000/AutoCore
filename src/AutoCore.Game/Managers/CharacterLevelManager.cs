@@ -14,6 +14,8 @@ using AutoCore.Utils.Memory;
 public class CharacterLevelManager : Singleton<CharacterLevelManager>
 {
     private readonly ConcurrentDictionary<long, CharacterManaState> _cache = new();
+    // Stores fractional part of mana regen for each character.
+    // This is used to ensure that any mana regen under .5 mana is not lost.
     private readonly ConcurrentDictionary<long, float> _manaRegenRemainders = new();
 
     // Client reports about half as much regen from our item vs what is in the clonebase.wad.
@@ -33,7 +35,7 @@ public class CharacterLevelManager : Singleton<CharacterLevelManager>
     }
 
     /// <summary>
-    /// Builds a CharacterStatsPacket from the cached mana state.
+    /// Builds a CharacterLevelPacket from the cached mana state.
     /// </summary>
     public CharacterLevelPacket BuildPacket(Character character)
     {
@@ -68,7 +70,7 @@ public class CharacterLevelManager : Singleton<CharacterLevelManager>
     /// <summary>
     /// Recalculates max mana from the character's power plant and updates current mana if needed.
     /// </summary>
-    public CharacterManaState UpdatePowerFromCharacter(Character character, bool setCurrentToMax = false)
+    public CharacterManaState UpdateManaFromCharacter(Character character, bool setCurrentToMax = false)
     {
         var newMax = CalculateMaxMana(character);
         var state = GetOrCreate(character.ObjectId.Coid);

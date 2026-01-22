@@ -351,18 +351,20 @@ public class GhostVehicle : GhostObject
 
         if (stream.WriteFlag((updateMask & ShieldMaxMask) != 0))
         {
-            stream.WriteBits(32, BitConverter.GetBytes(parentVehicle.MaxShield));
+            stream.WriteBits(32, BitConverter.GetBytes(parentVehicle.MaxShield)); // Max Shield
         }
 
         if (stream.WriteFlag((updateMask & ShieldMask) != 0))
         {
-            stream.WriteBits(32, BitConverter.GetBytes(parentVehicle.CurrentShield));
+            stream.WriteBits(32, BitConverter.GetBytes(parentVehicle.CurrentShield)); // Current SHield
         }
 
         // Mana/Power implementation
+        // Note: MaxMana is not known to be a part of the ghostvehicle packet. 
+        // Instead, it is managed and replicated by CharacterLevelManager and CharacterLevelPacket
         if (stream.WriteFlag((updateMask & PowerMask) != 0))
         {
-            var currentPower = 0;
+            var currentMana = 0;
             if (owner is Character ownerChar)
             {
                 var state = CharacterLevelManager.Instance.GetOrCreate(ownerChar.ObjectId.Coid);
@@ -372,7 +374,7 @@ public class GhostVehicle : GhostObject
                 }
             }
 
-            stream.WriteBits(32, BitConverter.GetBytes(currentPower));
+            stream.WriteBits(32, BitConverter.GetBytes(currentPower)); // Current Mana/Power
         }
 
         if (stream.WriteFlag((updateMask & TokenMask) != 0))

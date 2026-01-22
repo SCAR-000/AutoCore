@@ -92,7 +92,7 @@ public partial class TNLConnection
         ObjectLocalScopeAlways(character.CurrentVehicle.Ghost);
 
         // Initialize mana from power plant
-        CharacterLevelManager.Instance.UpdatePowerFromCharacter(character, setCurrentToMax: true);
+        CharacterLevelManager.Instance.UpdateManaFromCharacter(character, setCurrentToMax: true);
 
         var charPacket = new CreateCharacterExtendedPacket();
         var vehiclePacket = new CreateVehicleExtendedPacket();
