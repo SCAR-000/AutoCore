@@ -18,4 +18,13 @@ public class MissionDialogResponsePacket : BasePacket
         MixedVar = reader.ReadInt64();
         MissionGiver = reader.ReadTFID();
     }
+
+    public override void Write(BinaryWriter writer)
+    {
+        writer.BaseStream.Position += 4;
+
+        writer.Write(MissionId);
+        writer.Write(MixedVar);
+        writer.WriteTFID(MissionGiver);
+    }
 }

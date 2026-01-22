@@ -4,6 +4,7 @@ using AutoCore.Database.World.Models;
 using AutoCore.Game.CloneBases;
 using AutoCore.Game.Constants;
 using AutoCore.Game.Managers.Asset;
+using AutoCore.Game.Mission;
 using AutoCore.Game.Map;
 using AutoCore.Utils;
 using AutoCore.Utils.Memory;
@@ -92,6 +93,14 @@ public class AssetManager : Singleton<AssetManager>
     public T GetCloneBase<T>(int CBID) where T : CloneBase
     {
         return GetCloneBase(CBID) as T;
+    }
+
+    public Mission GetMission(int missionId)
+    {
+        if (WADLoader.Missions.TryGetValue(missionId, out var mission))
+            return mission;
+
+        return null;
     }
     #endregion
 

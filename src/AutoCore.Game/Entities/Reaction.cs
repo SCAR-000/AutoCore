@@ -1,6 +1,11 @@
 ﻿namespace AutoCore.Game.Entities;
 
+using System.Collections.Generic;
+using AutoCore.Game.Constants;
 using AutoCore.Game.EntityTemplates;
+using AutoCore.Game.Managers;
+using AutoCore.Game.Packets.Sector;
+using AutoCore.Game.Structures;
 using AutoCore.Utils;
 
 public enum ReactionType : byte
@@ -165,6 +170,9 @@ public class Reaction : ClonedObjectBase
 
         switch (Template.ReactionType)
         {
+            case ReactionType.GiveMission:
+                return HandleGiveMission(activator);
+
             //case ReactionType.TransferMap:
             //    return false;
 
@@ -177,4 +185,94 @@ public class Reaction : ClonedObjectBase
     public override int GetCurrentHP() => 1; 
     public override int GetMaximumHP() => 1;
     public override int GetBareTeamFaction() => Faction;
+
+    private bool HandleGiveMission(ClonedObjectBase activator)
+    {
+        var character = activator.GetAsCharacter() ?? activator.GetSuperCharacter(false);
+        if (character?.OwningConnection == null)
+        {
+            Logger.WriteLog(LogType.Error, "GiveMission reaction triggered without a valid character connection.");
+            return false;
+        }
+
+        // Resolve mission ID from multiple possible sources
+        var missionId = 0;
+        if (Template.Missions.Count > 0 && Template.Missions[0] > 0)
+        {
+            missionId = Template.Missions[0];
+            Logger.WriteLog(LogType.Debug, $"GiveMission: Mission ID {missionId} resolved from Template.Missions[0]");
+        }
+        else if (Template.GenericVar1 > 0) // From testing, GenericVar1 is likely the mission ID
+        {
+            missionId = Template.GenericVar1;
+            Logger.WriteLog(LogType.Debug, $"GiveMission: Mission ID {missionId} resolved from Template.GenericVar1");
+        }
+        else if (Template.GenericVar3 > 0)
+        {
+            missionId = Template.GenericVar3;
+            Logger.WriteLog(LogType.Debug, $"GiveMission: Mission ID {missionId} resolved from Template.GenericVar3");
+        }
+        else if (Template.ObjectiveIDCheck > 0)
+        {
+            missionId = Template.ObjectiveIDCheck;
+            Logger.WriteLog(LogType.Debug, $"GiveMission: Mission ID {missionId} resolved from Template.ObjectiveIDCheck");
+        }
+
+        if (missionId <= 0)
+        {
+            Logger.WriteLog(LogType.Error, $"GiveMission reaction {Template.COID} has no valid mission ID.");
+            return false;
+        }
+
+        var missionGiver = ResolveMissionGiver(activator, out _);
+        var possibleItems = new long[4];
+        for (var i = 0; i < possibleItems.Length && i < Template.Objects.Count; ++i)
+            possibleItems[i] = Template.Objects[i];
+
+        Logger.WriteLog(LogType.Debug, $"GiveMission: Requesting mission ID {missionId} for character {character.ObjectId.Coid}.");
+        var requested = MissionManager.Instance.RequestMission(character, missionId, missionGiver.ObjectId, possibleItems);
+
+        return requested;
+    }
+
+    private ClonedObjectBase ResolveMissionGiver(ClonedObjectBase activator, out string source)
+    {
+        source = "activator";
+
+        if (Template.Objects.Count > 0 && activator.Map != null)
+        {
+            for (var i = 0; i < Template.Objects.Count; ++i)
+            {
+                var candidate = activator.Map.GetLocalObject(Template.Objects[i]);
+                if (candidate == null)
+                    continue;
+
+                if (candidate.GetAsCreature() != null || candidate.GetAsCharacter() != null)
+                {
+                    source = $"objects[{i}]";
+                    return candidate;
+                }
+            }
+        }
+
+        return activator;
+    }
+
+    private void SendSystemMessage(TNL.TNLConnection connection, string message)
+    {
+        if (connection == null)
+            return;
+
+        var packet = new BroadcastPacket
+        {
+            ChatType = ChatType.SystemMessage,
+            SenderCoid = 0,
+            IsGM = false,
+            Sender = "System",
+            Message = message,
+            MessageLength = (short)message.Length
+        };
+
+        connection.SendGamePacket(packet);
+    }
 }

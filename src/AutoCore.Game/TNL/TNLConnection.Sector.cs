@@ -3,6 +3,7 @@
 using AutoCore.Database.Char;
 using AutoCore.Game.Managers;
 using AutoCore.Game.Packets.Sector;
+using AutoCore.Utils;
 
 public partial class TNLConnection
 {
@@ -114,5 +115,23 @@ public partial class TNLConnection
         packet.Read(reader);
 
         CurrentCharacter.CurrentVehicle.HandleMovement(packet);
+    }
+
+    private void HandleMissionDialogResponsePacket(BinaryReader reader)
+    {
+        var packet = new MissionDialogResponsePacket();
+        packet.Read(reader);
+
+        if (CurrentCharacter != null)
+            MissionManager.Instance.ClearPendingMission(CurrentCharacter, packet.MissionId);
+
+        var outcome = packet.MixedVar == 0 ? "accepted" : "declined";
+        Logger.WriteLog(LogType.Debug,
+            "MissionDialogResponse: missionId={0}, mixedVar={1} ({2}), giver={3} (global={4})",
+            packet.MissionId,
+            packet.MixedVar,
+            outcome,
+            packet.MissionGiver.Coid,
+            packet.MissionGiver.Global);
     }
 }

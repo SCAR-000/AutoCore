@@ -231,7 +231,17 @@ public partial class TNLConnection : GhostConnection
                     break;
 
                 case GameOpcode.ConvoyMissionsRequest:
-                    //ConvoyManager.MissionsRequest(this);
+                    if (CurrentCharacter == null)
+                    {
+                        Logger.WriteLog(LogType.Debug, "ConvoyMissionsRequest received without a character.");
+                        break;
+                    }
+
+                    var convoyMissionsResponse = new Packets.Global.ConvoyMissionsResponsePacket
+                    {
+                        MemberCoid = CurrentCharacter.ObjectId.Coid
+                    };
+                    SendGamePacket(convoyMissionsResponse);
                     break;
 
                 case GameOpcode.RequestClanName:
@@ -277,6 +287,10 @@ public partial class TNLConnection : GhostConnection
 
                 case GameOpcode.ChangeCombatModeRequest:
                     MapManager.Instance.HandleChangeCombatModeRequest(CurrentCharacter, reader);
+                    break;
+
+                case GameOpcode.MissionDialogResponse:
+                    HandleMissionDialogResponsePacket(reader);
                     break;
 
                 default:
