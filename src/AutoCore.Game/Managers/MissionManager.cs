@@ -14,6 +14,7 @@ using AutoCore.Utils.Memory;
 public class MissionManager : Singleton<MissionManager>
 {
     private readonly Dictionary<long, Dictionary<int, PendingMission>> _pendingMissions = new();
+    private readonly Dictionary<long, HashSet<int>> _activeMissions = new();
 
     public bool RequestMission(Character character, int missionId, TFID missionGiver, long[] possibleItems)
     {
@@ -102,6 +103,62 @@ public class MissionManager : Singleton<MissionManager>
         var characterId = character.ObjectId.Coid;
         if (_pendingMissions.TryGetValue(characterId, out var pendingForCharacter))
             return pendingForCharacter.Keys.ToArray();
+
+        return Array.Empty<int>();
+    }
+
+    public void AddActiveMission(Character character, int missionId)
+    {
+        if (character == null || missionId <= 0)
+            return;
+
+        var characterId = character.ObjectId.Coid;
+        if (!_activeMissions.TryGetValue(characterId, out var activeForCharacter))
+        {
+            activeForCharacter = new HashSet<int>();
+            _activeMissions[characterId] = activeForCharacter;
+        }
+
+        if (activeForCharacter.Add(missionId))
+        {
+            Logger.WriteLog(LogType.Debug,
+                "MissionManager.AddActiveMission: character={0}, missionId={1}, activeCount={2}",
+                characterId,
+                missionId,
+                activeForCharacter.Count);
+        }
+    }
+
+    public void RemoveActiveMission(Character character, int missionId)
+    {
+        if (character == null)
+            return;
+
+        var characterId = character.ObjectId.Coid;
+        if (!_activeMissions.TryGetValue(characterId, out var activeForCharacter))
+            return;
+
+        if (activeForCharacter.Remove(missionId))
+        {
+            Logger.WriteLog(LogType.Debug,
+                "MissionManager.RemoveActiveMission: character={0}, missionId={1}, activeCount={2}",
+                characterId,
+                missionId,
+                activeForCharacter.Count);
+        }
+
+        if (activeForCharacter.Count == 0)
+            _activeMissions.Remove(characterId);
+    }
+
+    public IReadOnlyCollection<int> GetActiveMissionIds(Character character)
+    {
+        if (character == null)
+            return Array.Empty<int>();
+
+        var characterId = character.ObjectId.Coid;
+        if (_activeMissions.TryGetValue(characterId, out var activeForCharacter))
+            return activeForCharacter.ToArray();
 
         return Array.Empty<int>();
     }
