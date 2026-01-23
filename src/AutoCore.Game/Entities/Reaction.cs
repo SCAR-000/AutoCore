@@ -200,22 +200,22 @@ public class Reaction : ClonedObjectBase
         if (Template.Missions.Count > 0 && Template.Missions[0] > 0)
         {
             missionId = Template.Missions[0];
-            Logger.WriteLog(LogType.Debug, $"GiveMission: Mission ID {missionId} resolved from Template.Missions[0]");
+            //Logger.WriteLog(LogType.Debug, $"GiveMission: Mission ID {missionId} resolved from Template.Missions[0]");
         }
         else if (Template.GenericVar1 > 0) // From testing, GenericVar1 is likely the mission ID
         {
             missionId = Template.GenericVar1;
-            Logger.WriteLog(LogType.Debug, $"GiveMission: Mission ID {missionId} resolved from Template.GenericVar1");
+            //Logger.WriteLog(LogType.Debug, $"GiveMission: Mission ID {missionId} resolved from Template.GenericVar1");
         }
         else if (Template.GenericVar3 > 0)
         {
             missionId = Template.GenericVar3;
-            Logger.WriteLog(LogType.Debug, $"GiveMission: Mission ID {missionId} resolved from Template.GenericVar3");
+            //Logger.WriteLog(LogType.Debug, $"GiveMission: Mission ID {missionId} resolved from Template.GenericVar3");
         }
         else if (Template.ObjectiveIDCheck > 0)
         {
             missionId = Template.ObjectiveIDCheck;
-            Logger.WriteLog(LogType.Debug, $"GiveMission: Mission ID {missionId} resolved from Template.ObjectiveIDCheck");
+            //Logger.WriteLog(LogType.Debug, $"GiveMission: Mission ID {missionId} resolved from Template.ObjectiveIDCheck");
         }
 
         if (missionId <= 0)
@@ -229,7 +229,7 @@ public class Reaction : ClonedObjectBase
         for (var i = 0; i < possibleItems.Length && i < Template.Objects.Count; ++i)
             possibleItems[i] = Template.Objects[i];
 
-        Logger.WriteLog(LogType.Debug, $"GiveMission: Requesting mission ID {missionId} for character {character.ObjectId.Coid}.");
+        //Logger.WriteLog(LogType.Debug, $"GiveMission: Requesting mission ID {missionId} for character {character.ObjectId.Coid}.");
         var requested = MissionManager.Instance.RequestMission(character, missionId, missionGiver.ObjectId, possibleItems);
 
         return requested;
