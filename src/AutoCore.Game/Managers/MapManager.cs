@@ -43,7 +43,7 @@ public class MapManager : Singleton<MapManager>
         var packet = new MapTransferRequestPacket();
         packet.Read(reader);
 
-        if (packet.Type != MapTransferType.ContinentObject)
+        if (packet.Type != MapTransferType.ContinentObject && packet.Type != MapTransferType.Warp)
         {
             Logger.WriteLog(LogType.Error, $"Not implemented map transfer type: {packet.Type}!");
             return;
@@ -53,6 +53,43 @@ public class MapManager : Singleton<MapManager>
         if (map == null)
         {
             Logger.WriteLog(LogType.Error, $"Trying to transfer to non-existant map: {packet.Data}!");
+            return;
+        }
+
+        var mapInfoPacket = new MapInfoPacket();
+        map.Fill(mapInfoPacket);
+
+        character.OwningConnection.ResetGhosting();
+        character.OwningConnection.SendGamePacket(mapInfoPacket, skipOpcode: true);
+
+        character.SetMap(map);
+        character.Position = map.MapData.EntryPoint.ToVector3();
+        character.Rotation = Quaternion.Default;
+
+        character.CurrentVehicle.SetMap(map);
+        character.CurrentVehicle.Position = character.Position;
+        character.CurrentVehicle.Rotation = character.Rotation;
+    }
+
+    public void WarpCharacterToMap(Character character, int mapId)
+    {
+        if (!SectorMaps.ContainsKey(mapId))
+        {
+            // Try to setup the map if it doesn't exist
+            var continentObject = AssetManager.Instance.GetContinentObject(mapId);
+            if (continentObject == null)
+            {
+                Logger.WriteLog(LogType.Error, $"Cannot warp to non-existent map: {mapId}!");
+                return;
+            }
+
+            SetupMap(mapId);
+        }
+
+        var map = GetMap(mapId);
+        if (map == null)
+        {
+            Logger.WriteLog(LogType.Error, $"Failed to get map: {mapId}!");
             return;
         }
 

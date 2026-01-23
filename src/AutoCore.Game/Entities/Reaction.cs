@@ -1,6 +1,7 @@
-﻿namespace AutoCore.Game.Entities;
+namespace AutoCore.Game.Entities;
 
 using AutoCore.Game.EntityTemplates;
+using AutoCore.Game.Managers;
 using AutoCore.Utils;
 
 public enum ReactionType : byte
@@ -165,8 +166,13 @@ public class Reaction : ClonedObjectBase
 
         switch (Template.ReactionType)
         {
-            //case ReactionType.TransferMap:
-            //    return false;
+            case ReactionType.TransferMap:
+                var character = activator.GetAsCharacter() ?? activator.GetSuperCharacter(false);
+                if (character != null)
+                {
+                    MapManager.Instance.WarpCharacterToMap(character, Template.MapTransferData);
+                }
+                return true;
 
             default:
                 Logger.WriteLog(LogType.Error, $"Unhandled reaction type: {Template.ReactionType} for reaction {Template.COID}!");
