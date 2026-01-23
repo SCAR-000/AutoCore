@@ -1,4 +1,6 @@
-﻿using System.Buffers;
+﻿using System;
+using System.Buffers;
+using System.IO;
 
 using TNL.Data;
 using TNL.Entities;
@@ -83,6 +85,7 @@ public partial class TNLConnection : GhostConnection
         ArrayPool<byte>.Shared.Return(dest);
 
         var arrLength = (uint)packetLength;
+
         if (arrLength > 1400U)
         {
             ++FragmentCounter;
@@ -231,17 +234,40 @@ public partial class TNLConnection : GhostConnection
                     break;
 
                 case GameOpcode.ConvoyMissionsRequest:
-                    if (CurrentCharacter == null)
-                    {
-                        Logger.WriteLog(LogType.Debug, "ConvoyMissionsRequest received without a character.");
-                        break;
-                    }
+                    // TODO:
+                    // Refactor this to have the MissionsManager handle all of this so we keep responsibilities seperate.
+                    //
+                    // if (CurrentCharacter == null)
+                    // {
+                    //     Logger.WriteLog(LogType.Debug, "ConvoyMissionsRequest received without a character.");
+                    //     break;
+                    // }
 
-                    var convoyMissionsResponse = new Packets.Global.ConvoyMissionsResponsePacket
-                    {
-                        MemberCoid = CurrentCharacter.ObjectId.Coid
-                    };
-                    SendGamePacket(convoyMissionsResponse);
+                    // var convoyMissionsResponse = new Packets.Global.ConvoyMissionsResponsePacket
+                    // {
+                    //     MemberCoid = CurrentCharacter.ObjectId.Coid
+                    // };
+
+                    // // Add all active missions for this character
+                    // var activeMissionIds = MissionManager.Instance.GetActiveMissionIds(CurrentCharacter);
+                    // foreach (var missionId in activeMissionIds)
+                    // {
+                    //     convoyMissionsResponse.AddMissionId((uint)missionId);
+                    // }
+
+                    // SendGamePacket(convoyMissionsResponse);
+
+                    // // Also send ConvoyActiveMission for each active mission
+                    // foreach (var missionId in activeMissionIds)
+                    // {
+                    //     var activeMissionPacket = new Packets.Global.ConvoyActiveMissionPacket
+                    //     {
+                    //         CoidChanger = CurrentCharacter.ObjectId.Coid,
+                    //         MissionId = (uint)missionId
+                    //     };
+
+                    //     SendGamePacket(activeMissionPacket);
+                    // }
                     break;
 
                 case GameOpcode.RequestClanName:

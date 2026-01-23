@@ -123,7 +123,15 @@ public partial class TNLConnection
         packet.Read(reader);
 
         if (CurrentCharacter != null)
+        {
             MissionManager.Instance.ClearPendingMission(CurrentCharacter, packet.MissionId);
+
+            // If mission was accepted (mixedVar == 0), add it to active missions
+            if (packet.MixedVar == 0)
+            {
+                MissionManager.Instance.AddActiveMission(CurrentCharacter, packet.MissionId);
+            }
+        }
 
         var outcome = packet.MixedVar == 0 ? "accepted" : "declined";
         Logger.WriteLog(LogType.Debug,

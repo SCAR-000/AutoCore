@@ -36,6 +36,9 @@ public partial class TNLConnection
         if (character == null)
             return;
 
+        CurrentCharacter = character;
+        CurrentCharacter.SetOwningConnection(this);
+
         // New character, that never entered the world
         if (character.LastTownId == -1)
         {

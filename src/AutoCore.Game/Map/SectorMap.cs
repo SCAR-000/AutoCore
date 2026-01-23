@@ -148,6 +148,7 @@ public class SectorMap
         var clientPacket = new GroupReactionCallPacket();
         GroupReactionCallPacket broadcastPacket = null;
         GroupReactionCallPacket convoyPacket = null;
+        bool giveMissionTriggered = false;
 
         foreach (var reactionCoid in reactions)
         {
@@ -158,8 +159,21 @@ public class SectorMap
                 continue;
             }
 
+            // Prevent multiple GiveMission reactions from firing in a single trigger activation
+            // Only the first valid GiveMission reaction will be processed
+            // if (reaction.Template.ReactionType == ReactionType.GiveMission && giveMissionTriggered)
+            // {
+            //     Logger.WriteLog(LogType.Debug, 
+            //         "GiveMission reaction {0} skipped: another GiveMission reaction already triggered in this activation", 
+            //         reactionCoid);
+            //     continue;
+            // }
+
             if (reaction.TriggerIfPossible(activator))
             {
+                if (reaction.Template.ReactionType == ReactionType.GiveMission)
+                    giveMissionTriggered = true;
+
                 var packet = new LogicStateChangePacket(reaction.ObjectId.Coid, activator.ObjectId, false);
 
                 clientPacket.AddPacket(packet);
