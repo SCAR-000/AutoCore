@@ -144,4 +144,11 @@ public class AssetManager : Singleton<AssetManager>
         return null;
     }
     #endregion
+
+    #region Missions
+    public Mission GetMission(int missionId)
+    {
+        return WADLoader.Missions.TryGetValue(missionId, out var mission) ? mission : null;
+    }
+    #endregion
 }
