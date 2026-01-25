@@ -14,6 +14,7 @@ using AutoCore.Game.Entities;
 using AutoCore.Game.Extensions;
 using AutoCore.Game.Managers;
 using AutoCore.Game.Packets;
+using AutoCore.Game.Packets.Sector;
 using AutoCore.Utils;
 
 public partial class TNLConnection : GhostConnection
@@ -278,6 +279,18 @@ public partial class TNLConnection : GhostConnection
                 case GameOpcode.ChangeCombatModeRequest:
                     MapManager.Instance.HandleChangeCombatModeRequest(CurrentCharacter, reader);
                     break;
+
+                case GameOpcode.RequestCastSkill:
+                {
+                    var packet = new RequestCastSkillPacket();
+                    packet.Read(reader);
+
+                    var vehicle = CurrentCharacter?.CurrentVehicle;
+                    ClonedObjectBase caster = vehicle != null ? vehicle : CurrentCharacter;
+                    if (caster != null)
+                        SkillManager.Instance.CastSkill(caster, packet.Target, packet.SkillId, 1, packet.TargetPosition);
+                    break;
+                }
 
                 default:
                     Logger.WriteLog(LogType.Error, "Unhandled Opcode: {0}", gameOpcode);

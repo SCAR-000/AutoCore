@@ -5,6 +5,8 @@ using AutoCore.Game.CloneBases;
 using AutoCore.Game.Constants;
 using AutoCore.Game.Managers.Asset;
 using AutoCore.Game.Map;
+using AutoCore.Game.Mission;
+using AutoCore.Game.Structures;
 using AutoCore.Utils;
 using AutoCore.Utils.Memory;
 
@@ -133,6 +135,13 @@ public class AssetManager : Singleton<AssetManager>
             return result;
 
         return null;
+    }
+    #endregion
+
+    #region Skills
+    public Skill GetSkill(int skillId)
+    {
+        return WADLoader.Skills.TryGetValue(skillId, out var skill) ? skill : null;
     }
     #endregion
 }

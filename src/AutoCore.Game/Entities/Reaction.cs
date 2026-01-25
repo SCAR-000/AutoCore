@@ -1,6 +1,8 @@
-﻿namespace AutoCore.Game.Entities;
+namespace AutoCore.Game.Entities;
 
 using AutoCore.Game.EntityTemplates;
+using AutoCore.Game.Managers;
+using AutoCore.Game.Structures;
 using AutoCore.Utils;
 
 public enum ReactionType : byte
@@ -165,8 +167,19 @@ public class Reaction : ClonedObjectBase
 
         switch (Template.ReactionType)
         {
-            //case ReactionType.TransferMap:
-            //    return false;
+            case ReactionType.SkillCast:
+                // Template.GenericVar1 appears to be the skill id, and the target Template.CBID
+                var target = Template.Objects.Count > 0
+                    ? ObjectManager.Instance.GetObject(Template.Objects[0], true)
+                    : activator?.Target;
+
+                target ??= activator;
+
+                var targetFid = target?.ObjectId ?? new TFID { Coid = -1, Global = true };
+
+                if (activator != null)
+                    SkillManager.Instance.CastSkill(activator, targetFid, Template.GenericVar1, 1);
+                return true;
 
             default:
                 Logger.WriteLog(LogType.Error, $"Unhandled reaction type: {Template.ReactionType} for reaction {Template.COID}!");
