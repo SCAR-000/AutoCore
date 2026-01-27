@@ -69,16 +69,16 @@ public partial class SectorServer : BaseServer, ILoopable
         {
             var ticks = _regenTimer / ManaRegenTickMs;
             _regenTimer %= ManaRegenTickMs;
+            var deltaMs = ticks * ManaRegenTickMs;
 
-            // Regenerate shield for all vehicles
-            foreach (var vehicle in ObjectManager.Instance.GetAllVehicles())
+            // Regenerate shield only for vehicles that need it (not at full shield)
+            foreach (var vehicle in ObjectManager.Instance.GetVehiclesNeedingShieldRegen())
             {
                 vehicle.RegenerateShield();
             }
 
-            // Regenerate mana
-            // Mana regen is seperate from vehicle, because technically mana/power is a Character property, not a vehicle property.
-            CharacterLevelManager.Instance.RegenerateMana(ticks * ManaRegenTickMs);
+            // Regenerate mana only for characters that need it (not at full mana)
+            CharacterLevelManager.Instance.RegenerateManaForActiveCharacters(deltaMs);
         }
     }
 

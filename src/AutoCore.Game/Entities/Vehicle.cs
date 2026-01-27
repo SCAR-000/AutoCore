@@ -58,6 +58,18 @@ public class Vehicle : SimpleObject
 
         CurrentShield = newShield;
 
+        // Update regeneration tracking
+        if (CurrentShield >= MaxShield)
+        {
+            // Shield at max - no longer needs regeneration
+            ObjectManager.Instance.ClearShieldRegenNeeded(ObjectId.Coid);
+        }
+        else if (ShieldRegenRate > 0 && MaxShield > 0)
+        {
+            // Shield below max and can regenerate - mark for regeneration
+            ObjectManager.Instance.MarkNeedsShieldRegen(ObjectId.Coid);
+        }
+
         // Notify clients of shield change if requested and ghost exists
         if (triggerGhostUpdate && Ghost != null)
             Ghost.SetMaskBits(GhostVehicle.ShieldMask);
@@ -105,20 +117,30 @@ public class Vehicle : SimpleObject
 
     /// <summary>
     /// Regenerates shield by the configured regeneration rate, up to the maximum shield.
+    /// Called by the regeneration system for vehicles in the active regen set.
     /// </summary>
     public void RegenerateShield()
     {
         // Early return if regeneration is disabled or vehicle has no shield capacity
         if (ShieldRegenRate <= 0 || MaxShield <= 0)
+        {
+            // Shouldn't be in regen set, but clear just in case
+            ObjectManager.Instance.ClearShieldRegenNeeded(ObjectId.Coid);
             return;
+        }
 
         // Early return if shield is already at maximum
         if (CurrentShield >= MaxShield)
+        {
+            // No longer needs regen
+            ObjectManager.Instance.ClearShieldRegenNeeded(ObjectId.Coid);
             return;
+        }
 
         // Increase shield by regen rate, but don't exceed MaxShield
         var newShield = Math.Min(CurrentShield + ShieldRegenRate, MaxShield);
         SetCurrentShield(newShield);
+        // Note: SetCurrentShield will clear the regen flag if newShield == MaxShield
     }
     #endregion
 

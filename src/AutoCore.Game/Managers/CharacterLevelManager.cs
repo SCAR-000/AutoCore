@@ -68,95 +68,212 @@ public class CharacterLevelManager : Singleton<CharacterLevelManager>
     }
 
     /// <summary>
+    /// Sets current mana safely and updates regen tracking.
+    /// </summary>
+    public void SetCurrentMana(Character character, short newCurrent, bool sendPacket = true)
+    {
+        var state = GetOrCreate(character.ObjectId.Coid);
+        var coid = character.ObjectId.Coid;
+
+        lock (state)
+        {
+            SetCurrentManaLocked(state, coid, newCurrent, resetRemainder: true);
+        }
+
+        if (sendPacket)
+        {
+            character.OwningConnection?.SendGamePacket(BuildPacket(character));
+            character.CurrentVehicle?.Ghost?.SetMaskBits(GhostVehicle.PowerMask);
+        }
+    }
+
+    /// <summary>
+    /// Sets max mana safely and clamps current mana if needed, then updates regen tracking.
+    /// </summary>
+    public void SetMaxMana(Character character, short newMax, bool sendPacket = true)
+    {
+        var state = GetOrCreate(character.ObjectId.Coid);
+        var coid = character.ObjectId.Coid;
+
+        lock (state)
+        {
+            SetMaxManaLocked(state, coid, newMax, clampCurrent: true, resetRemainder: true);
+        }
+
+        if (sendPacket)
+        {
+            character.OwningConnection?.SendGamePacket(BuildPacket(character));
+            character.CurrentVehicle?.Ghost?.SetMaskBits(GhostVehicle.PowerMask);
+        }
+    }
+
+    private void SetCurrentManaLocked(CharacterManaState state, long coid, short newCurrent, bool resetRemainder)
+    {
+        var maxMana = Math.Max(state.MaxMana, (short)0);
+        var clamped = Math.Clamp(newCurrent, (short)0, maxMana);
+        if (state.CurrentMana == clamped)
+        {
+            UpdateManaRegenTracking(coid, state, resetRemainder);
+            return;
+        }
+
+        state.CurrentMana = clamped;
+        UpdateManaRegenTracking(coid, state, resetRemainder);
+    }
+
+    private void SetMaxManaLocked(CharacterManaState state, long coid, short newMax, bool clampCurrent, bool resetRemainder)
+    {
+        var clampedMax = Math.Max(newMax, (short)0);
+        var changed = state.MaxMana != clampedMax;
+        state.MaxMana = clampedMax;
+
+        if (clampCurrent && state.CurrentMana > clampedMax)
+            state.CurrentMana = clampedMax;
+
+        if (changed || clampCurrent)
+            UpdateManaRegenTracking(coid, state, resetRemainder);
+    }
+
+    private void UpdateManaRegenTracking(long coid, CharacterManaState state, bool resetRemainder)
+    {
+        if (state.MaxMana <= 0 || state.CurrentMana >= state.MaxMana)
+        {
+            _manaRegenRemainders.TryRemove(coid, out _);
+            ObjectManager.Instance.ClearManaRegenNeeded(coid);
+            return;
+        }
+
+        if (resetRemainder)
+            _manaRegenRemainders.TryRemove(coid, out _);
+
+        ObjectManager.Instance.MarkNeedsManaRegen(coid);
+    }
+
+    /// <summary>
     /// Recalculates max mana from the character's power plant and updates current mana if needed.
+    /// Also updates the regeneration tracking based on whether the character needs mana regen.
     /// </summary>
     public CharacterManaState UpdateManaFromCharacter(Character character, bool setCurrentToMax = false)
     {
         var newMax = CalculateMaxMana(character);
         var state = GetOrCreate(character.ObjectId.Coid);
+        var coid = character.ObjectId.Coid;
 
         lock (state)
         {
-            state.MaxMana = newMax;
+            SetMaxManaLocked(state, coid, newMax, clampCurrent: true, resetRemainder: false);
 
             if (setCurrentToMax)
-            {
-                state.CurrentMana = newMax;
-            }
-            else if (state.CurrentMana > newMax)
-            {
-                state.CurrentMana = newMax;
-            }
+                SetCurrentManaLocked(state, coid, newMax, resetRemainder: true);
         }
 
         return state;
     }
 
     /// <summary>
-    /// Regenerates mana for all characters based on their power plant's regen rate.
+    /// Consumes mana from a character. Returns true if successful, false if not enough mana.
     /// </summary>
-    public void RegenerateMana(long deltaMs)
+    public bool ConsumeMana(Character character, short amount)
+    {
+        if (amount <= 0)
+            return true;
+
+        var state = GetOrCreate(character.ObjectId.Coid);
+        var coid = character.ObjectId.Coid;
+
+        lock (state)
+        {
+            if (state.CurrentMana < amount)
+                return false;
+
+            var newCurrent = (short)(state.CurrentMana - amount);
+            SetCurrentManaLocked(state, coid, newCurrent, resetRemainder: false);
+        }
+
+        character.OwningConnection?.SendGamePacket(BuildPacket(character));
+        character.CurrentVehicle?.Ghost?.SetMaskBits(GhostVehicle.PowerMask);
+
+        return true;
+    }
+
+    /// <summary>
+    /// Regenerates mana only for characters that are in the active regeneration set.
+    /// </summary>
+    public void RegenerateManaForActiveCharacters(long deltaMs)
     {
         if (deltaMs <= 0)
             return;
 
-        var characters = ObjectManager.Instance.GetCharacters();
+        var characters = ObjectManager.Instance.GetCharactersNeedingManaRegen();
         var deltaSeconds = deltaMs / 1000f;
 
         foreach (var character in characters)
         {
-            if (character?.CurrentVehicle?.PowerPlant == null)
-                continue;
-
-            var powerPlantSpecific = character.CurrentVehicle.PowerPlant.CloneBasePowerPlant?.PowerPlantSpecific;
-            if (powerPlantSpecific == null)
-                continue;
-
-            var rawRegenRate = powerPlantSpecific.PowerRegenRate;
-            var regenRate = rawRegenRate / ManaRegenRateDivisor;
-            if (regenRate <= 0)
-                continue;
-
-            var state = GetOrCreate(character.ObjectId.Coid);
-            short currentMana;
-            short maxMana;
-
-            lock (state)
-            {
-                currentMana = state.CurrentMana;
-                maxMana = state.MaxMana;
-            }
-
-            if (currentMana >= maxMana)
-            {
-                _manaRegenRemainders.TryRemove(character.ObjectId.Coid, out _);
-                continue;
-            }
-
-            var remainder = _manaRegenRemainders.GetOrAdd(character.ObjectId.Coid, 0f);
-            var total = remainder + (regenRate * deltaSeconds);
-            var gain = (short)Math.Floor(total);
-
-            if (gain <= 0)
-            {
-                _manaRegenRemainders[character.ObjectId.Coid] = total;
-                continue;
-            }
-
-            var newCurrent = (short)Math.Min(maxMana, currentMana + gain);
-            _manaRegenRemainders[character.ObjectId.Coid] = total - gain;
-
-            if (newCurrent == currentMana)
-                continue;
-
-            lock (state)
-            {
-                state.CurrentMana = newCurrent;
-            }
-
-            character.OwningConnection?.SendGamePacket(BuildPacket(character));
-            character.CurrentVehicle.Ghost?.SetMaskBits(GhostVehicle.PowerMask);
+            RegenerateManaForCharacter(character, deltaSeconds);
         }
+    }
+
+    /// <summary>
+    /// Regenerates mana for a single character based on their power plant's regen rate.
+    /// </summary>
+    private void RegenerateManaForCharacter(Character character, float deltaSeconds)
+    {
+        if (character?.CurrentVehicle?.PowerPlant == null)
+            return;
+
+        var powerPlantSpecific = character.CurrentVehicle.PowerPlant.CloneBasePowerPlant?.PowerPlantSpecific;
+        if (powerPlantSpecific == null)
+            return;
+
+        var rawRegenRate = powerPlantSpecific.PowerRegenRate;
+        var regenRate = rawRegenRate / ManaRegenRateDivisor;
+        if (regenRate <= 0)
+        {
+            // No regen rate, remove from active set
+            ObjectManager.Instance.ClearManaRegenNeeded(character.ObjectId.Coid);
+            return;
+        }
+
+        var state = GetOrCreate(character.ObjectId.Coid);
+        var coid = character.ObjectId.Coid;
+        short currentMana;
+        short maxMana;
+
+        lock (state)
+        {
+            currentMana = state.CurrentMana;
+            maxMana = state.MaxMana;
+        }
+
+        if (currentMana >= maxMana)
+        {
+            UpdateManaRegenTracking(coid, state, resetRemainder: false);
+            return;
+        }
+
+        var remainder = _manaRegenRemainders.GetOrAdd(coid, 0f);
+        var total = remainder + (regenRate * deltaSeconds);
+        var gain = (short)Math.Floor(total);
+
+        if (gain <= 0)
+        {
+            _manaRegenRemainders[coid] = total;
+            return;
+        }
+
+        var newCurrent = (short)Math.Min(maxMana, currentMana + gain);
+        _manaRegenRemainders[coid] = total - gain;
+
+        if (newCurrent == currentMana)
+            return;
+
+        lock (state)
+        {
+            SetCurrentManaLocked(state, coid, newCurrent, resetRemainder: false);
+        }
+
+        character.OwningConnection?.SendGamePacket(BuildPacket(character));
+        character.CurrentVehicle.Ghost?.SetMaskBits(GhostVehicle.PowerMask);
     }
 
     /// <summary>
@@ -166,6 +283,7 @@ public class CharacterLevelManager : Singleton<CharacterLevelManager>
     {
         _cache.TryRemove(characterCoid, out _);
         _manaRegenRemainders.TryRemove(characterCoid, out _);
+        ObjectManager.Instance.ClearManaRegenNeeded(characterCoid);
     }
 }
 

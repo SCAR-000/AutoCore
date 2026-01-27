@@ -479,10 +479,20 @@ public partial class TNLConnection : GhostConnection
     {
         if (CurrentCharacter != null)
         {
+            var characterCoid = CurrentCharacter.ObjectId.Coid;
+            var vehicleCoid = CurrentCharacter.CurrentVehicle?.ObjectId.Coid ?? 0;
+
             CurrentCharacter.SetMap(null);
-            CurrentCharacter.CurrentVehicle.SetMap(null);
+            CurrentCharacter.CurrentVehicle?.SetMap(null);
             CurrentCharacter.ClearGhost();
-            CurrentCharacter.CurrentVehicle.ClearGhost();
+            CurrentCharacter.CurrentVehicle?.ClearGhost();
+
+            // Clean up from ObjectManager and CharacterLevelManager caches
+            ObjectManager.Instance.Remove(characterCoid);
+            if (vehicleCoid != 0)
+                ObjectManager.Instance.Remove(vehicleCoid);
+            CharacterLevelManager.Instance.RemoveFromCache(characterCoid);
+
             CurrentCharacter = null;
         }
 

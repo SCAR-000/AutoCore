@@ -99,7 +99,6 @@ public class ChatManager : Singleton<ChatManager>
 
                 character.CurrentVehicle.SetCurrentHP(hp);
 
-                respPacket.Message = $"Vehicle HP set to {hp} (VehicleHP={character.CurrentVehicle.GetCurrentHP()}/{character.CurrentVehicle.GetMaximumHP()})";
                 break;
             }
 
@@ -119,7 +118,6 @@ public class ChatManager : Singleton<ChatManager>
 
                 character.CurrentVehicle.SetMaximumHP(maxHp);
 
-                respPacket.Message = $"Vehicle MaxHP set to {maxHp} (VehicleHP={character.CurrentVehicle.GetCurrentHP()}/{character.CurrentVehicle.GetMaximumHP()})";
                 break;
             }
 
@@ -139,7 +137,6 @@ public class ChatManager : Singleton<ChatManager>
 
                 character.CurrentVehicle.SetCurrentShield(shield);
 
-                respPacket.Message = $"Vehicle Shield set to {shield} (VehicleShield={character.CurrentVehicle.CurrentShield}/{character.CurrentVehicle.MaxShield})";
                 break;
             }
 
@@ -158,8 +155,6 @@ public class ChatManager : Singleton<ChatManager>
                 }
 
                 character.CurrentVehicle.SetMaximumShield(maxShield);
-
-                respPacket.Message = $"Vehicle MaxShield set to {maxShield} (VehicleShield={character.CurrentVehicle.CurrentShield}/{character.CurrentVehicle.MaxShield})";
                 break;
             }
 
@@ -177,16 +172,9 @@ public class ChatManager : Singleton<ChatManager>
                     break;
                 }
 
-                var state = CharacterLevelManager.Instance.GetOrCreate(character.ObjectId.Coid);
-                lock (state)
-                {
-                    state.CurrentMana = power;
-                }
+                CharacterLevelManager.Instance.SetCurrentMana(character, power);
 
-                connection.SendGamePacket(CharacterLevelManager.Instance.BuildPacket(character));
-                character.CurrentVehicle?.Ghost?.SetMaskBits(GhostVehicle.PowerMask);
 
-                respPacket.Message = $"Mana set to {power} (CurrentPower={state.CurrentMana}/{state.MaxMana})";
                 break;
             }
 
@@ -204,21 +192,7 @@ public class ChatManager : Singleton<ChatManager>
                     break;
                 }
 
-                var state = CharacterLevelManager.Instance.GetOrCreate(character.ObjectId.Coid);
-                lock (state)
-                {
-                    state.MaxMana = maxPower;
-                    // Clamp current power to new max if needed
-                    if (state.CurrentMana > maxPower)
-                    {
-                        state.CurrentMana = maxPower;
-                    }
-                }
-
-                connection.SendGamePacket(CharacterLevelManager.Instance.BuildPacket(character));
-                character.CurrentVehicle?.Ghost?.SetMaskBits(GhostVehicle.PowerMask);
-
-                respPacket.Message = $"Max Mana set to {maxPower} (CurrentPower={state.CurrentMana}/{state.MaxMana})";
+                CharacterLevelManager.Instance.SetMaxMana(character, maxPower);
                 break;
             }
 

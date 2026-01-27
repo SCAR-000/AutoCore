@@ -7,8 +7,18 @@ using AutoCore.Utils.Memory;
 
 public class ObjectManager : Singleton<ObjectManager>
 {
+    #region Object Storage
     private Dictionary<long, ClonedObjectBase> Objects { get; } = new();
+    private Dictionary<long, Vehicle> Vehicles { get; } = new();
+    private Dictionary<long, Character> Characters { get; } = new();
+    #endregion
 
+    #region Regeneration Tracking
+    private HashSet<long> VehiclesNeedingShieldRegen { get; } = new();
+    private HashSet<long> CharactersNeedingManaRegen { get; } = new();
+    #endregion
+
+    #region Add/Remove
     public bool Add(ClonedObjectBase obj)
     {
         if (!obj.ObjectId.Global)
@@ -18,9 +28,40 @@ public class ObjectManager : Singleton<ObjectManager>
             return false;
 
         Objects.Add(obj.ObjectId.Coid, obj);
+
+        // Index by type for O(1) access
+        if (obj is Vehicle vehicle)
+            Vehicles.Add(obj.ObjectId.Coid, vehicle);
+        else if (obj is Character character)
+            Characters.Add(obj.ObjectId.Coid, character);
+
         return true;
     }
 
+    public bool Remove(long coid)
+    {
+        if (!Objects.TryGetValue(coid, out var obj))
+            return false;
+
+        Objects.Remove(coid);
+
+        // Remove from type-indexed collections
+        if (obj is Vehicle)
+        {
+            Vehicles.Remove(coid);
+            VehiclesNeedingShieldRegen.Remove(coid);
+        }
+        else if (obj is Character)
+        {
+            Characters.Remove(coid);
+            CharactersNeedingManaRegen.Remove(coid);
+        }
+
+        return true;
+    }
+    #endregion
+
+    #region Object Lookup
     public Character GetOrLoadCharacter(long coid, CharContext context)
     {
         var character = GetCharacter(coid);
@@ -66,7 +107,7 @@ public class ObjectManager : Singleton<ObjectManager>
 
     public Character? GetCharacter(long coid)
     {
-        if (Objects.TryGetValue(coid, out var obj) && obj is Character character)
+        if (Characters.TryGetValue(coid, out var character))
             return character;
 
         return null;
@@ -74,24 +115,77 @@ public class ObjectManager : Singleton<ObjectManager>
 
     public Character? GetCharacterByName(string name)
     {
-        return Objects.Values.Where(o => o is Character objChar && objChar.Name == name).Select(o => o as Character).FirstOrDefault();
+        return Characters.Values.FirstOrDefault(c => c.Name == name);
     }
 
     public Vehicle? GetVehicle(long coid)
     {
-        if (Objects.TryGetValue(coid, out var obj) && obj is Vehicle vehicle)
+        if (Vehicles.TryGetValue(coid, out var vehicle))
             return vehicle;
 
         return null;
     }
 
-    public IEnumerable<Vehicle> GetAllVehicles()
+    public IEnumerable<Vehicle> GetAllVehicles() => Vehicles.Values;
+
+    public IEnumerable<Character> GetCharacters() => Characters.Values;
+    #endregion
+
+    #region Regeneration Tracking
+    /// <summary>
+    /// Marks a vehicle as needing shield regeneration.
+    /// </summary>
+    public void MarkNeedsShieldRegen(long vehicleCoid)
     {
-        return Objects.Values.OfType<Vehicle>();
+        VehiclesNeedingShieldRegen.Add(vehicleCoid);
     }
 
-    public IEnumerable<Character> GetCharacters()
+    /// <summary>
+    /// Clears the shield regeneration flag for a vehicle (e.g., when shield reaches max).
+    /// </summary>
+    public void ClearShieldRegenNeeded(long vehicleCoid)
     {
-        return Objects.Values.OfType<Character>();
+        VehiclesNeedingShieldRegen.Remove(vehicleCoid);
     }
+
+    /// <summary>
+    /// Marks a character as needing mana regeneration.
+    /// </summary>
+    public void MarkNeedsManaRegen(long characterCoid)
+    {
+        CharactersNeedingManaRegen.Add(characterCoid);
+    }
+
+    /// <summary>
+    /// Clears the mana regeneration flag for a character (ie, when mana reaches max).
+    /// </summary>
+    public void ClearManaRegenNeeded(long characterCoid)
+    {
+        CharactersNeedingManaRegen.Remove(characterCoid);
+    }
+
+    /// <summary>
+    /// Returns vehicles that need shield regeneration. Only iterates entities that actually need regen.
+    /// </summary>
+    public IEnumerable<Vehicle> GetVehiclesNeedingShieldRegen()
+    {
+        foreach (var coid in VehiclesNeedingShieldRegen)
+        {
+            if (Vehicles.TryGetValue(coid, out var vehicle))
+                yield return vehicle;
+        }
+    }
+
+    /// <summary>
+    /// Returns characters that need mana regeneration. Only iterates entities that actually need regen.
+    /// </summary>
+    public IEnumerable<Character> GetCharactersNeedingManaRegen()
+    {
+        foreach (var coid in CharactersNeedingManaRegen)
+        {
+            if (Characters.TryGetValue(coid, out var character))
+                yield return character;
+        }
+    }
+    #endregion
 }
