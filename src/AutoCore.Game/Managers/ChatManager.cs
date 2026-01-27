@@ -1,5 +1,6 @@
 ﻿namespace AutoCore.Game.Managers;
 
+using System.Linq;
 using AutoCore.Game.Constants;
 using AutoCore.Game.Entities;
 using AutoCore.Game.Packets.Global;
@@ -237,6 +238,55 @@ public class ChatManager : Singleton<ChatManager>
                         connection.SendGamePacket(createPacket);
                     }
                 }
+                break;
+
+            case "/warp":
+                if (character == null)
+                {
+                    respPacket.Message = "Unable to warp - character not loaded.";
+                    break;
+                }
+
+                if (parts.Length < 2)
+                {
+                    respPacket.Message = "Invalid warp command! Usage: /warp {mapid}";
+                    break;
+                }
+
+                if (int.TryParse(parts[1], out var mapId))
+                {
+                    var continentObject = AssetManager.Instance.GetContinentObject(mapId);
+                    if (continentObject == null)
+                    {
+                        respPacket.Message = $"Map ID {mapId} does not exist!";
+                        break;
+                    }
+
+                    MapManager.Instance.WarpCharacterToMap(character, mapId);
+                    respPacket.Message = $"Warping to {continentObject.DisplayName} (ID: {mapId})...";
+                }
+                else
+                {
+                    respPacket.Message = $"Invalid map ID: {parts[1]}";
+                }
+                break;
+
+            case "/maps":
+                var maps = AssetManager.Instance.GetContinentObjects().OrderBy(m => m.Id).ToList();
+                if (maps.Count == 0)
+                {
+                    respPacket.Message = "No maps available.";
+                    break;
+                }
+
+                var mapList = new System.Text.StringBuilder();
+                mapList.AppendLine("Available Maps:");
+                foreach (var map in maps)
+                {
+                    mapList.AppendLine($"  ID: {map.Id} - {map.DisplayName ?? map.MapFileName}");
+                }
+
+                respPacket.Message = mapList.ToString().TrimEnd();
                 break;
 
             default:
