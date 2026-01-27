@@ -170,7 +170,7 @@ public class Reaction : ClonedObjectBase
                 var character = activator.GetAsCharacter() ?? activator.GetSuperCharacter(false);
                 if (character != null)
                 {
-                    MapManager.Instance.WarpCharacterToMap(character, Template.MapTransferData);
+                    MapManager.Instance.HandleTransferMapRequest(character, Template.MapTransferData);
                 }
                 return true;
 
