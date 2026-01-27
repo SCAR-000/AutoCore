@@ -370,11 +370,11 @@ public class GhostVehicle : GhostObject
                 var state = CharacterLevelManager.Instance.GetOrCreate(ownerChar.ObjectId.Coid);
                 lock (state)
                 {
-                    currentPower = state.CurrentMana;
+                    currentMana = state.CurrentMana;
                 }
             }
 
-            stream.WriteBits(32, BitConverter.GetBytes(currentPower)); // Current Mana/Power
+            stream.WriteBits(32, BitConverter.GetBytes(currentMana)); // Current Mana/Power
         }
 
         if (stream.WriteFlag((updateMask & TokenMask) != 0))
