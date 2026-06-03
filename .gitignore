@@ -287,3 +287,9 @@ __pycache__/
 *.odx.cs
 *.xsd.cs
 *.json
+src/AutoCore.Global/appsettings.global.json
+src/AutoCore.Launcher/appsettings.auth.json
+src/AutoCore.Launcher/appsettings.global.json
+src/AutoCore.Launcher/appsettings.sector.json
+src/AutoCore.Sector/appsettings.sector.json
+src/AutoCore.Auth/appsettings.auth.json
