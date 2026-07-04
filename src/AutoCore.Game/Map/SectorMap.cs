@@ -20,6 +20,11 @@ public class SectorMap
     public Dictionary<TFID, Trigger> Triggers { get; } = new();
     public Dictionary<TFID, Reaction> Reactions { get; } = new();
 
+    // Loose world items spawned at runtime (e.g. via /loot) that can be picked up. Keyed by the
+    // item's local coid so an incoming ItemPickup can be resolved back to the object. Kept on the
+    // map (rather than a connection) so the registry survives relogs for the map's lifetime.
+    private readonly Dictionary<long, ClonedObjectBase> _worldItems = new();
+
     public SectorMap(int continentId)
     {
         ContinentId = continentId;
@@ -92,6 +97,12 @@ public class SectorMap
         packet.PositionZ = 0.0f;
         packet.WeatherUpdateSize = 0;
     }
+
+    public ClonedObjectBase GetObject(TFID id) => Objects.TryGetValue(id, out var obj) ? obj : null;
+
+    public void RegisterWorldItem(ClonedObjectBase item) => _worldItems[item.ObjectId.Coid] = item;
+
+    public ClonedObjectBase TakeWorldItem(long coid) => _worldItems.Remove(coid, out var item) ? item : null;
 
     public void EnterMap(ClonedObjectBase clonedObject)
     {

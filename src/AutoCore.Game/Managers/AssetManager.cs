@@ -5,6 +5,7 @@ using AutoCore.Game.CloneBases;
 using AutoCore.Game.Constants;
 using AutoCore.Game.Managers.Asset;
 using AutoCore.Game.Map;
+using AutoCore.Game.Structures;
 using AutoCore.Utils;
 using AutoCore.Utils.Memory;
 
@@ -78,6 +79,13 @@ public class AssetManager : Singleton<AssetManager>
 
         return true;
     }
+
+    // Loads ONLY clonebase.wad (no GLMs, no world DB, no map data). Lets standalone
+    // tooling resolve CBID -> CloneBase without a MySQL connection.
+    public bool LoadCloneBasesOnly()
+    {
+        return WADLoader.Load(Path.Combine(GamePath, "clonebase.wad"));
+    }
     #endregion
 
     #region WAD
@@ -92,6 +100,71 @@ public class AssetManager : Singleton<AssetManager>
     public T GetCloneBase<T>(int CBID) where T : CloneBase
     {
         return GetCloneBase(CBID) as T;
+    }
+
+    private List<ItemCloneBaseEntry> _sortedItemCloneBases;
+
+    public IReadOnlyList<ItemCloneBaseEntry> GetItemCloneBases()
+    {
+        _sortedItemCloneBases ??= WADLoader.CloneBases.Values
+            .Where(IsInventoryItemCloneBase)
+            .Select(cb =>
+            {
+                var cloneBaseObject = (CloneBaseObject)cb;
+                var inventory = cloneBaseObject.SimpleObjectSpecific;
+                return new ItemCloneBaseEntry(
+                    cb.CloneBaseSpecific.CloneBaseId,
+                    GetItemDisplayName(cb),
+                    cb.Type,
+                    inventory.InvSizeX,
+                    inventory.InvSizeY);
+            })
+            .OrderBy(entry => entry.Cbid)
+            .ToList();
+
+        return _sortedItemCloneBases;
+    }
+
+    public bool IsInventoryItem(int cbid)
+    {
+        var cloneBase = GetCloneBase(cbid);
+        return cloneBase != null && IsInventoryItemCloneBase(cloneBase);
+    }
+
+    private static bool IsInventoryItemCloneBase(CloneBase cloneBase)
+    {
+        if (cloneBase is not CloneBaseObject cloneBaseObject)
+            return false;
+
+        var inventory = cloneBaseObject.SimpleObjectSpecific;
+        if (inventory.InvSizeX == 0 || inventory.InvSizeY == 0)
+            return false;
+
+        return cloneBase.Type switch
+        {
+            CloneBaseObjectType.Item or
+            CloneBaseObjectType.Gadget or
+            CloneBaseObjectType.PowerPlant or
+            CloneBaseObjectType.Weapon or
+            CloneBaseObjectType.WheelSet or
+            CloneBaseObjectType.Commodity or
+            CloneBaseObjectType.Armor or
+            CloneBaseObjectType.TinkeringKit => true,
+            _ => false
+        };
+    }
+
+    private static string GetItemDisplayName(CloneBase cloneBase)
+    {
+        var name = cloneBase.CloneBaseSpecific.UniqueName;
+        if (!string.IsNullOrWhiteSpace(name))
+            return name.Trim();
+
+        name = cloneBase.CloneBaseSpecific.ShortDesc;
+        if (!string.IsNullOrWhiteSpace(name))
+            return name.Trim();
+
+        return cloneBase.Type.ToString();
     }
     #endregion
 

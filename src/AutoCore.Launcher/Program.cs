@@ -16,17 +16,25 @@ using AutoCore.Global.Network;
 using AutoCore.Sector.Config;
 using AutoCore.Sector.Network;
 using AutoCore.Utils;
+using AutoCore.Utils.Commands;
 using AutoCore.Utils.Server;
 
 public class Program : ExitableProgram
 {
-    private static AuthServer AuthServer { get; } = new();
-    private static GlobalServer GlobalServer { get; } = new();
-    private static SectorServer SectorServer { get; } = new();
+    private static AuthServer AuthServer = null!;
+    private static GlobalServer GlobalServer = null!;
+    private static SectorServer SectorServer = null!;
 
     public static void Main()
     {
         Initialize(ExitHandlerProc);
+
+        // Multiple servers share one CommandProcessor; keep scoped names (auth.exit, global.exit, etc.).
+        CommandProcessor.UseScopes();
+
+        AuthServer = new AuthServer();
+        GlobalServer = new GlobalServer();
+        SectorServer = new SectorServer();
 
         var authConfig = GetAuthConfig();
         var globalConfig = GetGlobalConfig();

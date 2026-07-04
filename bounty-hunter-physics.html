@@ -1,0 +1,1000 @@
+<!-- Serve via HTTP: python -m http.server 8080 — do NOT open as file:// (audio CORS) -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Auto Assault — Bounty Hunter</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #0ff; }
+canvas { display: block; }
+#hud {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  pointer-events: none; user-select: none;
+}
+#speed {
+  position: absolute; bottom: 28px; right: 36px;
+  font-size: 78px; font-weight: bold; color: #fff;
+  text-shadow: 0 0 14px rgba(0,255,255,0.7);
+  line-height: 1;
+}
+#speed-unit { font-size: 16px; opacity: 0.6; vertical-align: super; }
+#gear-box {
+  position: absolute; bottom: 28px; left: 36px;
+  font-size: 52px; font-weight: bold; color: #0ff;
+  text-shadow: 0 0 12px rgba(0,255,255,0.8);
+}
+#rpm-wrap { position: absolute; bottom: 116px; left: 36px; right: 36px; }
+#rpm-label { font-size: 10px; letter-spacing: 2px; opacity: 0.5; margin-bottom: 5px; }
+#rpm-bar-bg {
+  width: 100%; height: 8px; background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.15); border-radius: 4px;
+}
+#rpm-bar {
+  height: 100%; width: 0%; border-radius: 4px;
+  background: linear-gradient(to right, #00ff88 0%, #ffee00 55%, #ff8800 80%, #ff2200 100%);
+  transition: width 0.04s linear;
+}
+#wheels {
+  position: absolute; top: 18px; left: 36px; display: flex; gap: 10px; align-items: center;
+}
+#wheels-label { font-size: 9px; letter-spacing: 2px; opacity: 0.4; margin-right: 4px; }
+.wi {
+  width: 16px; height: 16px; border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.2); background: #00ff88;
+  transition: background 0.1s, border-color 0.1s;
+}
+.wi.air { background: #ff2200; border-color: #ff2200; }
+#debug-line {
+  position: absolute; top: 50px; left: 36px;
+  font-size: 11px; opacity: 0.4; letter-spacing: 1px;
+}
+#controls {
+  position: absolute; top: 18px; right: 36px;
+  font-size: 11px; opacity: 0.35; line-height: 2; text-align: right;
+}
+#click-hint {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+  font-size: 20px; opacity: 0.75; text-shadow: 0 0 12px #0ff;
+  letter-spacing: 3px; text-transform: uppercase;
+}
+#airborne-banner {
+  position: absolute; top: 40%; left: 50%; transform: translateX(-50%);
+  font-size: 28px; letter-spacing: 6px; color: #ff8800;
+  text-shadow: 0 0 16px rgba(255,136,0,0.8);
+  opacity: 0; transition: opacity 0.1s;
+}
+</style>
+</head>
+<body>
+<div id="hud">
+  <div id="speed"><span id="speed-val">0</span><span id="speed-unit"> MPH</span></div>
+  <div id="gear-box" title="Gear">1</div>
+  <div id="rpm-wrap">
+    <div id="rpm-label">RPM ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</div>
+    <div id="rpm-bar-bg"><div id="rpm-bar"></div></div>
+  </div>
+  <div id="wheels">
+    <span id="wheels-label">WHEELS</span>
+    <div class="wi" id="w0" title="FL"></div>
+    <div class="wi" id="w1" title="FR"></div>
+    <div class="wi" id="w2" title="RL"></div>
+    <div class="wi" id="w3" title="RR"></div>
+  </div>
+  <div id="debug-line">T: 0%  S: 0°  RPM: 800</div>
+  <div id="controls">
+    W / S — throttle / brake<br>
+    A / D — steer<br>
+    SPACE — handbrake<br>
+    SHIFT — boost<br>
+    R — reset<br>
+    C — paint scheme<br>
+    RMB — orbit cam
+  </div>
+  <div id="click-hint">Click to start</div>
+  <div id="airborne-banner">AIRBORNE</div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three":         "https://esm.sh/three@0.165.0",
+    "three/addons/": "https://esm.sh/three@0.165.0/examples/jsm/",
+    "cannon-es":     "https://unpkg.com/cannon-es@0.20.0/dist/cannon-es.js"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import * as CANNON from 'cannon-es';
+import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// VEHICLE PARAMS
+// Source: VehicleSpecific struct (AutoCore.Game/CloneBases/Specifics/VehicleSpecific.cs)
+// Values: calibrated estimates — swap for real values from clonebase.wad parse
+// Vehicle: veh_p_h_r_cha_00_dune-buggy-newuser (Human Ranger tier-0 starter)
+// Physics engine: Havok hkRaycastVehicle → Cannon-es RaycastVehicle (1:1 mapping)
+// Movement mode 0x02: analog throttle ramp (RE: FUN_00598650, VehicleAction::applyAction)
+// ═══════════════════════════════════════════════════════════════════════════════
+const VP = {
+  mass: 800,  // SimpleObjectSpecific.Mass
+
+  // SuspensionStrength / SuspensionLength / Damping (FrontRear struct)
+  // NOTE: cannon-es suspensionForce = (stiffness·Δlen − damping·relVel)·chassisMass.
+  // The raw Havok damping coeffs (Compression ~0.35, Extension ~0.45) give a damping
+  // ratio of ~0.05 at this stiffness/mass — violently under-damped, so the chassis
+  // bounces and reads "airborne" every frame. cannon-es needs tuned constants
+  // (defaults: stiffness 100, dampingCompression 4.4, dampingRelaxation 2.3).
+  // We keep the Havok front/rear *ratio* but use cannon-es magnitudes.
+  suspensionLength:             { front: 0.35,  rear: 0.35  },
+  suspensionStrength:           { front: 55,    rear: 48    },
+  suspensionDampingCompression: { front: 4.4,   rear: 4.0   },  // Havok 0.35/0.30
+  suspensionDampingExtension:   { front: 2.6,   rear: 2.3   },  // Havok 0.45/0.40
+
+  // WheelExistance = 0x0F (4 wheels), FL=0 FR=1 RL=2 RR=3
+  wheelRadius: [0.38, 0.38, 0.40, 0.40],
+  wheelWidth:  [0.25, 0.25, 0.28, 0.28],
+  // WheelHardPoints[6] in chassis local space (+Z = front per indexForwardAxis:2)
+  wheelHardPoints: [
+    new CANNON.Vec3(-0.65, -0.15,  1.05),  // FL
+    new CANNON.Vec3( 0.65, -0.15,  1.05),  // FR
+    new CANNON.Vec3(-0.65, -0.15, -0.85),  // RL
+    new CANNON.Vec3( 0.65, -0.15, -0.85),  // RR
+  ],
+  // WheelTorqueRatios (FrontRear)
+  wheelTorqueRatios: { front: 0.4, rear: 0.6 },
+  wheelFriction:          1.8,   // WheelSetSpecific.Friction (scaled)
+  rearWheelFrictionScalar: 0.9,  // RearWheelFrictionScalar
+
+  // SteeringMaxAngle / SteeringFullSpeedLimit
+  steeringMaxAngle:       0.62,  // radians (~35°)
+  steeringFullSpeedLimit:  15,   // m/s — above this, steering angle reduces
+
+  // Engine (EngineType, TorqueMax, RPM params)
+  torqueMax:         1800,   // TorqueMax (int16, used as Nm scale)
+  minTorqueFactor:   0.3,    // MinTorqueFactor
+  maxTorqueFactor:   1.0,    // MaxTorqueFactor
+  minimumRPM:         800,   // MinimumRPM
+  optimumRPMMin:     2500,   // OptimumRPMMin
+  optimumRPMMax:     4500,   // OptimumRPMMax
+  maximumRPMMax:     7000,   // MaximumRPMMax
+  numberOfGears:        5,   // NumberOfGears
+  gearRatios:  [3.5, 2.1, 1.4, 1.0, 0.75],  // GearRatios[5]
+  transmissionRatio:    3.2,  // TransmissionRatio
+  reverseGearRatio:     3.8,  // ReverseGearRation (sic)
+  downshiftRPM:        1800,  // DownshiftRPM
+  upshiftRPM:          5500,  // UpshiftRPM
+
+  // BrakesMaxTorque (FrontRear)
+  brakesMaxTorque: { front: 400, rear: 300 },
+
+  // SpeedLimiter / AbsoluteTopSpeed
+  speedLimiter:      30,   // m/s — throttle roll-off begins (~67 mph)
+  absoluteTopSpeed:  35,   // m/s — hard cap (~78 mph)
+
+  // RVInertia* (overrides Havok default inertia tensor)
+  rvInertiaRoll:    1200,
+  rvInertiaPitch:   1500,
+  rvInertiaYaw:     1800,
+  rvExtraAngularImpulse: 0.3,  // RVExtraAngularImpulse — air stabilization scale
+
+  // AVD* (angular velocity damping)
+  avdNormalSpinDamping:    0.05,
+  avdCollisionSpinDamping: 0.15,
+  avdCollisionThreshold:   5.0,  // m/s impact to trigger collision damping
+
+  // Aerodynamics
+  aeroDrag:        0.35,
+  aeroFrontalArea: 1.8,    // m²
+  aeroAirDensity:  1.225,  // kg/m³
+
+  // Misc
+  centerOfMassOffset: new CANNON.Vec3(0, -0.12, 0.08),  // CenterOfMassModifier
+  pushBottomUp:       2.5,    // PushBottomUp — ground clamp upward impulse factor
+
+  // Mode 0x02 throttle ramp rates (not in VehicleSpecific, inferred from applyAction RE)
+  throttleAccelRate: 2.5,  // units/sec to reach target
+  throttleDecelRate: 4.0,
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CANNON-ES WORLD
+// ═══════════════════════════════════════════════════════════════════════════════
+const world = new CANNON.World({ gravity: new CANNON.Vec3(0, -9.81, 0) });
+// NaiveBroadphase handles infinite Plane AABB correctly (SAPBroadphase doesn't)
+world.broadphase = new CANNON.NaiveBroadphase();
+world.solver.iterations = 20;
+world.allowSleep = false;
+
+const groundMat = new CANNON.Material('ground');
+const wheelMat  = new CANNON.Material('wheel');
+world.addContactMaterial(new CANNON.ContactMaterial(wheelMat, groundMat, {
+  friction: VP.wheelFriction, restitution: 0.0,
+}));
+
+// Ground — large flat box so raycasts hit it reliably
+const groundBody = new CANNON.Body({ mass: 0, material: groundMat });
+groundBody.addShape(new CANNON.Box(new CANNON.Vec3(250, 0.5, 250)));
+groundBody.position.set(0, -0.5, 0);  // top surface exactly at y=0
+world.addBody(groundBody);
+
+// Ramp: 18m ahead of spawn, slight pitch angle
+const rampPhysics = new CANNON.Body({ mass: 0, material: groundMat });
+rampPhysics.addShape(new CANNON.Box(new CANNON.Vec3(5, 0.55, 3.5)));
+rampPhysics.position.set(0, 0.55, -20);
+rampPhysics.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -0.22);
+world.addBody(rampPhysics);
+
+// Speed bumps
+const bumpPositions = [-38, -55];
+for (const bz of bumpPositions) {
+  const b = new CANNON.Body({ mass: 0, material: groundMat });
+  b.addShape(new CANNON.Box(new CANNON.Vec3(7, 0.13, 0.45)));
+  b.position.set(0, 0.13, bz);
+  world.addBody(b);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CHASSIS BODY
+// ═══════════════════════════════════════════════════════════════════════════════
+const chassisBody = new CANNON.Body({ mass: VP.mass });
+// Half-extents for a compact dune buggy (2.2m long, 1.3m wide, 0.7m tall)
+chassisBody.addShape(
+  new CANNON.Box(new CANNON.Vec3(0.65, 0.32, 1.1)),
+  VP.centerOfMassOffset
+);
+chassisBody.position.set(0, 1.5, 5);
+chassisBody.linearDamping  = 0.01;
+chassisBody.angularDamping = VP.avdNormalSpinDamping;
+chassisBody.allowSleep     = false;
+world.addBody(chassisBody);
+
+function applyInertiaOverride() {
+  // Override Havok-sourced inertia values (RVInertia* from VehicleSpecific)
+  // cannon-es 0.20: invInertia is the local-frame inverse inertia Vec3
+  chassisBody.invInertia.set(
+    1 / VP.rvInertiaRoll,
+    1 / VP.rvInertiaPitch,
+    1 / VP.rvInertiaYaw
+  );
+  if (chassisBody.updateInertiaWorld) {
+    chassisBody.updateInertiaWorld(true);
+  }
+}
+applyInertiaOverride();
+// Re-apply before each step since Cannon-es may recompute internally
+world.addEventListener('preStep', applyInertiaOverride);
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// RAYCAST VEHICLE
+// Direct equivalent of hkRaycastVehicle (Havok) — same ray+spring model
+// ═══════════════════════════════════════════════════════════════════════════════
+const vehicle = new CANNON.RaycastVehicle({
+  chassisBody,
+  indexRightAxis:   0,  // +X = right
+  indexUpAxis:      1,  // +Y = up
+  indexForwardAxis: 2,  // +Z = forward (Havok convention)
+});
+
+for (let i = 0; i < 4; i++) {
+  const isFront = i < 2;
+  const sl = isFront ? VP.suspensionLength.front             : VP.suspensionLength.rear;
+  const ss = isFront ? VP.suspensionStrength.front           : VP.suspensionStrength.rear;
+  const dc = isFront ? VP.suspensionDampingCompression.front : VP.suspensionDampingCompression.rear;
+  const dr = isFront ? VP.suspensionDampingExtension.front   : VP.suspensionDampingExtension.rear;
+  const fr = VP.wheelFriction * (isFront ? 1.0 : VP.rearWheelFrictionScalar);
+
+  vehicle.addWheel({
+    radius:                          VP.wheelRadius[i],
+    directionLocal:                  new CANNON.Vec3(0, -1, 0),
+    axleLocal:                       new CANNON.Vec3(-1, 0, 0),
+    chassisConnectionPointLocal:     VP.wheelHardPoints[i],
+    suspensionRestLength:            sl,
+    suspensionStiffness:             ss,
+    dampingCompression:              dc,
+    dampingRelaxation:               dr,
+    maxSuspensionForce:              200000,
+    maxSuspensionTravel:             0.5,
+    frictionSlip:                    fr,
+    rollInfluence:                   0.02,
+    customSlidingRotationalSpeed:    -30,
+    useCustomSlidingRotationalSpeed: true,
+  });
+}
+
+vehicle.addToWorld(world);
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// THREE.JS SCENE
+// ═══════════════════════════════════════════════════════════════════════════════
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.2;
+document.body.prepend(renderer.domElement);
+
+window.addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0d0d1a);
+scene.fog = new THREE.FogExp2(0x0d0d1a, 0.016);
+
+const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 500);
+camera.position.set(0, 5, 12);
+
+// Lights
+const sun = new THREE.DirectionalLight(0xffd090, 2.0);
+sun.position.set(40, 80, 50);
+sun.castShadow = true;
+sun.shadow.camera.left   = sun.shadow.camera.bottom = -100;
+sun.shadow.camera.right  = sun.shadow.camera.top    =  100;
+sun.shadow.camera.near   = 1;
+sun.shadow.camera.far    = 350;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.bias = -0.0005;
+scene.add(sun);
+scene.add(new THREE.AmbientLight(0x1a2255, 0.9));
+// Subtle fill from below (ground bounce)
+const fill = new THREE.HemisphereLight(0x223366, 0x332211, 0.5);
+scene.add(fill);
+
+// Ground
+const groundMesh = new THREE.Mesh(
+  new THREE.PlaneGeometry(500, 500, 60, 60),
+  new THREE.MeshLambertMaterial({ color: 0x1e1e2e })
+);
+groundMesh.rotation.x = -Math.PI / 2;
+groundMesh.receiveShadow = true;
+scene.add(groundMesh);
+const grid = new THREE.GridHelper(500, 100, 0x2a2a4a, 0x1e1e30);
+grid.position.y = 0.002;
+scene.add(grid);
+
+// Ramp mesh
+const rampMesh = new THREE.Mesh(
+  new THREE.BoxGeometry(10, 1.1, 7),
+  new THREE.MeshLambertMaterial({ color: 0x3a3a5a })
+);
+rampMesh.castShadow = rampMesh.receiveShadow = true;
+// Sync static ramp mesh to physics body (static, done once)
+rampMesh.position.set(
+  rampPhysics.position.x, rampPhysics.position.y, rampPhysics.position.z
+);
+rampMesh.quaternion.set(
+  rampPhysics.quaternion.x, rampPhysics.quaternion.y,
+  rampPhysics.quaternion.z, rampPhysics.quaternion.w
+);
+scene.add(rampMesh);
+
+// Speed bump meshes
+for (const bz of bumpPositions) {
+  const bm = new THREE.Mesh(
+    new THREE.BoxGeometry(14, 0.26, 0.9),
+    new THREE.MeshLambertMaterial({ color: 0x664422 })
+  );
+  bm.position.set(0, 0.13, bz);
+  bm.receiveShadow = bm.castShadow = true;
+  scene.add(bm);
+}
+
+// ── Vehicle visual: real Auto Assault dune-buggy model (full obj_ assembly) ───
+// Geometry: assets/buggy/exports/models/obj_veh_p_h_r_cha_02_dune-buggy.obj
+//   (the full vehicle WITH round wheels; the plain veh_ file is just the body shell).
+// Textures: DX10 .dds → PNG via PIL. The "_bump" .dds is a tangent-space NORMAL map;
+//   the "diffuse" is an empty decal layer, so we use a solid body colour + normal map.
+// Wheels are baked into material meshes, so we SPLIT triangles by cylindrical region
+// (centred on each tyre, axle = model X) into a body geometry + 4 wheel geometries.
+// Each wheel is recentred on its own hub and animated (steer + roll) from the physics.
+const MODEL_SCALE = 0.42;
+const MODEL_YAW   = 0;          // model nose (+Z, small front wheels) already = physics fwd
+const MODEL_MIN_Y = -0.20;      // lowest model vertex (source units) → ground
+
+// Wheel regions in MODEL space (tuned visually). Front wheels are at +Z.
+const WHEEL_REGIONS = [
+  { c:[-1.58, 0.66,  2.05], R:0.90, hw:0.62, front:true  },  // FL
+  { c:[ 1.58, 0.66,  2.05], R:0.90, hw:0.62, front:true  },  // FR
+  { c:[-1.88, 0.86, -1.92], R:0.96, hw:0.64, front:false },  // RL
+  { c:[ 1.88, 0.86, -1.92], R:0.96, hw:0.64, front:false },  // RR
+];
+
+const bodyGroup  = new THREE.Group();   // synced to chassisBody each frame
+scene.add(bodyGroup);
+
+const modelPivot = new THREE.Group();   // scaled/oriented model space
+modelPivot.scale.setScalar(MODEL_SCALE);
+modelPivot.rotation.y = MODEL_YAW;
+modelPivot.position.set(0, -0.84 - MODEL_SCALE * MODEL_MIN_Y, 0);
+bodyGroup.add(modelPivot);
+
+// Auto Assault paints vehicles via a 2-colour tint system, not a baked diffuse:
+// each "_NN_tint" .dds encodes a mask (RED channel = primary-colour regions, BLUE =
+// secondary) plus panel detail/shading in its ALPHA channel. tools composite scheme
+// _01 with primary=red / secondary=white into buggy_paint.png (a real diffuse),
+// paired with the "_bump" tangent-space normal map.
+const texLoader   = new THREE.TextureLoader();
+const buggyNormal = texLoader.load('assets/buggy/textures/png/buggy_bump.png');
+// Selectable 2-colour paint schemes (composited from the game's _NN_tint masks).
+const paintSchemes = ['buggy_paint.png', 'buggy_paint_yellow.png'].map(f => {
+  const t = texLoader.load('assets/buggy/textures/png/' + f);
+  t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
+});
+let paintIdx = 0;
+const buggyMat = new THREE.MeshPhongMaterial({
+  map: paintSchemes[paintIdx],
+  color: 0xffffff, specular: 0x444450, shininess: 50, emissive: 0x070708,
+  normalMap: buggyNormal, normalScale: new THREE.Vector2(0.6, 0.6),
+});
+function cyclePaint() {
+  paintIdx = (paintIdx + 1) % paintSchemes.length;
+  buggyMat.map = paintSchemes[paintIdx];
+  buggyMat.needsUpdate = true;
+}
+
+// Real wheel model (extracted from the game's whl_b_2_01_gen_3-spoke.geo — a proper
+// round buggy tyre) instanced at each hub, replacing the body's baked-in wheels.
+const WHEEL_MODEL = 'assets/buggy/exports/wheels/whl_b_2_01_gen_3-spoke.obj';
+const tyreMat = new THREE.MeshPhongMaterial({
+  color: 0x2a2a30, specular: 0x555560, shininess: 25, emissive: 0x0a0a0c,
+});
+
+// wheelPivots[i] = { pivot, front }. Each pivot sits at its hub (model space) and is
+// spun/steered each frame; the recentred wheel geometry is its child.
+const wheelPivots = [];
+
+function classifyWheel(cx, cy, cz) {
+  for (let i = 0; i < 4; i++) {
+    const w = WHEEL_REGIONS[i];
+    if (Math.abs(cx - w.c[0]) < w.hw) {
+      const dy = cy - w.c[1], dz = cz - w.c[2];
+      if (dy*dy + dz*dz < w.R*w.R) return i;
+    }
+  }
+  return -1;
+}
+
+new OBJLoader().load(
+  'assets/buggy/exports/models/obj_veh_p_h_r_cha_02_dune-buggy.obj',
+  (obj) => {
+    const bodyPos = [], bodyUV = [];
+    const wp = [[],[],[],[]];   // per-wheel position arrays (for hub centres)
+    // The .geo packs several LOD levels into one OBJ (stacked in the same space).
+    // Use only LOD0 — the single mesh with the most vertices — to avoid z-fighting.
+    let lod0 = null, maxN = -1;
+    obj.traverse((c) => {
+      if (c.isMesh) { const n = c.geometry.getAttribute('position').count; if (n > maxN) { maxN = n; lod0 = c; } }
+    });
+    [lod0].forEach((c) => {
+      if (!c) return;
+      const a = c.geometry.getAttribute('position').array;
+      const uvAttr = c.geometry.getAttribute('uv');
+      const u = uvAttr ? uvAttr.array : null;
+      let vt = 0;  // uv cursor (2 floats/vertex, 6/triangle)
+      for (let t = 0; t < a.length; t += 9, vt += 6) {
+        const cx = (a[t]+a[t+3]+a[t+6])/3, cy = (a[t+1]+a[t+4]+a[t+7])/3, cz = (a[t+2]+a[t+5]+a[t+8])/3;
+        const w = classifyWheel(cx, cy, cz);
+        if (w < 0) {
+          for (let k = 0; k < 9; k++) bodyPos.push(a[t+k]);
+          if (u) for (let k = 0; k < 6; k++) bodyUV.push(u[vt+k]);
+        } else {
+          for (let k = 0; k < 9; k++) wp[w].push(a[t+k]);
+        }
+      }
+    });
+
+    // Body (baked wheels removed → empty wells for the real wheel models)
+    const bodyGeo = new THREE.BufferGeometry();
+    bodyGeo.setAttribute('position', new THREE.Float32BufferAttribute(bodyPos, 3));
+    if (bodyUV.length) bodyGeo.setAttribute('uv', new THREE.Float32BufferAttribute(bodyUV, 2));
+    bodyGeo.computeVertexNormals();
+    const bodyMesh = new THREE.Mesh(bodyGeo, buggyMat);
+    bodyMesh.castShadow = true; bodyMesh.receiveShadow = true;
+    modelPivot.add(bodyMesh);
+
+    // Hub centre + radius for each removed wheel (placement of the real wheel model)
+    const hubs = [];
+    for (let i = 0; i < 4; i++) {
+      if (!wp[i].length) { hubs.push(null); continue; }
+      let mn = [1e9,1e9,1e9], mx = [-1e9,-1e9,-1e9];
+      for (let k = 0; k < wp[i].length; k += 3)
+        for (let j = 0; j < 3; j++) { mn[j]=Math.min(mn[j],wp[i][k+j]); mx[j]=Math.max(mx[j],wp[i][k+j]); }
+      hubs.push({
+        c: [ (mn[0]+mx[0])/2, (mn[1]+mx[1])/2, (mn[2]+mx[2])/2 ],
+        r: (mx[1]-mn[1])/2,                          // tyre radius (Y extent)
+        front: WHEEL_REGIONS[i].front,
+        side:  WHEEL_REGIONS[i].c[0] < 0 ? -1 : 1,   // left/right (mirror so rim faces out)
+      });
+    }
+
+    // Load the real wheel model once, recenter it, then instance at each hub
+    new OBJLoader().load(WHEEL_MODEL, (wheelObj) => {
+      const wpos = [];
+      wheelObj.traverse(c => { if (c.isMesh) { const a = c.geometry.getAttribute('position').array; for (let k = 0; k < a.length; k++) wpos.push(a[k]); } });
+      let wmn = [1e9,1e9,1e9], wmx = [-1e9,-1e9,-1e9];
+      for (let k = 0; k < wpos.length; k += 3) for (let j = 0; j < 3; j++) { wmn[j]=Math.min(wmn[j],wpos[k+j]); wmx[j]=Math.max(wmx[j],wpos[k+j]); }
+      const wc = [(wmn[0]+wmx[0])/2, (wmn[1]+wmx[1])/2, (wmn[2]+wmx[2])/2];
+      const wheelModelR = (wmx[1]-wmn[1])/2;         // ~0.5
+      for (let k = 0; k < wpos.length; k += 3) { wpos[k]-=wc[0]; wpos[k+1]-=wc[1]; wpos[k+2]-=wc[2]; }
+      const wheelGeo = new THREE.BufferGeometry();
+      wheelGeo.setAttribute('position', new THREE.Float32BufferAttribute(wpos, 3));
+      wheelGeo.computeVertexNormals();
+
+      for (let i = 0; i < 4; i++) {
+        const h = hubs[i];
+        if (!h) { wheelPivots.push(null); continue; }
+        const pivot = new THREE.Group();
+        pivot.position.set(h.c[0], h.c[1], h.c[2]);
+        const wm = new THREE.Mesh(wheelGeo, tyreMat);
+        wm.castShadow = true;
+        const s = (h.r / wheelModelR) * 0.96;
+        wm.scale.set(s * h.side, s, s);              // mirror X for left side so rim faces outward
+        pivot.add(wm);
+        modelPivot.add(pivot);
+        wheelPivots.push({ pivot, front: h.front });
+      }
+    }, undefined, (e) => console.warn('[wheel] failed to load wheel OBJ:', e));
+  },
+  undefined,
+  (err) => console.warn('[model] failed to load buggy OBJ:', err)
+);
+
+let wheelRoll = 0;  // accumulated tyre roll angle (radians)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// AUDIO (graceful fallback — silent if not served via HTTP or files missing)
+// ═══════════════════════════════════════════════════════════════════════════════
+let audioReady = false;
+let audioCtx, engineSource, engineGain, accelSource, accelGain, decelSource, decelGain;
+
+async function loadBuf(ctx, url) {
+  const r = await fetch(url, { mode: 'same-origin' });
+  if (!r.ok) throw new Error(`HTTP ${r.status}: ${url}`);
+  return ctx.decodeAudioData(await r.arrayBuffer());
+}
+
+async function initAudio() {
+  if (audioReady) return;
+  document.getElementById('click-hint').style.display = 'none';
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    const [engBuf, accBuf, decBuf] = await Promise.all([
+      loadBuf(audioCtx, 'assets/audio/veh_p_engine_dunebuggy.ogg'),
+      loadBuf(audioCtx, 'assets/audio/buggyaccel.ogg'),
+      loadBuf(audioCtx, 'assets/audio/buggydecel.ogg'),
+    ]);
+
+    engineGain = audioCtx.createGain(); engineGain.gain.value = 0.55;
+    engineGain.connect(audioCtx.destination);
+    engineSource = audioCtx.createBufferSource();
+    engineSource.buffer = engBuf; engineSource.loop = true;
+    engineSource.connect(engineGain); engineSource.start();
+
+    accelGain = audioCtx.createGain(); accelGain.gain.value = 0;
+    accelGain.connect(audioCtx.destination);
+    accelSource = audioCtx.createBufferSource();
+    accelSource.buffer = accBuf; accelSource.loop = true;
+    accelSource.connect(accelGain); accelSource.start();
+
+    decelGain = audioCtx.createGain(); decelGain.gain.value = 0;
+    decelGain.connect(audioCtx.destination);
+    decelSource = audioCtx.createBufferSource();
+    decelSource.buffer = decBuf; decelSource.loop = true;
+    decelSource.connect(decelGain); decelSource.start();
+
+    audioReady = true;
+  } catch (e) {
+    console.warn('[audio]', e.message);
+  }
+}
+
+function updateAudio(normalizedRPM, throttle) {
+  if (!audioReady) return;
+  const rate = 0.62 + normalizedRPM * 0.92;
+  const now = audioCtx.currentTime;
+  engineSource.playbackRate.setTargetAtTime(rate, now, 0.1);
+  if (accelSource) {
+    accelSource.playbackRate.setTargetAtTime(rate, now, 0.1);
+    accelGain.gain.setTargetAtTime(throttle > 0.1 ? 0.5 : 0, now, 0.18);
+  }
+  if (decelSource) {
+    decelGain.gain.setTargetAtTime(throttle < -0.05 ? 0.35 : 0, now, 0.18);
+  }
+}
+
+renderer.domElement.addEventListener('click', initAudio);
+renderer.domElement.addEventListener('click', () => {
+  document.getElementById('click-hint').style.display = 'none';
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// INPUT
+// ═══════════════════════════════════════════════════════════════════════════════
+const keys = {
+  forward: false, backward: false,
+  left: false, right: false,
+  handbrake: false, boost: false, reset: false
+};
+
+document.addEventListener('keydown', e => {
+  if (e.repeat) return;
+  switch (e.code) {
+    case 'KeyW': case 'ArrowUp':         keys.forward   = true; break;
+    case 'KeyS': case 'ArrowDown':       keys.backward  = true; break;
+    case 'KeyA': case 'ArrowLeft':       keys.left      = true; break;
+    case 'KeyD': case 'ArrowRight':      keys.right     = true; break;
+    case 'Space':                        keys.handbrake = true; e.preventDefault(); break;
+    case 'ShiftLeft': case 'ShiftRight': keys.boost     = true; break;
+    case 'KeyR':                         keys.reset     = true; break;
+    case 'KeyC':                         cyclePaint();          break;
+  }
+});
+document.addEventListener('keyup', e => {
+  switch (e.code) {
+    case 'KeyW': case 'ArrowUp':         keys.forward   = false; break;
+    case 'KeyS': case 'ArrowDown':       keys.backward  = false; break;
+    case 'KeyA': case 'ArrowLeft':       keys.left      = false; break;
+    case 'KeyD': case 'ArrowRight':      keys.right     = false; break;
+    case 'Space':                        keys.handbrake = false; break;
+    case 'ShiftLeft': case 'ShiftRight': keys.boost     = false; break;
+    case 'KeyR':                         keys.reset     = false; break;
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PHYSICS STATE
+// ═══════════════════════════════════════════════════════════════════════════════
+let currentThrottle   = 0;
+let currentSteer      = 0;
+let signedSpeed       = 0;
+let currentGear       = 1;
+let currentRPM        = VP.minimumRPM;
+let collisionDampTimer = 0;
+
+chassisBody.addEventListener('collide', evt => {
+  const impact = Math.abs(evt.contact.getImpactVelocityAlongNormal());
+  if (impact > VP.avdCollisionThreshold) collisionDampTimer = 0.45;
+});
+
+const SPAWN_POS = new CANNON.Vec3(0, 1.5, 5);
+const SPAWN_Q   = new CANNON.Quaternion();
+
+function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
+function lerp(a, b, t)    { return a + (b - a) * t; }
+function sign(v)           { return v > 1e-4 ? 1 : v < -1e-4 ? -1 : 0; }
+
+// HUD element cache
+const elSpeedVal  = document.getElementById('speed-val');
+const elGearBox   = document.getElementById('gear-box');
+const elRPMBar    = document.getElementById('rpm-bar');
+const elDebug     = document.getElementById('debug-line');
+const elAirborne  = document.getElementById('airborne-banner');
+const wInds       = [0,1,2,3].map(i => document.getElementById('w'+i));
+
+const hudState = {
+  speedMPH: 0, normalizedRPM: 0, gear: 1,
+  airborne: false, wheelsGrounded: [false,false,false,false],
+  throttlePct: 0, steerDeg: 0
+};
+
+// Reusable Cannon vectors (avoid GC in hot loop)
+const _fwd  = new CANNON.Vec3();
+const _drag = new CANNON.Vec3();
+const _stab = new CANNON.Vec3();
+const _up   = new CANNON.Vec3(0, 1, 0);
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PHYSICS TICK — 60 Hz fixed step
+// Implements VehicleAction::applyAction (FUN_00598650) in JS
+// ═══════════════════════════════════════════════════════════════════════════════
+function stepPhysics(dt) {
+  // ── Reset ──────────────────────────────────────────────────────────────────
+  if (keys.reset) {
+    chassisBody.position.copy(SPAWN_POS);
+    chassisBody.quaternion.copy(SPAWN_Q);
+    chassisBody.velocity.set(0, 0, 0);
+    chassisBody.angularVelocity.set(0, 0, 0);
+    chassisBody.wakeUp();
+    currentThrottle = 0; currentSteer = 0;
+    currentGear = 1; currentRPM = VP.minimumRPM;
+  }
+
+  // ── Chassis forward direction ──
+  // Forward is LOCAL +Z — the end where the steering/front wheels and the visual
+  // bumper/windshield live. We negate applyEngineForce below so positive throttle
+  // drives toward +Z (verified empirically), keeping `speed` positive when moving
+  // forward for the brake/reverse logic.
+  const q = chassisBody.quaternion;
+  _fwd.set(0, 0, 1);
+  q.vmult(_fwd, _fwd);  // world-space forward
+
+  const vel    = chassisBody.velocity;
+  const speed  = vel.dot(_fwd);       // signed: + = moving forward
+  const aspeed = Math.abs(speed);
+  signedSpeed  = speed;               // expose for wheel-roll animation
+
+  // ── Throttle ramp (Mode 0x02: analog ramp, not instantaneous) ──────────────
+  const boostMul  = keys.boost ? 1.25 : 1.0;
+  const targetThr = keys.forward  ? 0.82 * boostMul
+                  : keys.backward ? -0.52
+                  : 0;
+
+  const sameSign = sign(targetThr) === sign(currentThrottle) || targetThr === 0;
+  const rampRate = (!sameSign || Math.abs(targetThr) > Math.abs(currentThrottle))
+    ? VP.throttleAccelRate : VP.throttleDecelRate;
+
+  const tDiff = targetThr - currentThrottle;
+  currentThrottle += clamp(tDiff, -rampRate * dt, rampRate * dt);
+  if (Math.abs(currentThrottle) < 0.005 && targetThr === 0) currentThrottle = 0;
+
+  // ── Automatic gear shifting ────────────────────────────────────────────────
+  const avgRearR = (VP.wheelRadius[2] + VP.wheelRadius[3]) * 0.5;
+  const wheelRPM = aspeed / avgRearR * (60 / (Math.PI * 2));
+
+  if (currentThrottle >= 0) {
+    const gr   = VP.gearRatios[currentGear - 1] * VP.transmissionRatio;
+    currentRPM = Math.max(VP.minimumRPM, Math.min(VP.maximumRPMMax * 1.05, wheelRPM * gr));
+    if (currentRPM > VP.upshiftRPM   && currentGear < VP.numberOfGears) currentGear++;
+    if (currentRPM < VP.downshiftRPM && currentGear > 1)                currentGear--;
+  } else {
+    currentRPM = Math.max(VP.minimumRPM, wheelRPM * VP.reverseGearRatio);
+  }
+
+  // ── Speed-dependent steering reduction (RE: FUN_00598650) ─────────────────
+  // angle = maxAngle * clamp(steeringFullSpeedLimit / speed, 0, 1)
+  const steerLimit = aspeed > 0.5 ? clamp(VP.steeringFullSpeedLimit / aspeed, 0, 1) : 1;
+  const targetSteer = keys.left  ?  VP.steeringMaxAngle * steerLimit
+                    : keys.right ? -VP.steeringMaxAngle * steerLimit
+                    : 0;
+  currentSteer = lerp(currentSteer, targetSteer, clamp(8.0 * dt, 0, 1));
+  if (!keys.left && !keys.right && Math.abs(currentSteer) < 0.004) currentSteer = 0;
+
+  vehicle.setSteeringValue( currentSteer, 0);  // FL
+  vehicle.setSteeringValue( currentSteer, 1);  // FR
+
+  // ── Torque calculation (simplified FUN_004a9750 2D torque curve) ───────────
+  const torqueFactor  = lerp(VP.minTorqueFactor, VP.maxTorqueFactor, Math.abs(currentThrottle));
+  const lowSpeedBoost = 1 + Math.max(0, 1 - aspeed / 3.5) * 1.5;
+  const speedFactor   = aspeed < VP.speedLimiter ? 1
+    : Math.max(0, 1 - (aspeed - VP.speedLimiter) / (VP.absoluteTopSpeed - VP.speedLimiter));
+  const baseTorque = VP.torqueMax * torqueFactor * lowSpeedBoost * speedFactor;
+  const torqueClamp = VP.torqueMax * 0.52;  // RE: FUN_00598040 clamps to [0, 0.52]
+
+  // ── Traction factor (FUN_00598040: dot(contactNormal, worldUp)) ────────────
+  let groundedCount = 0;
+  let tractionSum   = 0;
+  for (let i = 0; i < 4; i++) {
+    const wi = vehicle.wheelInfos[i];
+    if (wi.isInContact) {
+      const n = wi.raycastResult.hitNormalWorld;
+      tractionSum += Math.max(0, n ? n.dot(_up) : 1);
+      groundedCount++;
+    }
+  }
+  const tractionFactor = groundedCount > 0 ? tractionSum / groundedCount : 0;
+
+  // ── Per-wheel forces ───────────────────────────────────────────────────────
+  for (let i = 0; i < 4; i++) {
+    const isFront = i < 2;
+    const ratio   = isFront ? VP.wheelTorqueRatios.front : VP.wheelTorqueRatios.rear;
+    const wi      = vehicle.wheelInfos[i];
+
+    vehicle.applyEngineForce(0, i);
+    vehicle.setBrake(0, i);
+
+    // Handbrake: cut ALL engine torque, lock rear wheels, front rolls free.
+    // (Driving the front wheels while the rear is locked pitches the car over
+    //  its nose into an endo at speed — so engine force must be cut here.)
+    if (keys.handbrake) {
+      vehicle.setBrake(isFront ? 0 : VP.brakesMaxTorque.rear, i);
+      continue;
+    }
+
+    // Braking: S key while moving forward (speed > 1 m/s)
+    if (currentThrottle < -0.05 && speed > 1.0) {
+      vehicle.setBrake(isFront ? VP.brakesMaxTorque.front : VP.brakesMaxTorque.rear, i);
+      continue;
+    }
+
+    // Airborne — no torque
+    if (!wi.isInContact) continue;
+
+    let torque = baseTorque * sign(currentThrottle) * ratio * tractionFactor;
+    torque = clamp(torque, -torqueClamp, torqueClamp);
+    // Negated: positive applyEngineForce drives the chassis toward LOCAL -Z, but
+    // our front (+Z) must lead, so forward throttle → negative engine force → +Z.
+    vehicle.applyEngineForce(-torque, i);
+  }
+
+  // ── Aerodynamic drag: F = 0.5 * Cd * A * ρ * v² ──────────────────────────
+  const vMag = vel.length();
+  if (vMag > 0.2) {
+    const dragF = 0.5 * VP.aeroDrag * VP.aeroFrontalArea * VP.aeroAirDensity * vMag * vMag;
+    _drag.set(vel.x, vel.y, vel.z);
+    _drag.scale(-dragF / vMag, _drag);
+    chassisBody.applyForce(_drag);
+  }
+
+  // ── Air stabilization: angular impulse when airborne (FUN_00598320) ────────
+  const av = chassisBody.angularVelocity;
+  if (groundedCount === 0) {
+    const scale = VP.rvExtraAngularImpulse * 15;
+    _stab.set(-av.x * scale, -av.y * VP.rvExtraAngularImpulse * 6, -av.z * scale);
+    chassisBody.applyTorque(_stab);
+  }
+
+  // ── AVD collision damping ─────────────────────────────────────────────────
+  if (collisionDampTimer > 0) {
+    collisionDampTimer -= dt;
+    chassisBody.angularDamping = VP.avdCollisionSpinDamping;
+  } else {
+    chassisBody.angularDamping = VP.avdNormalSpinDamping;
+  }
+
+  // ── Ground clamp / PushBottomUp: upward impulse if chassis sinking ─────────
+  if (groundedCount > 0 && vel.y < -0.8) {
+    chassisBody.applyImpulse(
+      new CANNON.Vec3(0, VP.pushBottomUp * VP.mass * 0.001, 0),
+      new CANNON.Vec3(0, 0, 0)
+    );
+  }
+
+  // ── Step simulation ────────────────────────────────────────────────────────
+  // Single-arg call → timeSinceLastCalled is undefined → cannon-es runs
+  // internalStep() directly. (Passing 0 here makes it use its OWN accumulator,
+  // which never reaches dt, so the world would never advance.)
+  world.step(1 / 60);
+
+  // ── Update HUD state ───────────────────────────────────────────────────────
+  hudState.speedMPH      = Math.round(aspeed * 2.23694);
+  hudState.normalizedRPM = clamp((currentRPM - VP.minimumRPM) / (VP.maximumRPMMax - VP.minimumRPM), 0, 1);
+  hudState.gear          = (currentThrottle < -0.05 && speed > 1.0) ? 'R' : currentGear;
+  hudState.airborne      = groundedCount === 0;
+  for (let i = 0; i < 4; i++) hudState.wheelsGrounded[i] = vehicle.wheelInfos[i].isInContact;
+  hudState.throttlePct   = Math.round(currentThrottle * 100);
+  hudState.steerDeg      = Math.round(currentSteer * (180 / Math.PI));
+
+  updateAudio(hudState.normalizedRPM, currentThrottle);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// HUD UPDATE
+// ═══════════════════════════════════════════════════════════════════════════════
+function updateHUD() {
+  elSpeedVal.textContent  = hudState.speedMPH;
+  elGearBox.textContent   = hudState.gear;
+  elRPMBar.style.width    = (hudState.normalizedRPM * 100).toFixed(1) + '%';
+  elAirborne.style.opacity = hudState.airborne ? '1' : '0';
+  for (let i = 0; i < 4; i++) wInds[i].classList.toggle('air', !hudState.wheelsGrounded[i]);
+  const contactBits = vehicle.wheelInfos.map(w => w.isInContact ? '1' : '0').join('');
+  elDebug.textContent =
+    `T: ${hudState.throttlePct > 0 ? '+' : ''}${hudState.throttlePct}%  ` +
+    `S: ${hudState.steerDeg}°  ` +
+    `G${hudState.gear}  ` +
+    `${Math.round(currentRPM)} RPM  ` +
+    `${hudState.airborne ? 'AIR' : 'GND'}  ` +
+    `y=${chassisBody.position.y.toFixed(2)} c=${contactBits}`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CAMERA — GTA-style chase by default; hold RIGHT mouse to orbit, wheel to zoom
+// ═══════════════════════════════════════════════════════════════════════════════
+const camTarget  = new THREE.Vector3(0, 5, 12);
+const camLookAt  = new THREE.Vector3(0, 1.5, 5);
+const _camOffset = new CANNON.Vec3();
+const _lookOff   = new CANNON.Vec3();
+const _lookWorld = new THREE.Vector3();
+
+let orbiting   = false;
+let orbitYaw   = Math.PI;   // 0 = in front (+Z); PI = behind (matches chase view)
+let orbitPitch = 0.35;
+let orbitDist  = 8.4;
+let lastMX = 0, lastMY = 0;
+
+renderer.domElement.addEventListener('contextmenu', e => e.preventDefault());
+renderer.domElement.addEventListener('mousedown', e => {
+  if (e.button === 2) { orbiting = true; lastMX = e.clientX; lastMY = e.clientY; }
+});
+window.addEventListener('mouseup', e => { if (e.button === 2) orbiting = false; });
+window.addEventListener('mousemove', e => {
+  if (!orbiting) return;
+  orbitYaw   -= (e.clientX - lastMX) * 0.006;
+  orbitPitch  = clamp(orbitPitch + (e.clientY - lastMY) * 0.006, -0.15, 1.3);
+  lastMX = e.clientX; lastMY = e.clientY;
+});
+renderer.domElement.addEventListener('wheel', e => {
+  orbitDist = clamp(orbitDist + e.deltaY * 0.01, 3.5, 25);
+  e.preventDefault();
+}, { passive: false });
+
+function updateCamera() {
+  const cp = chassisBody.position;
+  const cq = chassisBody.quaternion;
+  _lookWorld.set(cp.x, cp.y + 0.8, cp.z);
+
+  if (orbiting) {
+    // Free orbit around the vehicle (world space)
+    const hor = Math.cos(orbitPitch) * orbitDist;
+    camTarget.set(
+      cp.x + Math.sin(orbitYaw) * hor,
+      cp.y + 1.0 + Math.sin(orbitPitch) * orbitDist,
+      cp.z + Math.cos(orbitYaw) * hor
+    );
+    camera.position.lerp(camTarget, 0.25);
+    camLookAt.lerp(_lookWorld, 0.3);
+  } else {
+    // GTA chase: trail behind the chassis facing (forward +Z → behind is -Z)
+    _camOffset.set(0, 3.8, -7.5);
+    cq.vmult(_camOffset, _camOffset);
+    camTarget.set(cp.x + _camOffset.x, cp.y + _camOffset.y, cp.z + _camOffset.z);
+    camera.position.lerp(camTarget, 0.08);
+
+    _lookOff.set(0, 0.8, 5.5);
+    cq.vmult(_lookOff, _lookOff);
+    _lookWorld.set(cp.x + _lookOff.x, cp.y + _lookOff.y, cp.z + _lookOff.z);
+    camLookAt.lerp(_lookWorld, 0.12);
+  }
+  camera.lookAt(camLookAt);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MAIN RENDER LOOP — external 60 Hz accumulator
+// ═══════════════════════════════════════════════════════════════════════════════
+let lastTS    = 0;
+let accumulator = 0;
+const FIXED_DT  = 1 / 60;
+
+function animate(ts) {
+  requestAnimationFrame(animate);
+
+  const rawDT = (ts - lastTS) / 1000;
+  lastTS = ts;
+  const dt = Math.min(rawDT, 0.1);  // cap for tab-switch recovery
+  accumulator += dt;
+
+  while (accumulator >= FIXED_DT) {
+    stepPhysics(FIXED_DT);
+    accumulator -= FIXED_DT;
+  }
+
+  // ── Sync vehicle body mesh ──
+  bodyGroup.position.set(
+    chassisBody.position.x,
+    chassisBody.position.y,
+    chassisBody.position.z
+  );
+  bodyGroup.quaternion.set(
+    chassisBody.quaternion.x,
+    chassisBody.quaternion.y,
+    chassisBody.quaternion.z,
+    chassisBody.quaternion.w
+  );
+
+  // ── Animate extracted wheels: roll (all) + steer (front) ──
+  // Roll: advance by distance travelled / radius. Steer: yaw front wheels.
+  const vRadius = MODEL_SCALE * 0.85;                 // ~tyre radius in world units
+  wheelRoll += (signedSpeed * (1/60)) / vRadius;      // sign: forward rolls tyres forward
+  const _qy = new THREE.Quaternion(), _qx = new THREE.Quaternion(), _yAxis = new THREE.Vector3(0,1,0), _xAxis = new THREE.Vector3(1,0,0);
+  for (const w of wheelPivots) {
+    if (!w) continue;
+    _qy.setFromAxisAngle(_yAxis, w.front ? currentSteer : 0);
+    _qx.setFromAxisAngle(_xAxis, wheelRoll);
+    w.pivot.quaternion.copy(_qy).multiply(_qx);
+  }
+
+  updateCamera();
+  updateHUD();
+  renderer.render(scene, camera);
+}
+
+requestAnimationFrame(animate);
+</script>
+</body>
+</html>

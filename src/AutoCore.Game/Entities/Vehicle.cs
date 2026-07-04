@@ -175,7 +175,7 @@ public class Vehicle : SimpleObject
             vehiclePacket.PowerMaxAdd = 0;
             vehiclePacket.HeatMaxAdd = 0;
             vehiclePacket.CooldownAdd = 0;
-            vehiclePacket.InventorySlots = 0;
+            vehiclePacket.InventorySlots = Character.CargoInventorySize;
             vehiclePacket.MaxWeightWeaponFront = 0.0f;
             vehiclePacket.MaxWeightWeaponTurret = 0.0f;
             vehiclePacket.MaxWeightWeaponRear = 0.0f;
@@ -260,7 +260,7 @@ public class Vehicle : SimpleObject
 
         if (packet is CreateVehicleExtendedPacket extendedPacket)
         {
-            // TODO
+            GetSuperCharacter(false)?.FillVehicleInventoryPacket(extendedPacket);
         }
     }
 

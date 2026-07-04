@@ -232,6 +232,12 @@ public abstract class ClonedObjectBase
             case CloneBaseObjectType.Weapon:
                 return new Weapon();
 
+            case CloneBaseObjectType.Item:
+            case CloneBaseObjectType.Commodity:
+            case CloneBaseObjectType.Gadget:
+            case CloneBaseObjectType.TinkeringKit:
+                return new SimpleObject(GraphicsObjectType.Graphics);
+
             default:
                 Logger.WriteLog(LogType.Error, $"Creating object of type {cloneBase.Type} is not yet supported! CBID: {cbid}");
                 return null;

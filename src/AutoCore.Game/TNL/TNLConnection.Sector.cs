@@ -3,6 +3,7 @@
 using AutoCore.Database.Char;
 using AutoCore.Game.Managers;
 using AutoCore.Game.Packets.Sector;
+using AutoCore.Utils;
 
 public partial class TNLConnection
 {
@@ -98,6 +99,10 @@ public partial class TNLConnection
 
         SendGamePacket(vehiclePacket);
         SendGamePacket(charPacket);
+
+        var cargoPacket = new InventoryCargoSendAllPacket();
+        character.FillCargoInventoryPacket(cargoPacket);
+        SendGamePacket(cargoPacket);
     }
 
     private void HandleCreatureMovedPacket(BinaryReader reader)
@@ -114,5 +119,36 @@ public partial class TNLConnection
         packet.Read(reader);
 
         CurrentCharacter.CurrentVehicle.HandleMovement(packet);
+    }
+
+    private void HandleItemPickupPacket(BinaryReader reader)
+    {
+        var packet = new ItemPickupPacket();
+        packet.Read(reader);
+
+        Logger.WriteLog(LogType.Debug, "ItemPickup requested for coid {0} (global={1})", packet.ItemId.Coid, packet.ItemId.Global);
+
+        // Resolve the coid to an object: first items spawned via /loot, then any object on the map.
+        var map = CurrentCharacter.Map;
+        var item = map?.TakeWorldItem(packet.ItemId.Coid)
+                   ?? map?.GetObject(packet.ItemId);
+        if (item == null)
+        {
+            Logger.WriteLog(LogType.Network, "ItemPickup: no object found with coid {0}; ignoring.", packet.ItemId.Coid);
+            return;
+        }
+
+        if (!AssetManager.Instance.IsInventoryItem(item.CBID))
+        {
+            Logger.WriteLog(LogType.Network, "ItemPickup: coid {0} (CBID {1}) is not an inventory item; ignoring.", packet.ItemId.Coid, item.CBID);
+            return;
+        }
+
+        if (!ChatManager.Instance.GiveItemToCargo(this, CurrentCharacter, item, out var error))
+        {
+            // Could not be placed (e.g. cargo full); keep it in the world so it can be retried.
+            map.RegisterWorldItem(item);
+            Logger.WriteLog(LogType.Network, "ItemPickup: failed to add coid {0} to cargo: {1}", packet.ItemId.Coid, error);
+        }
     }
 }

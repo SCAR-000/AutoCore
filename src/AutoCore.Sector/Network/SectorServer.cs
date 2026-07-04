@@ -8,6 +8,7 @@ using AutoCore.Utils;
 using AutoCore.Utils.Server;
 using AutoCore.Utils.Threading;
 using AutoCore.Utils.Timer;
+using System.Collections.Concurrent;
 using System.Net;
 
 public partial class SectorServer : BaseServer, ILoopable
@@ -21,6 +22,16 @@ public partial class SectorServer : BaseServer, ILoopable
     public override bool IsRunning => Loop != null && Loop.Running;
     public TNLInterface Interface { get; private set; }
     private readonly object _interfaceLock = new();
+
+    private DebugApiServer _debugApi;
+
+    private readonly ConcurrentQueue<Action> _mainThreadActions = new();
+
+    /// <summary>
+    /// Queues an action to run on the game loop thread. Used by the debug admin API (which runs on its
+    /// own HTTP thread) so that touching game state and sending packets never races the main loop.
+    /// </summary>
+    public void EnqueueOnMainLoop(Action action) => _mainThreadActions.Enqueue(action);
 
     public SectorServer()
         : base("Sector")
@@ -50,6 +61,18 @@ public partial class SectorServer : BaseServer, ILoopable
     {
         Timer.Update(delta);
 
+        while (_mainThreadActions.TryDequeue(out var action))
+        {
+            try
+            {
+                action();
+            }
+            catch (Exception ex)
+            {
+                Logger.WriteLog(LogType.Error, "Queued main-loop action threw: {0}", ex);
+            }
+        }
+
         if (Interface == null)
             return;
 
@@ -75,12 +98,21 @@ public partial class SectorServer : BaseServer, ILoopable
 
         Logger.WriteLog(LogType.Network, "*** Listening for clients on port {0}", Config.GameConfig.Port);
 
+        if (Config.DebugPort > 0)
+        {
+            _debugApi = new DebugApiServer(this, Config.DebugPort);
+            _debugApi.Start();
+        }
+
         return true;
     }
 
     public void Shutdown()
     {
         Logger.WriteLog(LogType.None, "Shutting down the server...");
+
+        _debugApi?.Stop();
+        _debugApi = null;
 
         lock (_interfaceLock)
         {

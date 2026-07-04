@@ -51,7 +51,14 @@ public class Character : Creature
     public byte GMLevel { get; set; }
     public TNLConnection OwningConnection { get; private set; }
     public Vehicle CurrentVehicle { get; private set; }
+
+    public const byte CargoInventorySize = 60;
+    private const byte CargoInventoryWidth = 10;
+
+    private readonly List<CargoInventoryEntry> _cargoInventory = [];
     #endregion
+
+    private readonly record struct CargoInventoryEntry(long Coid, byte PositionX, byte PositionY);
 
     public Character()
     {
@@ -148,6 +155,63 @@ public class Character : Creature
             extendedCharPacket.NumAchievements = 0;
             extendedCharPacket.NumDisciplines = 0;
             extendedCharPacket.NumSkills = 0;
+        }
+    }
+
+    public (byte PositionX, byte PositionY)? AddInventoryItem(long coid)
+    {
+        if (_cargoInventory.Count >= CargoInventorySize)
+            return null;
+
+        var index = _cargoInventory.Count;
+        var positionX = (byte)(index % CargoInventoryWidth);
+        var positionY = (byte)(index / CargoInventoryWidth);
+
+        _cargoInventory.Add(new CargoInventoryEntry(coid, positionX, positionY));
+
+        return (positionX, positionY);
+    }
+
+    /// <summary>
+    /// Read-only view of the server-side cargo list, used by the debug admin API so the debug tool
+    /// can compare what the server believes is in cargo against what it reads from client memory.
+    /// </summary>
+    public IReadOnlyList<(long Coid, byte PositionX, byte PositionY)> GetCargoSnapshot()
+    {
+        return _cargoInventory.Select(e => (e.Coid, e.PositionX, e.PositionY)).ToList();
+    }
+
+    public void FillCargoInventoryPacket(InventoryCargoSendAllPacket packet)
+    {
+        // ucInventorySize is the number of populated entries the client reads from the fixed
+        // m_vItems array (the grid capacity itself comes from the vehicle's NumInventorySlots).
+        // Reporting the capacity here would make the client read empty/garbage trailing entries,
+        // so this must be the actual item count.
+        var itemCount = Math.Min(_cargoInventory.Count, InventoryCargoSendAllPacket.MaxItems);
+        packet.InventorySize = (byte)itemCount;
+
+        for (var i = 0; i < itemCount; ++i)
+        {
+            var entry = _cargoInventory[i];
+            packet.ItemCoids[i] = entry.Coid;
+            packet.ItemPositionX[i] = entry.PositionX;
+            packet.ItemPositionY[i] = entry.PositionY;
+        }
+    }
+
+    public void FillVehicleInventoryPacket(CreateVehicleExtendedPacket packet)
+    {
+        // The client sizes the cargo grid from NumInventorySlots (the bay capacity); without it
+        // the client falls back to a small default grid. InventorySize is the count of populated
+        // entries, and InventoryCoids is positionally indexed (slot index = Y * width + X).
+        packet.NumInventorySlots = CargoInventorySize;
+        packet.InventorySize = (ushort)Math.Min(_cargoInventory.Count, packet.InventoryCoids.Length);
+
+        foreach (var entry in _cargoInventory)
+        {
+            var index = entry.PositionY * CargoInventoryWidth + entry.PositionX;
+            if (index >= 0 && index < packet.InventoryCoids.Length)
+                packet.InventoryCoids[index] = entry.Coid;
         }
     }
 
