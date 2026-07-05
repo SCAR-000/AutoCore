@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<!--
+  Auto Assault — PLAYABLE VEHICLE DEMO (data-driven Havok 2.3 raycast vehicle physics)
+  Serve the REPO ROOT over HTTP:  python -m http.server 8080
+  then open http://localhost:8080/tools/model-viewer/play.html
+
+  Physics: all vehicle constants sourced from vehicle-physics.json (dumped from
+  clonebase.wad via tools/AutoCore.PhysicsDump). Formulas from Ghidra RE of
+  VehicleAction::applyAction @ 0x598650 (autoassault.exe).
+
+  Terrain: heightfield from the level's .tga alpha channel × 4.0 (same as level.html).
+  Vehicle models: .geo files parsed in-browser (geo-parser.js + materials.js).
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>AutoCore Play — Vehicle Physics Demo</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root { --bg:#0e1218; --panel:#161b24; --panel2:#1c232f; --line:#28303d; --text:#cdd6e4; --dim:#7c8798; --accent:#5b9dff; --warn:#ffb02e; --ok:#3fb950; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { display: flex; background: var(--bg); color: var(--text); font: 13px/1.45 "Segoe UI", system-ui, sans-serif; overflow: hidden; }
+  #sidebar { width: 320px; min-width: 320px; height: 100%; display: flex; flex-direction: column; background: var(--panel); border-right: 1px solid var(--line); }
+  #sidebar header { padding: 10px 12px 6px; }
+  #sidebar h1 { margin: 0 0 4px; font-size: 15px; font-weight: 600; color: #e8eef8; }
+  #sidebar .sub { color: var(--dim); font-size: 11px; margin-bottom: 8px; }
+  .tabs { display: flex; gap: 0; border-bottom: 1px solid var(--line); }
+  .tab { flex: 1; padding: 7px; text-align: center; cursor: pointer; color: var(--dim); font-size: 12px; border-bottom: 2px solid transparent; }
+  .tab.active { color: var(--text); border-bottom-color: var(--accent); }
+  .tab-panel { display: none; flex: 1; flex-direction: column; overflow: hidden; }
+  .tab-panel.active { display: flex; }
+  #search { width: 100%; padding: 6px 9px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel2); color: var(--text); outline: none; margin-bottom: 4px; }
+  #search:focus { border-color: var(--accent); }
+  #count { color: var(--dim); font-size: 11px; padding: 0 2px 4px; }
+  .picker-list { flex: 1; overflow-y: auto; margin: 0; padding: 4px 0; list-style: none; }
+  .picker-list li { padding: 4px 12px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: Consolas, monospace; font-size: 12px; }
+  .picker-list li:hover { background: var(--panel2); }
+  .picker-list li.active { background: #24446e; color: #fff; }
+  .picker-list li.exotic { color: var(--warn); }
+  .picker-list li .meta { color: var(--dim); font-size: 10px; }
+  #main { flex: 1; position: relative; height: 100%; }
+  #canvas-wrap { position: absolute; inset: 0; }
+  #canvas-wrap canvas { display: block; }
+  #hud { position: fixed; top: 0; left: 320px; right: 0; height: 100%; pointer-events: none; user-select: none; }
+  #speed { position: absolute; bottom: 28px; right: 36px; font-size: 78px; font-weight: bold; color: #fff; text-shadow: 0 0 14px rgba(0,255,255,0.7); line-height: 1; font-family: 'Courier New', monospace; }
+  #speed-unit { font-size: 16px; opacity: 0.6; vertical-align: super; }
+  #gear-box { position: absolute; bottom: 28px; left: 36px; font-size: 52px; font-weight: bold; color: var(--accent); text-shadow: 0 0 12px rgba(91,157,255,0.8); font-family: 'Courier New', monospace; }
+  #rpm-wrap { position: absolute; bottom: 116px; left: 36px; right: 36px; }
+  #rpm-label { font-size: 10px; letter-spacing: 2px; opacity: 0.5; margin-bottom: 5px; color: var(--text); }
+  #rpm-bar-bg { width: 100%; height: 8px; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.15); border-radius: 4px; }
+  #rpm-bar { height: 100%; width: 0%; border-radius: 4px; background: linear-gradient(to right, #00ff88 0%, #ffee00 55%, #ff8800 80%, #ff2200 100%); transition: width 0.04s linear; }
+  #debug-line { position: absolute; top: 12px; left: 36px; font-size: 11px; opacity: 0.5; letter-spacing: 1px; color: var(--text); font-family: 'Courier New', monospace; }
+  #controls { position: absolute; top: 12px; right: 36px; font-size: 11px; opacity: 0.35; line-height: 2; text-align: right; color: var(--text); }
+  #info-panel { position: absolute; left: 12px; bottom: 12px; max-width: 400px; background: rgba(22,27,38,.92); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; font-size: 12px; }
+  #info-panel .k { color: var(--dim); display: inline-block; min-width: 80px; }
+  #status { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); background: rgba(22,27,38,.92); border: 1px solid var(--line); border-radius: 8px; padding: 5px 14px; font-size: 12px; }
+  #status:empty { display: none; }
+  #status.error { color: #ff7b72; border-color: #6e2c2c; }
+  #exotic-warning { position: absolute; top: 40%; left: 50%; transform: translateX(-50%); background: rgba(110,74,28,.9); border: 1px solid var(--warn); border-radius: 8px; padding: 10px 20px; font-size: 14px; color: var(--warn); display: none; text-align: center; max-width: 500px; }
+  #airborne-banner { position: absolute; top: 35%; left: 50%; transform: translateX(-50%); font-size: 28px; letter-spacing: 6px; color: #ff8800; text-shadow: 0 0 16px rgba(255,136,0,0.8); opacity: 0; transition: opacity 0.1s; font-family: 'Courier New', monospace; }
+  #cache-info { position: absolute; right: 12px; bottom: 12px; max-width: 350px; background: rgba(22,27,38,.92); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; font-size: 11px; color: var(--dim); pointer-events: none; }
+  #cache-info summary { cursor: pointer; color: var(--warn); font-weight: 600; }
+  #cache-info p { margin: 6px 0; line-height: 1.5; }
+  #cache-info code { color: var(--accent); }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://esm.sh/three@0.165.0",
+  "three/addons/": "https://esm.sh/three@0.165.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+  <aside id="sidebar">
+    <header>
+      <h1>AutoCore Play</h1>
+      <div class="sub">Data-driven Havok 2.3 vehicle physics</div>
+    </header>
+    <div class="tabs">
+      <div class="tab active" data-tab="vehicles">Vehicles</div>
+      <div class="tab" data-tab="levels">Levels</div>
+    </div>
+    <div class="tab-panel active" data-panel="vehicles">
+      <div style="padding: 8px 12px;">
+        <input id="vehicle-search" type="search" placeholder="Search vehicles…" autocomplete="off">
+        <div id="vehicle-count"></div>
+      </div>
+      <ul class="picker-list" id="vehicle-list"></ul>
+    </div>
+    <div class="tab-panel" data-panel="levels">
+      <div style="padding: 8px 12px;">
+        <input id="level-search" type="search" placeholder="Search maps…" autocomplete="off">
+        <div id="level-count"></div>
+      </div>
+      <ul class="picker-list" id="level-list"></ul>
+    </div>
+  </aside>
+  <div id="main">
+    <div id="canvas-wrap"></div>
+    <div id="hud">
+      <div id="speed"><span id="speed-val">0</span><span id="speed-unit"> MPH</span></div>
+      <div id="gear-box">N</div>
+      <div id="rpm-wrap">
+        <div id="rpm-label">RPM</div>
+        <div id="rpm-bar-bg"><div id="rpm-bar"></div></div>
+      </div>
+      <div id="debug-line"></div>
+      <div id="controls">
+        W/S — throttle / brake<br>
+        A/D — steer<br>
+        Q/E — sharp turn<br>
+        SPACE — handbrake<br>
+        R — reset<br>
+        Mouse — look
+      </div>
+      <div id="info-panel"></div>
+      <div id="exotic-warning"></div>
+      <div id="airborne-banner">AIRBORNE</div>
+      <div id="status"></div>
+    </div>
+    <details id="cache-info">
+      <summary>ℹ Prop collision (.cache files) not yet implemented</summary>
+      <p>Level JSON references <code>assets/extracted/physics/*.cache</code> — Havok 2.3 serialized collision shapes (7,510 files). These contain the actual convex-hull / triangle-mesh colliders for bridges, buildings, walls, ramps, etc.</p>
+      <p><b>Current state:</b> Only terrain heightfield collision is active. You can drive on the ground but will pass through static objects.</p>
+      <p><b>To enable prop collision:</b> Reverse-engineer the Havok <code>.cache</code> serialization format (header + shape type enum + vertex/index arrays), parse each placement's <code>Physics</code> field into a Rapier/cannon-es collider, and add it to the physics world. This is Tier 3 per <code>docs/vehicle-physics-port.md</code>.</p>
+    </details>
+  </div>
+
+<script type="module">
+import * as THREE from 'three';
+import { parseGeo } from './geo-parser.js';
+import { TextureBank, buildMaterial } from './materials.js';
+import { VehicleAction } from './vehicle/vehicleAction.js';
+import { Vec3, Quat } from './vehicle/hkMath.js';
+
+const ROOT = '../../';
+
+// ── DOM helpers ──
+const $ = (id) => document.getElementById(id);
+const setStatus = (msg, err) => { const e = $('status'); e.textContent = msg; e.classList.toggle('error', err); };
+
+// ── Three.js scene ──
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.2;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+$('canvas-wrap').appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0e1218);
+scene.fog = new THREE.FogExp2(0x0e1218, 0.003);
+
+const camera = new THREE.PerspectiveCamera(60, 1, 0.5, 50000);
+camera.position.set(0, 50, 100);
+
+const sun = new THREE.DirectionalLight(0xfff4e2, 2.2);
+sun.position.set(1, 1.6, 0.8);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.near = 1;
+sun.shadow.camera.far = 500;
+sun.shadow.camera.left = sun.shadow.camera.bottom = -150;
+sun.shadow.camera.right = sun.shadow.camera.top = 150;
+scene.add(sun);
+scene.add(new THREE.AmbientLight(0x516080, 0.8));
+scene.add(new THREE.HemisphereLight(0x9db4ff, 0x3a2f24, 0.5));
+
+const worldGroup = new THREE.Group();
+scene.add(worldGroup);
+
+function resize() {
+  const w = $('canvas-wrap').clientWidth;
+  const h = $('canvas-wrap').clientHeight;
+  renderer.setSize(w, h);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', resize);
+resize();
+
+// ── State ──
+let vehicles = [];
+let levelsIndex = [];
+let assetIndex = null;
+let modelByStem = null;
+let textureBank = null;
+let currentLevel = null;
+let currentVehicle = null;
+let controller = null;
+let vehicleGroup = null;
+let terrainHeightFn = null;
+let terrainData = null;
+let geoCache = new Map();
+
+// ── Tab switching ──
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.querySelector(`[data-panel="${t.dataset.tab}"]`).classList.add('active');
+  });
+});
+
+// ── Load asset index (for model/texture resolution) ──
+async function loadAssetIndex() {
+  const [idxRes] = await Promise.all([
+    fetch(ROOT + 'tools/model-viewer/index.json').then(r => r.json()),
+  ]);
+  assetIndex = idxRes;
+  modelByStem = new Map();
+  for (const m of idxRes.models) {
+    modelByStem.set(m.name.toLowerCase().replace(/\.geo$/, ''), m.path);
+  }
+  textureBank = new TextureBank(idxIndex_textures(idxRes), ROOT);
+}
+
+function idxIndex_textures(idx) {
+  const out = {};
+  if (idx.textures) {
+    for (const [k, v] of Object.entries(idx.textures)) out[k.toLowerCase()] = v;
+  }
+  return out;
+}
+
+// ── Load vehicle list ──
+async function loadVehicles() {
+  const data = await fetch(ROOT + 'tools/model-viewer/vehicle-physics.json').then(r => r.json());
+  vehicles = data.vehicles;
+  renderVehicleList();
+}
+
+function renderVehicleList() {
+  const q = $('vehicle-search').value.trim().toLowerCase();
+  const shown = q ? vehicles.filter(v => v.UniqueName.toLowerCase().includes(q) || v.ShortDesc.toLowerCase().includes(q)) : vehicles;
+  $('vehicle-count').textContent = `${shown.length} / ${vehicles.length} vehicles`;
+  const list = $('vehicle-list');
+  list.textContent = '';
+  const frag = document.createDocumentFragment();
+  for (const v of shown) {
+    const li = document.createElement('li');
+    const exotic = v.IsExotic ? ' exotic' : '';
+    const active = currentVehicle && currentVehicle.Cbid === v.Cbid ? ' active' : '';
+    li.className = exotic + active;
+    li.innerHTML = `${v.ShortDesc || v.UniqueName}<br><span class="meta">${v.UniqueName} · ${v.Mass}kg${v.IsExotic ? ' · ⚠ exotic' : ''}</span>`;
+    li.addEventListener('click', () => selectVehicle(v));
+    frag.appendChild(li);
+  }
+  list.appendChild(frag);
+}
+
+$('vehicle-search').addEventListener('input', renderVehicleList);
+
+// ── Load level list ──
+async function loadLevels() {
+  levelsIndex = await fetch(ROOT + 'tools/model-viewer/levels/levels-index.json').then(r => r.json());
+  renderLevelList();
+}
+
+function renderLevelList() {
+  const q = $('level-search').value.trim().toLowerCase();
+  const shown = q ? levelsIndex.filter(l => l.name.toLowerCase().includes(q)) : levelsIndex;
+  $('level-count').textContent = `${shown.length} / ${levelsIndex.length} maps`;
+  const list = $('level-list');
+  list.textContent = '';
+  const frag = document.createDocumentFragment();
+  for (const lv of shown) {
+    const li = document.createElement('li');
+    if (currentLevel && currentLevel.name === lv.name) li.classList.add('active');
+    li.innerHTML = `${lv.name}<br><span class="meta">${lv.objects.toLocaleString()} obj · ${lv.width}×${lv.height}</span>`;
+    li.addEventListener('click', () => loadLevel(lv.name));
+    frag.appendChild(li);
+  }
+  list.appendChild(frag);
+}
+
+$('level-search').addEventListener('input', renderLevelList);
+
+// ── TGA parser (from level.js) ──
+function parseTGA(buf) {
+  const d = new Uint8Array(buf);
+  const idLen = d[0];
+  const imgType = d[2];
+  const w = d[12] | (d[13] << 8);
+  const h = d[14] | (d[15] << 8);
+  const bpp = d[16];
+  if (imgType !== 2 || bpp !== 32) return null;
+  const off = 18 + idLen;
+  const alpha = new Uint8Array(w * h);
+  const green = new Uint8Array(w * h);
+  const blue = new Uint8Array(w * h);
+  for (let i = 0, s = off; i < w * h; i++, s += 4) {
+    alpha[i] = d[s + 3];
+    green[i] = d[s + 1];
+    blue[i] = d[s];
+  }
+  return { w, h, alpha, green, blue };
+}
+
+const HEIGHT_SCALE = 4.0;
+
+// ── Load level (terrain + heightfield) ──
+async function loadLevel(name) {
+  setStatus(`Loading ${name}…`);
+  try {
+    const data = await (await fetch(`./levels/${name}.json`)).json();
+    worldGroup.clear();
+    currentLevel = { name, data };
+    renderLevelList();
+
+    const t = data.Terrain;
+    const grid = t.GridSize || 1;
+
+    // Load TGA heightfield
+    let tga = null;
+    try {
+      const buf = await (await fetch(ROOT + t.Tga)).arrayBuffer();
+      tga = parseTGA(buf);
+    } catch { /* flat */ }
+
+    if (tga && tga.w === t.Width && tga.h === t.Height) {
+      terrainData = { tga, width: t.Width, height: t.Height, grid, heightScale: HEIGHT_SCALE };
+
+      // Decimation shared by BOTH the visual mesh and the collision height function.
+      // The rendered mesh only samples every `step`-th heightfield cell, so the
+      // collision surface must be evaluated on the SAME decimated grid — otherwise
+      // the physics collides against a finer, invisible surface (measured up to ~165
+      // world units off the drawn terrain on scrapvalley) and the vehicle appears to
+      // drive through the ground.
+      const step = Math.max(1, Math.ceil(Math.max(t.Width, t.Height) / 400));
+      const nx = Math.floor(t.Width / step);
+      const nz = Math.floor(t.Height / step);
+      const W = t.Width, H = t.Height;
+
+      // Height of a decimated vertex — identical sampling to the mesh's positions[i+1].
+      const vh = (c, r) => tga.alpha[Math.min(r * step, H - 1) * W + Math.min(c * step, W - 1)] * HEIGHT_SCALE;
+
+      // Collision height = the EXACT plane of the rendered triangle covering (x, z).
+      // Barycentric interpolation over the same triangle split the index buffer uses
+      // (a, d2, b, b, d2, e2 → diagonal top-right→bottom-left, split line tx+tz=1),
+      // so collision height == drawn height everywhere, with no seams between cells.
+      // Out-of-range queries clamp to the nearest edge cell (not 0, which would pitch
+      // a vehicle off the map edge).
+      const cw = step * grid;
+      terrainHeightFn = (x, z) => {
+        const gx = x / cw, gz = z / cw;
+        let c0 = Math.min(Math.max(Math.floor(gx), 0), nx - 2);
+        let r0 = Math.min(Math.max(Math.floor(gz), 0), nz - 2);
+        const tx = Math.min(Math.max(gx - c0, 0), 1), tz = Math.min(Math.max(gz - r0, 0), 1);
+        const h00 = vh(c0, r0), h10 = vh(c0 + 1, r0), h01 = vh(c0, r0 + 1), h11 = vh(c0 + 1, r0 + 1);
+        if (tx + tz <= 1) return h00 + tx * (h10 - h00) + tz * (h01 - h00);
+        return h11 + (1 - tx) * (h01 - h11) + (1 - tz) * (h10 - h11);
+      };
+
+      // Build terrain mesh (uses the shared step/nx/nz above).
+      const positions = new Float32Array(nx * nz * 3);
+      let minY = Infinity, maxY = -Infinity;
+      for (let r = 0; r < nz; r++) {
+        for (let c = 0; c < nx; c++) {
+          const a = tga.alpha[(r * step) * t.Width + (c * step)];
+          const y = a * HEIGHT_SCALE;
+          const i = (r * nx + c) * 3;
+          positions[i] = c * step * grid;
+          positions[i + 1] = y;
+          positions[i + 2] = r * step * grid;
+          if (y < minY) minY = y;
+          if (y > maxY) maxY = y;
+        }
+      }
+      const indices = [];
+      for (let r = 0; r < nz - 1; r++) {
+        for (let c = 0; c < nx - 1; c++) {
+          const a = r * nx + c, b = a + 1, d2 = a + nx, e2 = d2 + 1;
+          indices.push(a, d2, b, b, d2, e2);
+        }
+      }
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      geo.setIndex(indices);
+      geo.computeVertexNormals();
+      const mat = new THREE.MeshStandardMaterial({ color: 0x3a4150, roughness: 0.95, metalness: 0, side: THREE.DoubleSide });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.receiveShadow = true;
+      worldGroup.add(mesh);
+    } else {
+      // Flat plane
+      terrainHeightFn = () => 0;
+      const geo = new THREE.PlaneGeometry(t.Width * grid, t.Height * grid);
+      geo.rotateX(-Math.PI / 2);
+      geo.translate(t.Width * grid / 2, 0, t.Height * grid / 2);
+      worldGroup.add(new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: 0x3a4150, roughness: 1 })));
+    }
+
+    // Set sun shadow camera to cover terrain area
+    const terrainSize = t.Width * grid;
+    sun.position.set(t.Width * grid * 0.5 + 50, 200, t.Height * grid * 0.5 + 50);
+    sun.target.position.set(t.Width * grid / 2, 0, t.Height * grid / 2);
+    sun.shadow.camera.left = sun.shadow.camera.bottom = -terrainSize * 0.3;
+    sun.shadow.camera.right = sun.shadow.camera.top = terrainSize * 0.3;
+    sun.shadow.camera.updateProjectionMatrix();
+    scene.add(sun.target);
+
+    // If a vehicle is already selected, reposition it at the level entry point
+    if (controller && currentVehicle) {
+      const entry = data.Terrain.Entry;
+      const spawnY = terrainHeightFn(entry[0], entry[2]) + 1.0;
+      controller.reset(new Vec3(entry[0], spawnY, entry[2]), new Quat(0, 0, 0, 1));
+      if (terrainHeightFn) controller.setTerrain(terrainHeightFn);
+    }
+
+    setStatus('');
+  } catch (e) {
+    console.error(e);
+    setStatus(`Failed to load ${name}: ${e.message}`, true);
+  }
+}
+
+// ── Load vehicle model (.geo) ──
+async function loadGeoModel(stem) {
+  if (geoCache.has(stem)) return geoCache.get(stem);
+  const path = modelByStem.get(stem.toLowerCase());
+  if (!path) {
+    console.warn(`Model not found: ${stem}`);
+    geoCache.set(stem, null);
+    return null;
+  }
+  try {
+    const res = await fetch(ROOT + path);
+    const buf = await res.arrayBuffer();
+    const geo = parseGeo(buf);
+    geoCache.set(stem, geo);
+    return geo;
+  } catch (e) {
+    console.warn(`Failed to load model ${stem}:`, e);
+    geoCache.set(stem, null);
+    return null;
+  }
+}
+
+async function buildVehicleMesh(vehicle) {
+  const group = new THREE.Group();
+  const vs = vehicle.VehicleSpecific;
+
+  // Resolve body model — try PhysicsName, then UniqueName
+  const bodyStem = vehicle.PhysicsName || vehicle.UniqueName;
+  const bodyGeo = await loadGeoModel(bodyStem);
+
+  // The body model and the extracted WheelHardPoints do not share a consistent
+  // vertical origin across vehicles, so we can't place either directly from the raw
+  // hardpoint Y (that is what makes wheels appear above the car). Instead we align
+  // everything to a single ground line derived from the suspension geometry:
+  //
+  //   - A wheel hangs BELOW its hardpoint by (suspensionLength − compression); at
+  //     rest the compression settles at ~gravity/(4·strength).
+  //   - The body is then lifted so its underside meets the resting wheel bottom.
+  //
+  // This keeps the wheels tucked under the car and the body resting on the terrain,
+  // independent of each model's authored origin, and stays consistent with the
+  // raycast suspension the physics actually simulates.
+  const bodyContainer = new THREE.Group();
+  // Body underside in the model's own frame (fallback box is 1 unit tall, centered).
+  let bodyBottom = -0.5;
+  if (bodyGeo) {
+    bodyBottom = Infinity;
+    for (const section of bodyGeo.sections) {
+      const pos = section.positions;
+      for (let i = 1; i < pos.length; i += 3) if (pos[i] < bodyBottom) bodyBottom = pos[i];
+    }
+    for (const section of bodyGeo.sections) {
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.BufferAttribute(section.positions, 3));
+      if (section.normals) geometry.setAttribute('normal', new THREE.BufferAttribute(section.normals, 3));
+      if (section.uvs) geometry.setAttribute('uv', new THREE.BufferAttribute(section.uvs, 2));
+      geometry.setIndex(new THREE.BufferAttribute(section.indices, 1));
+      if (!section.normals) geometry.computeVertexNormals();
+      const { material: mat } = buildMaterial(section, textureBank, { texturesEnabled: true });
+      const mesh = new THREE.Mesh(geometry, mat);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      bodyContainer.add(mesh);
+    }
+  } else {
+    const box = new THREE.Mesh(
+      new THREE.BoxGeometry(2, 1, 4),
+      new THREE.MeshStandardMaterial({ color: 0x556677, roughness: 0.5 })
+    );
+    box.castShadow = true;
+    bodyContainer.add(box);
+  }
+
+  // Resting wheel geometry (front wheel as the reference for the body height).
+  const hp0 = (vs.WheelHardPoints && vs.WheelHardPoints[0]) || { X: 0, Y: 0, Z: 0 };
+  const suspLenF = vs.SuspensionLength.Front;
+  const strengthF = vs.SuspensionStrength.Front || 1;
+  const radiusF = (vs.WheelRadius && vs.WheelRadius[0]) || 0.4;
+  const restCompF = Math.min(suspLenF, 9.81 / (4 * strengthF));
+  const wheelRestCenterY = hp0.Y - (suspLenF - restCompF);      // wheel centre at rest
+  // Lift the body so its underside meets the resting wheel bottom.
+  bodyContainer.position.y = (wheelRestCenterY - radiusF) - bodyBottom;
+  group.add(bodyContainer);
+
+  // Load wheel models
+  const wheelStem = vehicle.Wheel0Name;
+  if (wheelStem) {
+    const wheelGeo = await loadGeoModel(wheelStem);
+    if (wheelGeo) {
+      const wheelCount = vs.WheelExistance || 4;
+      for (let i = 0; i < wheelCount; i++) {
+        const hp = vs.WheelHardPoints[i];
+        if (!hp) continue;
+        // steerPivot (at the hardpoint, rotates Y for steering)
+        //   └ dropGroup (translates Y down the strut by the live suspension travel)
+        //       └ wheelMesh (rotates X for rolling)
+        const steerPivot = new THREE.Group();
+        steerPivot.position.set(hp.X, hp.Y, hp.Z);
+        const dropGroup = new THREE.Group();
+        const wheelMesh = new THREE.Group();
+        for (const section of wheelGeo.sections) {
+          const geometry = new THREE.BufferGeometry();
+          geometry.setAttribute('position', new THREE.BufferAttribute(section.positions, 3));
+          if (section.normals) geometry.setAttribute('normal', new THREE.BufferAttribute(section.normals, 3));
+          if (section.uvs) geometry.setAttribute('uv', new THREE.BufferAttribute(section.uvs, 2));
+          geometry.setIndex(new THREE.BufferAttribute(section.indices, 1));
+          if (!section.normals) geometry.computeVertexNormals();
+          const { material: mat } = buildMaterial(section, textureBank, { texturesEnabled: true });
+          const mesh = new THREE.Mesh(geometry, mat);
+          mesh.castShadow = true;
+          wheelMesh.add(mesh);
+        }
+        // Mirror left-side wheels
+        if (hp.X < 0) wheelMesh.scale.x = -1;
+        dropGroup.add(wheelMesh);
+        steerPivot.add(dropGroup);
+        group.add(steerPivot);
+        steerPivot.userData.isWheel = true;
+        steerPivot.userData.wheelMesh = wheelMesh;
+        steerPivot.userData.dropGroup = dropGroup;
+        steerPivot.userData.isFront = i < 2;
+        steerPivot.userData.wheelIdx = i;
+      }
+    }
+  }
+
+  return group;
+}
+
+// ── Select and spawn vehicle ──
+async function selectVehicle(vehicle) {
+  setStatus(`Loading vehicle ${vehicle.ShortDesc || vehicle.UniqueName}…`);
+  currentVehicle = vehicle;
+  renderVehicleList();
+
+  // Show exotic warning if needed
+  const warn = $('exotic-warning');
+  if (vehicle.IsExotic) {
+    warn.style.display = 'block';
+    warn.textContent = `⚠ EXOTIC VEHICLE — ${vehicle.ExoticReason}. Physics may be incorrect. Driving is still attempted but handling will be wrong.`;
+  } else {
+    warn.style.display = 'none';
+  }
+
+  // Build physics controller
+  controller = new VehicleAction(vehicle);
+  if (terrainHeightFn) controller.setTerrain(terrainHeightFn);
+
+  // Build vehicle mesh
+  if (vehicleGroup) worldGroup.remove(vehicleGroup);
+  vehicleGroup = await buildVehicleMesh(vehicle);
+  worldGroup.add(vehicleGroup);
+
+  // Spawn at level entry or origin
+  let spawnX = 0, spawnZ = 0;
+  if (currentLevel) {
+    const entry = currentLevel.data.Terrain.Entry;
+    spawnX = entry[0]; spawnZ = entry[2];
+  }
+  const spawnY = terrainHeightFn ? terrainHeightFn(spawnX, spawnZ) + 1.0 : 5;
+  controller.reset(new Vec3(spawnX, spawnY, spawnZ), new Quat(0, 0, 0, 1));
+
+  // Update info panel
+  updateInfoPanel(vehicle);
+
+  setStatus('');
+}
+
+function updateInfoPanel(v) {
+  const vs = v.VehicleSpecific;
+  $('info-panel').innerHTML = `
+    <div><span class="k">Vehicle:</span> ${v.ShortDesc || v.UniqueName}</div>
+    <div><span class="k">Mass:</span> ${v.Mass} kg</div>
+    <div><span class="k">Top Speed:</span> ${vs.AbsoluteTopSpeed.toFixed(1)} m/s (${(vs.AbsoluteTopSpeed * 2.23694).toFixed(0)} mph)</div>
+    <div><span class="k">Gears:</span> ${vs.NumberOfGears} · TorqueMax: ${vs.TorqueMax}</div>
+    <div><span class="k">Wheels:</span> ${vs.WheelExistance} × ${(vs.WheelRadius[0] || 0).toFixed(2)}m radius</div>
+    <div><span class="k">Suspension:</span> F=${vs.SuspensionStrength.Front} R=${vs.SuspensionStrength.Rear}</div>
+    <div><span class="k">Steer Max:</span> ${(vs.SteeringMaxAngle * 180 / Math.PI).toFixed(1)}° @ ${(vs.SteeringFullSpeedLimit).toFixed(1)} m/s</div>
+    ${v.IsExotic ? `<div style="color:var(--warn);margin-top:4px">⚠ ${v.ExoticReason}</div>` : ''}
+  `;
+}
+
+// ── Input ──
+// A/D = "Steer Left/Right Soft" (limited), Q/E = "Steer Left/Right" (sharp turn
+// with rear-traction cut) — the retail client's two steering binding sets.
+// (No boost key: boost in AA is server-driven only, not a client control.)
+const keys = { forward: false, backward: false, left: false, right: false, sharpLeft: false, sharpRight: false, handbrake: false, reset: false };
+document.addEventListener('keydown', e => {
+  if (e.repeat) return;
+  if (e.target.tagName === 'INPUT') return;
+  switch (e.code) {
+    case 'KeyW': case 'ArrowUp': keys.forward = true; break;
+    case 'KeyS': case 'ArrowDown': keys.backward = true; break;
+    case 'KeyA': case 'ArrowLeft': keys.left = true; break;
+    case 'KeyD': case 'ArrowRight': keys.right = true; break;
+    case 'KeyQ': keys.sharpLeft = true; break;
+    case 'KeyE': keys.sharpRight = true; break;
+    case 'Space': keys.handbrake = true; e.preventDefault(); break;
+    case 'KeyR': keys.reset = true; break;
+  }
+});
+document.addEventListener('keyup', e => {
+  switch (e.code) {
+    case 'KeyW': case 'ArrowUp': keys.forward = false; break;
+    case 'KeyS': case 'ArrowDown': keys.backward = false; break;
+    case 'KeyA': case 'ArrowLeft': keys.left = false; break;
+    case 'KeyD': case 'ArrowRight': keys.right = false; break;
+    case 'KeyQ': keys.sharpLeft = false; break;
+    case 'KeyE': keys.sharpRight = false; break;
+    case 'Space': keys.handbrake = false; break;
+    case 'KeyR': keys.reset = false; break;
+  }
+});
+
+// Mouse look
+let mouseDown = false, lastMX = 0, lastMY = 0;
+// camYaw = the camera's current orbit heading (smoothly chases the car). camYawOffset
+// = a manual orbit offset the mouse adds, which decays back to behind-the-car while
+// driving. camPitch = elevation angle above the horizon. camInit forces a snap (no
+// swing) on the first frame after (re)spawning.
+let camYaw = 0, camYawOffset = 0, camPitch = 0.30, camDist = 9, camInit = false;
+renderer.domElement.addEventListener('contextmenu', e => e.preventDefault());
+renderer.domElement.addEventListener('mousedown', e => {
+  if (e.button === 2 || e.button === 0) { mouseDown = true; lastMX = e.clientX; lastMY = e.clientY; }
+});
+window.addEventListener('mouseup', () => mouseDown = false);
+window.addEventListener('mousemove', e => {
+  if (!mouseDown) return;
+  camYawOffset -= (e.clientX - lastMX) * 0.006;
+  camPitch = Math.max(0.05, Math.min(1.2, camPitch + (e.clientY - lastMY) * 0.006));
+  lastMX = e.clientX; lastMY = e.clientY;
+});
+renderer.domElement.addEventListener('wheel', e => {
+  camDist = Math.max(4, Math.min(30, camDist + e.deltaY * 0.01));
+  e.preventDefault();
+}, { passive: false });
+
+// ── Chase camera (GTA-style) ──
+// Stays level with the world (ignores the car's roll/pitch so bumps don't tip the
+// view), lags smoothly behind the car's heading, swings behind the direction of
+// travel at speed, looks slightly ahead, and rides up over terrain.
+const _camGoal = new THREE.Vector3();
+const _lookGoal = new THREE.Vector3();
+const _lookNow = new THREE.Vector3();
+const _fwd = new Vec3();
+
+// Shortest-path angular lerp (handles the ±π wrap).
+function angleLerp(a, b, t) {
+  let d = b - a;
+  while (d > Math.PI) d -= 2 * Math.PI;
+  while (d < -Math.PI) d += 2 * Math.PI;
+  return a + d * t;
+}
+
+function updateCamera(dt) {
+  if (!controller) return;
+  const pos = controller.chassis.position;
+  const q = controller.chassis.orientation;
+  const vel = controller.chassis.linearVelocity;
+
+  // Car heading yaw — YAW ONLY. Take the chassis forward, flatten to the XZ plane,
+  // so the camera never rolls or pitches with the car body.
+  q.vmult(new Vec3(0, 0, 1), _fwd);
+  let headingYaw = Math.atan2(_fwd.x, _fwd.z);
+
+  // At speed, bias toward the direction of travel (the cam swings behind a slide),
+  // but only while moving forward — reversing keeps the nose-heading so we don't
+  // whip the camera around.
+  const groundSpeed = Math.hypot(vel.x, vel.z);
+  if (groundSpeed > 3 && (_fwd.x * vel.x + _fwd.z * vel.z) > 0) {
+    const velYaw = Math.atan2(vel.x, vel.z);
+    headingYaw = angleLerp(headingYaw, velYaw, Math.min(1, (groundSpeed - 3) / 12));
+  }
+
+  // Manual mouse orbit decays back to center once you're driving again.
+  if (!mouseDown && groundSpeed > 2) camYawOffset *= Math.max(0, 1 - dt * 1.5);
+
+  // Smoothly chase the target yaw (frame-rate independent). Snap while dragging.
+  const targetYaw = headingYaw + camYawOffset;
+  camYaw = mouseDown ? targetYaw : angleLerp(camYaw, targetYaw, 1 - Math.exp(-dt * 4));
+
+  // Spherical placement behind + above the car.
+  const hx = Math.sin(camYaw), hz = Math.cos(camYaw);
+  const flat = Math.cos(camPitch) * camDist;
+  _camGoal.set(
+    pos.x - hx * flat,
+    pos.y + Math.sin(camPitch) * camDist + 1.0,
+    pos.z - hz * flat
+  );
+
+  // Look slightly ahead of and above the car for a sense of speed.
+  _lookGoal.set(pos.x + hx * 3.0, pos.y + 1.4, pos.z + hz * 3.0);
+
+  // Snap on (re)spawn / level change, otherwise ease in.
+  if (!camInit || camera.position.distanceTo(_camGoal) > camDist * 4) {
+    camera.position.copy(_camGoal);
+    _lookNow.copy(_lookGoal);
+    camYaw = targetYaw;
+    camInit = true;
+  } else {
+    camera.position.lerp(_camGoal, 1 - Math.exp(-dt * 7));
+    _lookNow.lerp(_lookGoal, 1 - Math.exp(-dt * 10));
+  }
+
+  // Don't let the camera clip into hills.
+  if (terrainHeightFn) {
+    const gy = terrainHeightFn(camera.position.x, camera.position.z) + 1.2;
+    if (camera.position.y < gy) camera.position.y = gy;
+  }
+
+  camera.lookAt(_lookNow);
+}
+
+// ── Game loop ──
+let lastTS = 0;
+let accumulator = 0;
+const FIXED_DT = 1 / 60;
+
+function animate(ts) {
+  requestAnimationFrame(animate);
+  const dt = Math.min((ts - lastTS) / 1000, 0.1);
+  lastTS = ts;
+
+  if (controller) {
+    // Reset
+    if (keys.reset) {
+      let spawnX = 0, spawnZ = 0;
+      if (currentLevel) {
+        const entry = currentLevel.data.Terrain.Entry;
+        spawnX = entry[0]; spawnZ = entry[2];
+      }
+      const spawnY = terrainHeightFn ? terrainHeightFn(spawnX, spawnZ) + 1.0 : 5;
+      controller.reset(new Vec3(spawnX, spawnY, spawnZ), new Quat(0, 0, 0, 1));
+      camInit = false;
+    }
+
+    // Physics tick (fixed 60Hz)
+    accumulator += dt;
+    while (accumulator >= FIXED_DT) {
+      controller.step(FIXED_DT, keys);
+      accumulator -= FIXED_DT;
+    }
+
+    // Sync vehicle mesh to physics
+    if (vehicleGroup) {
+      vehicleGroup.position.set(
+        controller.chassis.position.x,
+        controller.chassis.position.y,
+        controller.chassis.position.z
+      );
+      vehicleGroup.quaternion.set(
+        controller.chassis.orientation.x,
+        controller.chassis.orientation.y,
+        controller.chassis.orientation.z,
+        controller.chassis.orientation.w
+      );
+
+      // Animate wheels: steerPivot handles Y (steer), dropGroup slides down the
+      // strut by the live suspension travel, wheelMesh handles X (roll).
+      for (const child of vehicleGroup.children) {
+        if (child.userData.isWheel) {
+          const wheel = controller.suspension.wheels[child.userData.wheelIdx];
+          if (wheel) {
+            const rollAngle = wheel.wheelAngularVel * dt;
+            child.userData.wheelMesh.rotateX(rollAngle);
+            // Wheel hangs below the hardpoint by (suspensionLength − compression):
+            // fully extended when airborne, rising toward the mount under load.
+            child.userData.dropGroup.position.y = -(wheel.suspensionLength - wheel.compression);
+            if (child.userData.isFront) {
+              child.rotation.y = wheel.steerAngle;
+            }
+          }
+        }
+      }
+    }
+
+    // Update HUD
+    const t = controller.getTelemetry();
+    $('speed-val').textContent = t.speedMPH;
+    $('gear-box').textContent = t.gear;
+    $('rpm-bar').style.width = (t.normalizedRPM * 100).toFixed(1) + '%';
+    $('airborne-banner').style.opacity = t.airborne ? '1' : '0';
+    $('debug-line').textContent =
+      `T: ${t.throttlePct > 0 ? '+' : ''}${t.throttlePct}%  S: ${t.steerDeg}°  G${t.gear}  ${t.rpm} RPM  ${t.airborne ? 'AIR' : 'GND'}  y=${t.pos.y.toFixed(2)}`;
+
+    updateCamera(dt);
+  }
+
+  renderer.render(scene, camera);
+}
+
+// ── Init ──
+(async () => {
+  setStatus('Loading assets…');
+  await loadAssetIndex();
+  await loadVehicles();
+  await loadLevels();
+
+  // Auto-load a default level (scrapvalley — the starter zone)
+  await loadLevel('sec_f_b_map_hwy_a2_1_scrapvalley');
+
+  // Auto-select a default vehicle (first non-exotic)
+  const defaultVehicle = vehicles.find(v => !v.IsExotic) || vehicles[0];
+  if (defaultVehicle) await selectVehicle(defaultVehicle);
+
+  requestAnimationFrame(animate);
+})();
+</script>
+</body>
+</html>

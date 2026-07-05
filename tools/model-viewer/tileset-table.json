@@ -1,0 +1,580 @@
+{
+  "0": {
+    "label": " (Universal)",
+    "tile": "tile_mnt_ground_01.dds",
+    "tile2": "tile2_mnt_ground_01.dds",
+    "layerScales": [
+      0.5,
+      0.5,
+      1.0,
+      0.8
+    ],
+    "layerIndices": [
+      5,
+      5,
+      2,
+      4
+    ]
+  },
+  "1": {
+    "label": "Mountain",
+    "tile": "tile_mnt_ground_01.dds",
+    "tile2": "tile2_mnt_ground_01.dds",
+    "layerScales": [
+      0.5,
+      0.5,
+      1.0,
+      0.8
+    ],
+    "layerIndices": [
+      5,
+      5,
+      2,
+      4
+    ]
+  },
+  "2": {
+    "label": "Arena - Dirt",
+    "tile": "tile_mnt_ground_01.dds",
+    "tile2": "tile2_mnt_ground_01.dds",
+    "layerScales": [
+      0.5,
+      0.5,
+      1.0,
+      0.8
+    ],
+    "layerIndices": [
+      5,
+      5,
+      2,
+      4
+    ]
+  },
+  "3": {
+    "label": "Desert",
+    "tile": "tile_des_ground_01.dds",
+    "tile2": "tile2_des_ground_01.dds",
+    "layerScales": [
+      0.5,
+      0.8,
+      1.0,
+      1.0
+    ],
+    "layerIndices": [
+      5,
+      4,
+      2,
+      2
+    ]
+  },
+  "4": {
+    "label": "Town - Mutant",
+    "tile": "tile_f_m_ground_01.dds",
+    "tile2": "tile2_f_m_ground_01.dds",
+    "layerScales": [
+      0.8,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "layerIndices": [
+      4,
+      2,
+      2,
+      2
+    ]
+  },
+  "5": {
+    "label": "Jungle (Old)",
+    "tile": "tile_tro_ground_01.dds",
+    "tile2": "tile2_tro_ground_01.dds",
+    "layerScales": [
+      0.8,
+      0.8,
+      1.0,
+      0.8
+    ],
+    "layerIndices": [
+      4,
+      4,
+      2,
+      4
+    ]
+  },
+  "6": {
+    "label": "Swamp",
+    "tile": "tile_swa_ground_01.dds",
+    "tile2": "tile2_swa_ground_01.dds",
+    "layerScales": [
+      0.4,
+      0.5,
+      1.0,
+      0.8
+    ],
+    "layerIndices": [
+      6,
+      5,
+      2,
+      4
+    ]
+  },
+  "7": {
+    "label": "Plains (Old)",
+    "tile": "tile_pla_ground_01.dds",
+    "tile2": "tile2_pla_ground_01.dds",
+    "layerScales": [
+      0.8,
+      0.8,
+      1.0,
+      0.8
+    ],
+    "layerIndices": [
+      4,
+      4,
+      2,
+      4
+    ]
+  },
+  "8": {
+    "label": "IceCap (Old)",
+    "tile": "tile_ice_ground_01.dds",
+    "tile2": "tile2_ice_ground_01.dds",
+    "layerScales": [
+      0.8,
+      0.8,
+      1.0,
+      0.8
+    ],
+    "layerIndices": [
+      4,
+      4,
+      2,
+      4
+    ]
+  },
+  "9": {
+    "label": "Volcanic (Old)",
+    "tile": "tile_vol_ground_01.dds",
+    "tile2": "tile2_vol_ground_01.dds",
+    "layerScales": [
+      0.8,
+      0.8,
+      1.0,
+      0.8
+    ],
+    "layerIndices": [
+      4,
+      4,
+      2,
+      4
+    ]
+  },
+  "10": {
+    "label": "Alien (Old)",
+    "tile": "tile_xos_ground_01.dds",
+    "tile2": "tile2_xos_ground_01.dds",
+    "layerScales": [
+      0.8,
+      0.8,
+      1.0,
+      0.8
+    ],
+    "layerIndices": [
+      4,
+      4,
+      2,
+      4
+    ]
+  },
+  "11": {
+    "label": "(Old) Subterranean",
+    "tile": "tile_sub_ground_01.dds",
+    "tile2": "tile2_sub_ground_01.dds",
+    "layerScales": [
+      0.8,
+      0.8,
+      1.0,
+      0.8
+    ],
+    "layerIndices": [
+      4,
+      4,
+      2,
+      4
+    ]
+  },
+  "12": {
+    "label": "Arena",
+    "tile": "tile_mnt_ground_01.dds",
+    "tile2": "tile2_mnt_ground_01.dds",
+    "layerScales": [
+      0.5,
+      0.5,
+      1.0,
+      0.8
+    ],
+    "layerIndices": [
+      5,
+      5,
+      2,
+      4
+    ]
+  },
+  "13": {
+    "label": "Town - Biomek",
+    "tile": "tile_f_b_ground_01.dds",
+    "tile2": "tile2_f_b_ground_01.dds",
+    "layerScales": [
+      0.5,
+      1.0,
+      1.0,
+      0.8
+    ],
+    "layerIndices": [
+      5,
+      2,
+      2,
+      4
+    ]
+  },
+  "14": {
+    "label": "Town - Human",
+    "tile": "tile_f_h_ground_01.dds",
+    "tile2": "tile2_f_h_ground_01.dds",
+    "layerScales": [
+      0.5,
+      1.0,
+      0.8,
+      0.8
+    ],
+    "layerIndices": [
+      5,
+      2,
+      4,
+      4
+    ]
+  },
+  "15": {
+    "label": "Urban",
+    "tile": "tile_urb_ground_01.dds",
+    "tile2": "tile2_urb_ground_01.dds",
+    "layerScales": [
+      0.8,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "layerIndices": [
+      4,
+      2,
+      2,
+      2
+    ]
+  },
+  "16": {
+    "label": "Mountain - Arid",
+    "tile": "tile_mnt_ground_02_arid.dds",
+    "tile2": "tile2_mnt_ground_02_arid.dds",
+    "layerScales": [
+      0.8,
+      1.0,
+      1.0,
+      0.8
+    ],
+    "layerIndices": [
+      4,
+      2,
+      2,
+      4
+    ]
+  },
+  "17": {
+    "label": "Mountain - Xosen",
+    "tile": "tile_mnt_ground_03_xos.dds",
+    "tile2": "tile2_mnt_ground_03_xos.dds",
+    "layerScales": [
+      0.8,
+      0.6,
+      1.0,
+      0.8
+    ],
+    "layerIndices": [
+      4,
+      0,
+      2,
+      4
+    ]
+  },
+  "18": {
+    "label": "Indoor 1",
+    "tile": "tile_f_ind_ground_01.dds",
+    "tile2": "tile2_f_ind_ground_01.dds",
+    "layerScales": [
+      0.5,
+      0.8,
+      1.0,
+      1.0
+    ],
+    "layerIndices": [
+      5,
+      4,
+      2,
+      2
+    ]
+  },
+  "19": {
+    "label": "Indoor 2",
+    "tile": "tile_f_ind_ground_02.dds",
+    "tile2": "tile2_f_ind_ground_02.dds",
+    "layerScales": [
+      0.5,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "layerIndices": [
+      5,
+      2,
+      2,
+      2
+    ]
+  },
+  "20": {
+    "label": "Urban 2",
+    "tile": "tile_urb_ground_02.dds",
+    "tile2": "tile2_urb_ground_02.dds",
+    "layerScales": [
+      0.8,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "layerIndices": [
+      4,
+      2,
+      2,
+      2
+    ]
+  },
+  "21": {
+    "label": "Mountain Moab",
+    "tile": "tile_mnt_ground_04_moab.dds",
+    "tile2": "tile2_mnt_ground_04_moab.dds",
+    "layerScales": [
+      1.0,
+      0.8,
+      1.0,
+      0.8
+    ],
+    "layerIndices": [
+      2,
+      4,
+      2,
+      4
+    ]
+  },
+  "22": {
+    "label": "Desert 2",
+    "tile": "tile_des_ground_02.dds",
+    "tile2": "tile2_des_ground_02.dds",
+    "layerScales": [
+      0.5,
+      0.8,
+      1.0,
+      1.0
+    ],
+    "layerIndices": [
+      5,
+      4,
+      2,
+      2
+    ]
+  },
+  "23": {
+    "label": "Town - Mutant 2 (Subdued)",
+    "tile": "tile_f_m_ground_02.dds",
+    "tile2": "tile2_f_m_ground_02.dds",
+    "layerScales": [
+      0.8,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "layerIndices": [
+      4,
+      2,
+      2,
+      2
+    ]
+  },
+  "24": {
+    "label": "Town - Human 2",
+    "tile": "tile_f_h_ground_02.dds",
+    "tile2": "tile2_f_h_ground_02.dds",
+    "layerScales": [
+      0.5,
+      0.8,
+      1.0,
+      1.0
+    ],
+    "layerIndices": [
+      5,
+      4,
+      2,
+      2
+    ]
+  },
+  "25": {
+    "label": "Town - Biomek 2",
+    "tile": "tile_f_b_ground_02.dds",
+    "tile2": "tile2_f_b_ground_02.dds",
+    "layerScales": [
+      0.8,
+      0.5,
+      1.0,
+      0.8
+    ],
+    "layerIndices": [
+      4,
+      5,
+      2,
+      4
+    ]
+  },
+  "26": {
+    "label": "Town - Biomek 3",
+    "tile": "tile_f_b_ground_03.dds",
+    "tile2": "tile2_f_b_ground_03.dds",
+    "layerScales": [
+      0.8,
+      0.5,
+      1.0,
+      0.8
+    ],
+    "layerIndices": [
+      4,
+      5,
+      2,
+      4
+    ]
+  },
+  "27": {
+    "label": "Mountain - Desat",
+    "tile": "tile_mnt_ground_05_desat.dds",
+    "tile2": "tile2_mnt_ground_05_desat.dds",
+    "layerScales": [
+      0.5,
+      0.5,
+      1.0,
+      0.8
+    ],
+    "layerIndices": [
+      5,
+      5,
+      2,
+      4
+    ]
+  },
+  "28": {
+    "label": "Mountain - Scrap",
+    "tile": "tile_mnt_ground_06_sv.dds",
+    "tile2": "tile2_mnt_ground_06_sv.dds",
+    "layerScales": [
+      0.4,
+      0.5,
+      1.0,
+      0.8
+    ],
+    "layerIndices": [
+      8,
+      5,
+      2,
+      4
+    ]
+  },
+  "29": {
+    "label": "Town - Mutant 3",
+    "tile": "tile_f_m_ground_03.dds",
+    "tile2": "tile2_f_m_ground_03.dds",
+    "layerScales": [
+      0.8,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "layerIndices": [
+      4,
+      2,
+      2,
+      2
+    ]
+  },
+  "30": {
+    "label": "Mountain  No specular",
+    "tile": "tile_mnt_ground_07_nospecgrass.dds",
+    "tile2": "tile2_mnt_ground_07_nospecgrass.dds",
+    "layerScales": [
+      0.5,
+      0.5,
+      1.0,
+      0.8
+    ],
+    "layerIndices": [
+      5,
+      5,
+      2,
+      4
+    ]
+  },
+  "31": {
+    "label": "Mountain  Region 3",
+    "tile": "tile_mnt_ground_08_R3.dds",
+    "tile2": "tile2_mnt_ground_08_R3.dds",
+    "layerScales": [
+      0.5,
+      0.5,
+      1.0,
+      0.8
+    ],
+    "layerIndices": [
+      5,
+      5,
+      2,
+      4
+    ]
+  },
+  "32": {
+    "label": "Urban 3",
+    "tile": "tile_urb_ground_03.dds",
+    "tile2": "tile2_urb_ground_03.dds",
+    "layerScales": [
+      0.8,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "layerIndices": [
+      4,
+      2,
+      2,
+      2
+    ]
+  },
+  "33": {
+    "label": "Mountain Embers",
+    "tile": "tile_mnt_ground_09_embers.dds",
+    "tile2": "tile2_mnt_ground_09_embers.dds",
+    "layerScales": [
+      1.0,
+      0.5,
+      1.0,
+      0.8
+    ],
+    "layerIndices": [
+      2,
+      5,
+      2,
+      4
+    ]
+  }
+}

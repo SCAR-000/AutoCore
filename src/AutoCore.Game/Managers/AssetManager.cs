@@ -189,6 +189,11 @@ public class AssetManager : Singleton<AssetManager>
         return WorldDBLoader.ContinentObjects.Values;
     }
 
+    public IEnumerable<CloneBase> GetCloneBasesByType(CloneBaseObjectType type)
+    {
+        return WADLoader.CloneBases.Values.Where(cb => cb.Type == type);
+    }
+
     public MapData GetMapData(int mapId)
     {
         if (MapDataLoader.MapDatas.TryGetValue(mapId, out var result))

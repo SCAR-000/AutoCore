@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<!--
+  Auto Assault model viewer.
+  Serve the REPO ROOT over HTTP (asset fetches are repo-root-relative):
+      python -m http.server 8080
+  then open http://localhost:8080/tools/model-viewer/
+  Regenerate the model index after (re)extracting assets:
+      python tools/build_viewer_index.py
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>AutoCore Model Viewer</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --bg: #10141c; --panel: #171c26; --panel2: #1d2430; --line: #29313f;
+    --text: #cdd6e4; --dim: #7c8798; --accent: #5b9dff; --warn: #ffb02e;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    display: flex; background: var(--bg); color: var(--text);
+    font: 13px/1.45 "Segoe UI", system-ui, sans-serif; overflow: hidden;
+  }
+  #sidebar {
+    width: 330px; min-width: 330px; height: 100%; display: flex; flex-direction: column;
+    background: var(--panel); border-right: 1px solid var(--line);
+  }
+  #sidebar header { padding: 10px 12px 6px; }
+  #sidebar h1 { margin: 0 0 8px; font-size: 15px; font-weight: 600; color: #e8eef8; }
+  #search {
+    width: 100%; padding: 6px 9px; border-radius: 6px; border: 1px solid var(--line);
+    background: var(--panel2); color: var(--text); outline: none;
+  }
+  #search:focus { border-color: var(--accent); }
+  #count { color: var(--dim); font-size: 11px; padding: 4px 2px 0; }
+  #controls {
+    padding: 8px 12px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+    display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center;
+  }
+  #controls label { display: inline-flex; align-items: center; gap: 4px; color: var(--dim); }
+  #controls select, #controls input[type=color] {
+    background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 5px;
+    padding: 2px 4px; height: 24px;
+  }
+  #controls input[type=color] { width: 34px; padding: 1px 2px; }
+  #tint-row { display: flex; gap: 6px; align-items: center; }
+  #model-list {
+    flex: 1; overflow-y: auto; margin: 0; padding: 4px 0; list-style: none;
+  }
+  #model-list li {
+    padding: 3px 12px; cursor: pointer; white-space: nowrap; overflow: hidden;
+    text-overflow: ellipsis; font-family: Consolas, monospace; font-size: 12px;
+  }
+  #model-list li:hover { background: var(--panel2); }
+  #model-list li.active { background: #24446e; color: #fff; }
+  #model-list li.more { color: var(--dim); cursor: default; font-style: italic; }
+  #main { flex: 1; position: relative; height: 100%; }
+  #canvas-wrap { position: absolute; inset: 0; }
+  #canvas-wrap canvas { display: block; }
+  #info {
+    position: absolute; left: 12px; bottom: 12px; max-width: min(640px, 70%);
+    background: rgba(23, 28, 38, 0.92); border: 1px solid var(--line); border-radius: 8px;
+    padding: 8px 12px; font-size: 12px; pointer-events: none; word-break: break-word;
+  }
+  #info:empty { display: none; }
+  #info .k { color: var(--dim); display: inline-block; min-width: 68px; }
+  #info .warn { color: var(--warn); }
+  #status {
+    position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+    background: rgba(23, 28, 38, 0.92); border: 1px solid var(--line); border-radius: 8px;
+    padding: 5px 14px; font-size: 12px;
+  }
+  #status:empty { display: none; }
+  #status.error { color: #ff7b72; border-color: #6e2c2c; }
+  #hint {
+    position: absolute; right: 12px; bottom: 12px; color: var(--dim); font-size: 11px;
+    pointer-events: none; text-align: right;
+  }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://esm.sh/three@0.165.0",
+    "three/addons/": "https://esm.sh/three@0.165.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+  <aside id="sidebar">
+    <header>
+      <h1>AutoCore Model Viewer</h1>
+      <input id="search" type="search" placeholder="Search models…  (press /)" autocomplete="off">
+      <div id="count"></div>
+    </header>
+    <div id="controls">
+      <label>LOD <select id="lod"></select></label>
+      <label><input type="checkbox" id="textures" checked> textures</label>
+      <label><input type="checkbox" id="wireframe"> wireframe</label>
+      <label><input type="checkbox" id="show-bbox"> bounds</label>
+      <label><input type="checkbox" id="show-shadows"> shadow meshes</label>
+      <span id="tint-row" style="display:none">
+        <label>paint <select id="tint-scheme"></select></label>
+        <input type="color" id="tint-primary" title="primary colour">
+        <input type="color" id="tint-secondary" title="secondary colour">
+      </span>
+    </div>
+    <ul id="model-list"></ul>
+  </aside>
+  <main id="main">
+    <div id="canvas-wrap"></div>
+    <div id="status"></div>
+    <div id="info"></div>
+    <div id="hint">drag: orbit &middot; wheel: zoom &middot; right-drag: pan</div>
+  </main>
+  <script type="module" src="./viewer.js"></script>
+</body>
+</html>

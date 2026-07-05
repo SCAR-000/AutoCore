@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<!--
+  Auto Assault LEVEL viewer — renders a whole map: terrain heightfield (TGA alpha x 4.0),
+  every object placement (instanced .geo models), and spawn/store/path markers.
+  Serve the REPO ROOT over HTTP:  python -m http.server 8080
+  then open http://localhost:8080/tools/model-viewer/level.html
+  Regenerate level data after (re)extracting:  mapdump.exe <game> assets/extracted/maps tools/model-viewer/levels
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>AutoCore Level Viewer</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root { --bg:#0e1218; --panel:#161b24; --panel2:#1c232f; --line:#28303d; --text:#cdd6e4; --dim:#7c8798; --accent:#5b9dff; --warn:#ffb02e; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { display: flex; background: var(--bg); color: var(--text); font: 13px/1.45 "Segoe UI", system-ui, sans-serif; overflow: hidden; }
+  #sidebar { width: 320px; min-width: 320px; height: 100%; display: flex; flex-direction: column; background: var(--panel); border-right: 1px solid var(--line); }
+  #sidebar header { padding: 10px 12px 6px; }
+  #sidebar h1 { margin: 0 0 8px; font-size: 15px; font-weight: 600; color: #e8eef8; }
+  #search { width: 100%; padding: 6px 9px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel2); color: var(--text); outline: none; }
+  #search:focus { border-color: var(--accent); }
+  #count { color: var(--dim); font-size: 11px; padding: 4px 2px 0; }
+  #controls { padding: 8px 12px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 6px 12px; }
+  #controls label { display: inline-flex; align-items: center; gap: 4px; color: var(--dim); }
+  #level-list { flex: 1; overflow-y: auto; margin: 0; padding: 4px 0; list-style: none; }
+  #level-list li { padding: 4px 12px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: Consolas, monospace; font-size: 12px; }
+  #level-list li:hover { background: var(--panel2); }
+  #level-list li.active { background: #24446e; color: #fff; }
+  #level-list li .meta { color: var(--dim); font-size: 10px; }
+  #main { flex: 1; position: relative; height: 100%; }
+  #canvas-wrap { position: absolute; inset: 0; }
+  #canvas-wrap canvas { display: block; }
+  #info { position: absolute; left: 12px; bottom: 12px; max-width: 60%; background: rgba(22,27,38,.92); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; font-size: 12px; pointer-events: none; }
+  #info:empty { display: none; }
+  #info .k { color: var(--dim); display: inline-block; min-width: 76px; }
+  #info .warn { color: var(--warn); }
+  #status { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); background: rgba(22,27,38,.95); border: 1px solid var(--line); border-radius: 8px; padding: 5px 14px; font-size: 12px; }
+  #status:empty { display: none; }
+  #status.error { color: #ff7b72; border-color: #6e2c2c; }
+  #hint { position: absolute; right: 12px; bottom: 12px; color: var(--dim); font-size: 11px; pointer-events: none; }
+  #tooltip { position: absolute; display: none; background: rgba(22,27,38,.95); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; font-size: 12px; pointer-events: none; max-width: 320px; z-index: 10; transition: opacity .12s; opacity: 0; }
+  #tooltip.visible { display: block; opacity: 1; }
+  #tooltip .tt-title { font-weight: 600; color: #e8eef8; margin-bottom: 3px; word-break: break-all; }
+  #tooltip .tt-row { color: var(--dim); line-height: 1.4; }
+  #tooltip .tt-row span { color: var(--text); }
+  #tooltip .tt-badge { display: inline-block; font-size: 10px; padding: 1px 5px; border-radius: 3px; margin-left: 4px; vertical-align: middle; }
+  #tooltip .tt-badge.warn { background: #6e4a1c; color: var(--warn); }
+  #tooltip .tt-badge.marker { background: #1c4a6e; color: #40b0ff; }
+
+  #legend { border-top: 1px solid var(--line); flex-shrink: 0; }
+  #legend summary { padding: 8px 12px; cursor: pointer; color: var(--dim); font-size: 12px; user-select: none; list-style: none; display: flex; align-items: center; justify-content: space-between; }
+  #legend summary::before { content: "▸ "; }
+  #legend[open] summary::before { content: "▾ "; }
+  #legend summary::-webkit-details-marker { display: none; }
+  #legend-body { padding: 2px 12px 10px; max-height: 260px; overflow-y: auto; }
+  .legend-group { margin-bottom: 8px; }
+  .legend-group h3 { margin: 4px 0 4px; font-size: 10px; text-transform: uppercase; letter-spacing: .04em; color: var(--dim); font-weight: 600; }
+  .legend-row { display: flex; align-items: flex-start; gap: 8px; padding: 2px 0; font-size: 12px; }
+  .legend-row .note { display: block; color: var(--dim); font-size: 11px; margin-top: 1px; }
+  .swatch { flex-shrink: 0; width: 14px; height: 14px; margin-top: 1px; border-radius: 50%; }
+  .swatch.sq { border-radius: 3px; }
+  .swatch.ln { border-radius: 2px; width: 14px; height: 4px; margin-top: 6px; }
+  .swatch.terrain { border-radius: 3px; }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://esm.sh/three@0.165.0",
+  "three/addons/": "https://esm.sh/three@0.165.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+  <aside id="sidebar">
+    <header>
+      <h1>AutoCore Level Viewer</h1>
+      <input id="search" type="search" placeholder="Search maps…" autocomplete="off">
+      <div id="count"></div>
+    </header>
+    <div id="controls">
+      <label><input type="checkbox" id="show-terrain" checked> terrain</label>
+      <label><input type="checkbox" id="show-objects" checked> objects</label>
+      <label><input type="checkbox" id="show-markers" checked> markers</label>
+      <label><input type="checkbox" id="show-paths" checked> paths</label>
+      <label><input type="checkbox" id="show-boxes" checked> unresolved</label>
+    </div>
+    <ul id="level-list"></ul>
+    <details id="legend">
+      <summary>Legend</summary>
+      <div id="legend-body">
+        <div class="legend-group">
+          <h3>Markers</h3>
+          <div class="legend-row"><span class="swatch" style="background:#40ff80"></span><div>Spawn point<span class="note">where NPCs/enemies spawn</span></div></div>
+          <div class="legend-row"><span class="swatch" style="background:#40b0ff"></span><div>Enter point<span class="note">map transfer / zone entrance</span></div></div>
+          <div class="legend-row"><span class="swatch" style="background:#ffd040"></span><div>Store<span class="note">vendor / junkyard / garage</span></div></div>
+          <div class="legend-row"><span class="swatch" style="background:#ff7040"></span><div>Outpost<span class="note">capture point — often the "red sphere" you see; a patrol path line passing beneath it can make the pair look like a "T"</span></div></div>
+        </div>
+        <div class="legend-group">
+          <h3>Lines</h3>
+          <div class="legend-row"><span class="swatch ln" style="background:#ff40c0"></span><div>Map path<span class="note">patrol / vehicle route waypoints</span></div></div>
+        </div>
+        <div class="legend-group">
+          <h3>Placeholders</h3>
+          <div class="legend-row"><span class="swatch sq" style="background:#8a5cff;opacity:.7"></span><div>Unresolved model<span class="note">CBID has no matching .geo name — box is NOT the real size/shape</span></div></div>
+          <div class="legend-row"><span class="swatch sq" style="background:#ff5c5c;opacity:.7"></span><div>Model failed to parse<span class="note">a .geo was found but couldn't be read</span></div></div>
+        </div>
+        <div class="legend-group">
+          <h3>Terrain</h3>
+          <div class="legend-row"><span class="swatch sq terrain" style="background:#6b7355"></span><div>Ground surface<span class="note">real heightfield shape; flat placeholder color, not yet textured</span></div></div>
+        </div>
+      </div>
+    </details>
+  </aside>
+  <main id="main">
+    <div id="canvas-wrap"></div>
+    <div id="status"></div>
+    <div id="info"></div>
+    <div id="tooltip"></div>
+    <div id="hint">drag: orbit · wheel: zoom · right-drag: pan</div>
+  </main>
+  <script type="module" src="./level.js"></script>
+</body>
+</html>
