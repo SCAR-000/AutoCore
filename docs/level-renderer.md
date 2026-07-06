@@ -82,7 +82,9 @@ Deep-link a specific map with `#<mapname>` (e.g. `level.html#sec_f_m_map_town_e7
      (precomputed in the dump; HTML is rebuilt on each open/selection so badges and drill-down
      stay in sync). Client-side fallback resolution lives in `trigger-graph.js`. Click hints
      only carry placement metadata + `_triggerIndex`. **Click a reaction node** in the tree to
-     open a drill-down pane with full `Reactions[]` fields. Each node shows an **execution
+     open a drill-down pane with full `Reactions[]` fields. The tree lists affected object names
+     inline in each reaction summary; **focus buttons** for those objects appear only in the
+     drill-down detail pane (not duplicated in the tree). Each node shows an **execution
      realm badge** (Server / Client UI / Server → all players / Server → convoy) inferred by
      `reaction-execution.js` from reaction type and flags — map files have no explicit realm
      field. Focus buttons jump the camera to linked target COIDs via `ObjectIndex`; dialog

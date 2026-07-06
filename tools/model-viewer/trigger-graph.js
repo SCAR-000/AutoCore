@@ -221,7 +221,9 @@ export function buildReactionDetailHTML(reactionCoid, data) {
   html += `<div class="tp-row tp-realm-hint">${escapeHtml(realm.hint)}</div>`;
   html += `<div class="tp-row"><span class="tp-k">COID</span> ${reaction.Coid} · CBID ${reaction.Cbid}</div>`;
   if (reaction.Name) html += `<div class="tp-row"><span class="tp-k">Name</span> ${escapeHtml(reaction.Name)}</div>`;
-  html += `<div class="tp-row"><span class="tp-k">Summary</span> ${escapeHtml(summary)}</div>`;
+  if (!reaction.Objects?.length) {
+    html += `<div class="tp-row"><span class="tp-k">Summary</span> ${escapeHtml(summary)}</div>`;
+  }
 
   for (const d of details) html += `<div class="tp-detail">${escapeHtml(d)}</div>`;
 
@@ -292,9 +294,6 @@ function renderNode(node, data, index, depth, selectedReactionCoid) {
   html += `<span class="${realmBadgeClass(realm)}">${escapeHtml(realm.label)}</span> `;
   html += `<span class="tp-summary">${escapeHtml(node.Summary)}</span>`;
   html += `</button>`;
-  if (node.TargetCoids?.length) {
-    html += `<div class="tp-targets">${node.TargetCoids.map((c) => `<button type="button" class="tp-focus" data-coid="${c}">${escapeHtml(formatCoid(c, index))}</button>`).join(' ')}</div>`;
-  }
   for (const d of node.Details || []) html += `<div class="tp-detail">${escapeHtml(d)}</div>`;
   if (node.Children?.length) {
     html += `<ul class="tp-tree">${node.Children.map((c) => renderNode(c, data, index, depth + 1, selectedReactionCoid)).join('')}</ul>`;

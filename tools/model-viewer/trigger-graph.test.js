@@ -137,6 +137,45 @@ describe('trigger-graph', () => {
     assert.match(html, /tp-node-select selected/);
   });
 
+  it('buildTriggerInspectorHTML shows target names in tree but not focus buttons', () => {
+    const trigger = {
+      Coid: 1,
+      Name: 'Gate',
+      Reactions: [50],
+      Graph: {
+        Nodes: [{
+          Coid: 50,
+          ReactionType: 'Activate',
+          Summary: 'Activate Spawner A (#9)',
+          Details: [],
+          TargetCoids: [9],
+          Children: [],
+          IsCycle: false,
+        }],
+      },
+    };
+    const data = {
+      ObjectIndex: { 9: { Kind: 'spawn', Label: 'Spawner A' } },
+      MapLogic: { Variables: [] },
+      Reactions: [{ Coid: 50, ReactionType: 'Activate', Objects: [9] }],
+    };
+    const html = buildTriggerInspectorHTML(trigger, data);
+    assert.match(html, /Spawner A/);
+    assert.doesNotMatch(html, /tp-focus/);
+  });
+
+  it('buildReactionDetailHTML shows focus buttons for object targets without duplicate Summary', () => {
+    const data = {
+      ObjectIndex: { 9: { Kind: 'spawn', Label: 'Spawner A' } },
+      MapLogic: { Variables: [] },
+      Reactions: [{ Coid: 50, Cbid: 1, ReactionType: 'Activate', Objects: [9] }],
+    };
+    const html = buildReactionDetailHTML(50, data);
+    assert.match(html, /tp-focus/);
+    assert.match(html, /Spawner A/);
+    assert.doesNotMatch(html, /<span class="tp-k">Summary<\/span>/);
+  });
+
   it('buildReactionDetailHTML includes Text choices and trigger links', () => {
     const data = {
       ObjectIndex: { 9: { Kind: 'spawn', Label: 'Spawner' } },
