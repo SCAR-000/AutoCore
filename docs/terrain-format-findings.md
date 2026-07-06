@@ -1,57 +1,85 @@
 # Terrain Format — Findings
 
 Reconstructing Auto Assault map terrain for a level renderer.
-**Status: SOLVED enough to render terrain.** Object placement is fully available, AND the terrain
-heightfield is decoded: it's the **alpha channel of the per-map `.tga`, height ≈ 4.0 × alpha**.
+**Status: SOLVED — height, tile layers, tint and the full texturing pipeline are decoded
+and implemented** (see `docs/level-renderer.md` "Terrain texturing" for the renderer side).
 
-## TERRAIN HEIGHT — SOLVED
+## TGA channel reference (per-map `<map>.tga`, 32bpp BGRA, at grid resolution) — FINAL
 
-The per-map `<map>.tga` (32bpp BGRA, at exactly the `.fam` grid resolution) encodes terrain:
-- **A (alpha) channel = height.** Decoded empirically: parsed the `EntryPoint` (player spawn
-  world position, cleanly readable from the `.fam` header) for all maps; spawn elevation is the
-  **Y** component (X/Z are the large horizontal coords, Y is small). Sampling the `.tga` at each
-  spawn's grid cell `[Z/gridSize, X/gridSize]` (TGA is **top-down**, no row flip) gives:
-  **median(Y / alpha) = 4.04 across 86 maps** (IQR 3.95–4.34; a tight 4-highway-map subset fit
-  `height = 3.88·A + 2.5` with <2-unit error). So **worldHeight ≈ 4.0 × alphaByte**, offset ≈ 0.
-- **B channel** = high-frequency tile/texture-index or blend noise (not height).
-- **G channel** = a smooth drivable-zone / terrain-type mask (looked height-like but Y/G is
-  scattered — NOT height).
-- **R channel** = unused (always 0).
+Decoded from `CVOGTerrain_LoadMapImage` @ `0x4aba80` (autoassault.exe, Ghidra project
+AA-decode) and verified empirically:
 
-Resolution caveat: alpha is 8-bit → ~4-unit vertical steps, max ~1020 units. Good enough for
-recognizable terrain; a finer low-order height byte (sub-4-unit residuals) may exist elsewhere
-(unconfirmed — candidates: G, or the `_den.pgm`). Exact scale/offset can be pinned precisely later
-by regressing many on-terrain object placements (not just spawn points, which sometimes sit on
-structures — one outlier map spawns 1200 units up a tower) once the full `.fam` object parser
-(the level renderer itself) provides multi-point ground truth.
+- **Height is 16-bit: `h16 = (A << 8) | B`**, world Y = `h16 * HeightScale/256`
+  (HeightScale = 4 from the `.fam`, so Y = h16/64, max ~1024 units).
+  - A = high byte (this is why the early "height ≈ 4.0 × alpha" fit worked:
+    median(Y/alpha) = 4.04 across 86 maps).
+  - **B = low byte** (earlier misread as "tile/blend noise" — its high-frequency look is
+    the fractional height). Verification on scrapvalley: using h16 keeps the mean height
+    gradient identical (1.679 → 1.682) while flat zero-gradient runs drop 70% → 15%,
+    i.e. it fills in the 8-bit terracing with genuine sub-4-unit relief.
+- **G low 3 bits = per-cell tile layer index (0–7)** — selects the terrain texture layer
+  (atlas row) for that cell (`CVOGTerrain_GetTileIndex` @ `0x4a8c00`, returns `G & 7`).
+  G's high 5 bits are not used by the texturing path (earlier misread as a smooth "zone
+  mask"). The tile grid is offset **(-1,-1)** from the height-vertex grid
+  (`CVOGTerrainChunk_GetCornerData` @ `0x5bf480`).
+- **R = unused** (0 in all checked maps).
 
-### Terrain reconstruction recipe (for the renderer)
-1. Read `.fam` header → `width`, `height`, `gridSize` (world units per cell).
-2. Load `<map>.tga`, take the alpha channel as an `width × height` height grid.
-3. Build a plane mesh: vertex `(col·gridSize, alpha[row,col]·4.0, row·gridSize)` for each cell
-   (world X = col·grid, Z = row·grid, Y = height). Triangulate adjacent cells.
-4. Texture/tint later using the G (zone) + B (tile) channels and the 8-layer tileset from
-   `CVOGTerrain_ApplyTilesetTextures` if desired; a flat colour is fine to start.
+Companion files per map (same directory, `assets/extracted/textures/`):
+- `<map>_tint.tga` — same dimensions, per-cell RGBA **vertex tint**
+  (`CVOGTerrain_LoadTintMap` @ `0x4ab100`; default mid-gray `0x7f7f7f`; shaders multiply
+  by `2 * tint`, so 0x7f = neutral). Carries much of the authored ground look on town maps.
+- `<map>_den.pgm` — lower-res density/detail map, not height.
+- `_verttint.png` (`CVOGTerrain_ReloadRandomTintFile` @ `0x4a9c70`) — 8px-tall random
+  per-vertex tint palette (subtle; not implemented in the viewer).
 
-## Confirmed `.fam` binary header
+### Reconstruction recipe
+1. `.fam` header → `width`, `height`, `gridSize`.
+2. `<map>.tga` (top-down, **no row flip**): vertex
+   `(col·gridSize, h16[row,col]/64, row·gridSize)`.
+3. Texture per cell from the tileset atlas using `G & 7` corner indices — full
+   algorithm (atlas layout, corner-mask LUTs, blend order) in `docs/level-renderer.md`.
 
-## What's confirmed
+## Terrain texturing pipeline (RE summary)
 
-### `.fam` binary header (per `CVOGTerrain::StreamMapHeader` @ `0x004aa0f0`, VOGTerrain.cpp)
-Fields streamed into the map object, in order:
+- `CVOGTerrain_ApplyTilesetTextures` @ `0x4a86f0` — tileset byte → per-tileset entry in
+  the table at `0xaefb88` (34 entries, stride 0x15 dwords): label + 3 texture names
+  (`tile`, `tile2`, `tile_*_spec`) + 8 layer indices (+ per-layer UV scale via the
+  10-float table at `0xaefb60`, and 8 per-layer average colors). Extracted complete to
+  `tools/model-viewer/tileset-table.json`. Only `tile2_*.dds` (diffuse atlas) and
+  `tile_*_spec.dds` ship.
+- `tile2_*.dds` = 2048² DXT5, **8×8 atlas of 256² cells: row = tile layer, column =
+  transition pattern (0 corner / 1 edge / 2 three-corner / 3 diagonal / 4–7 solid
+  variants); alpha = authored transition mask.**
+- `CVOGTerrain_BuildTileUVTable` @ `0x5bedd0` — startup LUT (0xb45520): for each combo of
+  4 corner tile indices, the 4 texture-stage UVs per corner. Corner-mask → column LUT
+  `0xaf3fc8` = `[4,0,0,1,0,1,3,2,0,3,1,2,1,2,2,4]`, rotation LUT `0xaf4008` =
+  `[0,0,3,3,1,0,1,0,2,0,2,3,1,1,2,0]` (90° cyclic UV rotation). Cell UV inset:
+  `cell*0.125 + 0.0078125 + local*0.109375`.
+- `CVOGTerrainChunk_BuildVertexBuffer` @ `0x5c01e0` — fills chunk VBs: Y from the u16
+  height buffer, 4 UV sets from the combo LUT, vertex color from the tint map; random
+  solid-variant column shift when a cell's 4 corners share one tile.
+- Blend (shipped shader source `assets/extracted/shaders/NDDiffTerrainLayered2.fx`,
+  `NDTerrainLayered` ps.1.1): lowest layer = solid base, higher layers lerped on top by
+  atlas alpha in ascending order; `final = 2 * vertColor * lighting * blended`.
+
+## Confirmed `.fam` binary header (per `CVOGTerrain::StreamMapHeader` @ `0x4aa0f0`)
+
+Fields streamed in order:
 `c_lMapVersion` (0x3e=62 current), `m_lMapIterationVersion`, `m_lWidth`, `m_lHeight`,
 `m_fGridSize` (world units per cell), `m_ucTileSet`, `m_bUseRoad`, `m_arriMusic[3]`,
 `m_bUseClouds`, `m_bUseTimeOfDay`, `m_strSkyboxName`, `m_fCullingScale`, `m_lNumberOfImports`.
+Object field offsets: `+0x10` width, `+0x14` height, `+0x18` gridSize, `+0x1c` tileSet.
 
 Verified against real files:
-- `sec_f_b_map_interior_a1_1_fort-logan-tavern.fam`: ver=60, iter=709, **w=256 h=256**, grid=2.5
-- `sec_f_b_map_hwy_a2_1_scrapvalley.fam`: ver=61, iter=2155, **w=2048 h=2048**, grid=5.0
+- `sec_f_b_map_interior_a1_1_fort-logan-tavern.fam`: ver=60, iter=709, w=256 h=256, grid=2.5
+- `sec_f_b_map_hwy_a2_1_scrapvalley.fam`: ver=61, iter=2155, w=2048 h=2048, grid=5.0
 
-The server's `MapData.cs` reads version + iterVersion then does `Position += 8` — that 8 bytes
-is exactly `m_lWidth` + `m_lHeight` (2× int32), which it discards. Everything after (objects,
+The server's `MapData.cs` reads version + iterVersion then does `Position += 8` — that is
+exactly `m_lWidth` + `m_lHeight` (2× int32), which it discards. Everything after (objects,
 roads, etc.) it parses fully.
 
-### Object placements — FULLY AVAILABLE (this is 90% of "render the level")
+## Object placements — FULLY AVAILABLE
+
 `MapData.Read` parses every VOGO/client-VOGO placement into `ObjectTemplate` subclasses with
 real world transforms:
 - `GraphicsObjectTemplate`: CBID, COID, **Location (Vector4)**, **Rotation (Quaternion)**, Scale,
@@ -62,55 +90,3 @@ real world transforms:
 
 CBID → model: `AssetManager.GetCloneBase(cbid)` gives `SimpleObjectSpecific.PhysicsName` +
 `CloneBaseSpecific.UniqueName/ShortDesc`, resolvable to a `.geo` via the model-viewer index.
-
-**Conclusion: a renderer that places every building/prop/marker/road at its exact
-position+rotation+scale is buildable right now, with no further RE.** Only the ground *surface*
-is missing.
-
-## TGA channel reference (per-map `<map>.tga`, 32bpp BGRA, at grid resolution)
-- **A (alpha)** = terrain height (× ~4.0 world units). **Confirmed** — a hillshade of the alpha
-  grid shows coherent ridges/valleys/drainage (see `scratchpad/terrain_alpha_hillshade.png`);
-  scrapvalley height range 4–648 units, mean ~148.
-- **B** = tile/texture index or blend noise (high-frequency).
-- **G** = drivable-zone / terrain-type mask (smooth-quantized zones).
-- **R** = unused.
-Also `<map>_den.pgm` (lower-res PGM P5 8-bit) = a density/detail map, not height.
-
-## Deeper RE pass (CVOGTerrain cluster @ 0x004a8000–0x004aa100, VOGTerrain.cpp)
-
-Decompiled the terrain method cluster. What each does (renamed/commented in Ghidra):
-- `0x004aa0f0` `CVOGTerrain::StreamMapHeader` — header only (fields listed above). Object field
-  offsets: `+0x10` width, `+0x14` height, `+0x18` gridSize, `+0x1c` tileSet.
-- `0x004a86f0` `CVOGTerrain::ApplyTilesetTextures` — maps `m_ucTileSet` → **8 texture layer
-  indices** (object `+0x344..+0x360`) from a per-tileset table at `DAT_00aefb60`/`DAT_00aefb88`
-  (stride 0x15). Confirms terrain is textured with 8 blended layers selected by tileset.
-- `0x004a9c70` `CVOGTerrain::ReloadRandomTintFile` — loads a `_verttint.png` (must be **8px tall**),
-  builds an 8-row random vertex-**tint** palette (writes the alpha byte `>>0x18` of each texel).
-  This is per-vertex colour tint, **NOT height**.
-
-So within this cluster there is **no height-array read** — the terrain height grid is loaded
-elsewhere (map-load path) and only textured/tinted here. Height is therefore either (a) the smooth
-channel of the per-map `.tga`, or (b) a coarser grid streamed in the `.fam` body the server skips.
-
-## Strongest lead + the decisive experiment
-
-The per-map `.tga` remains the only grid-resolution asset, and its **G channel is smooth
-(adjacent-cell diff ~0.4)** — the statistical signature of a heightfield, not an index map. The
-"stepped" look is consistent with genuinely terraced low-relief highway terrain.
-
-**Decisive confirmation (do this next, uses only data in hand — no more guessing):**
-Parse object placement world positions from a `.fam` (via the server's `MapData` parser or a port),
-and for each object sample the `.tga` G value at its world-XY→grid-cell. If object elevation
-correlates linearly with G, then **G = height** and the regression slope gives the **vertical
-scale** (world units per G step); intercept gives the base. Use an outdoor map with real relief
-(`scrapvalley`), not a flat interior. If G doesn't correlate, fall back to a **live read**: attach
-to the running client and dump the terrain vertex buffer (the render path builds it via
-`CVOGTerrainChunker::SubmitForRendering` @ `0x009d9e20`) to recover heights directly.
-
-## Next RE steps (when tackling terrain height)
-1. Find the terrain-grid stream: xref the `CVOGTerrain` vtable and functions that build
-   `hkSampledHeightFieldBase`/`hkHeightFieldShape` (strings @ `0x00a0d5f0`/`0x00a0dc00`); the
-   height array read happens right after `StreamMapHeader` in the map-load path.
-2. Determine whether the grid is in the `.fam` body (a chunk `MapData.cs` currently skips) or a
-   derived/decompressed buffer, and its element size (u8/u16) + vertical scale factor.
-3. Cross-check decoded heights against `m_fGridSize` and known in-game landmark elevations.

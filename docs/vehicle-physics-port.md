@@ -468,6 +468,7 @@ clonebase.wad
    │  (AssetManager.LoadCloneBasesOnly — no MySQL, no GLMs)
    ▼
 tools/AutoCore.PhysicsDump  →  tools/model-viewer/vehicle-physics.json
+tools/AutoCore.EquipmentDump → tools/model-viewer/equipment-catalog.json
    │
    ▼
 tools/model-viewer/vehicle/*.js  (Engine, Transmission, Suspension, Brakes,
@@ -517,6 +518,30 @@ per vehicle CBID with `Cbid`, `UniqueName`, `ShortDesc`, `PhysicsName`, `Mass`,
 
 ---
 
+## `tools/AutoCore.EquipmentDump/` — equipment catalog dump
+
+```
+equipmentdump.exe <gamePath> <outputJsonPath>
+  e.g. equipmentdump.exe "C:\Program Files (x86)\NetDevil\Auto Assault" tools/model-viewer/equipment-catalog.json
+```
+
+C# console tool (same `AssetManager.LoadCloneBasesOnly()` pattern as PhysicsDump).
+Enumerates clonebases by type and writes `tools/model-viewer/equipment-catalog.json`:
+
+| Collection | Source type | Key fields |
+|---|---|---|
+| `Vehicles` | `CloneBaseObjectType.Vehicle` | `HardPoints[3]`, `HardPointFacing`, `VehicleFlags`, weight limits, `TurretSize`, `DefaultWheelset`, `WheelAxle` |
+| `Weapons` | `Weapon` | `FirePoint`, `Flags`, `CanBeFront/Back/Turret`, `TurretSize`, `Mass`, `PhysicsName` |
+| `WheelSets` | `WheelSet` | `Wheel0Name`, `Wheel1Name`, `WheelSetType`, `Friction[6]` |
+| `Ornaments` | `Item` subtype 10 | `PhysicsName`, `Mass`, `Scale` |
+| `Armors` | `Armor` | `PhysicsName`, `Mass`, `Scale` |
+
+Weapon `Flags` bits (from `tWeapon` schema): `0x1` front, `0x2`/`0x4` rear/drop,
+`0x10` turret. The play.html loadout panel reads this file via `vehicle-equipment-lib.js`
+(compatibility) and `vehicle-equipment-mesh.js` (hardpoint mounting).
+
+---
+
 ## `VehicleSpecific` field inventory
 
 Source: `src/AutoCore.Game/CloneBases/Specifics/VehicleSpecific.cs`. Grouped by the
@@ -538,14 +563,10 @@ component each field feeds, with **confirmed** semantics from simulating the ful
   Z=forward): `RVInertiaPitch`→about X, `RVInertiaYaw`→about Y, `RVInertiaRoll`→about Z.
 
 **Suspension** (per-wheel raycast, `suspension.js`)
-- `WheelHardPoints[6]` (Vector3) — **X/Z map directly to the body `.geo` frame, but
-  Y does NOT** ✅. The hardpoint Y is the suspension top-mount in a frame whose
-  vertical origin differs per model; placing a wheel mesh at the raw hardpoint Y
-  puts it above the roof on many vehicles. Fix (`play.html buildVehicleMesh`):
-  derive the wheel's resting position as `hardpoint.Y − (SuspensionLength −
-  restCompression)` where `restCompression ≈ min(SuspensionLength, 9.81/(4·strength))`,
-  then lift the body model so its lowest vertex meets that resting wheel bottom.
-  Both are computed from geometry, decoupled from each model's absolute origin.
+- `WheelHardPoints[6]` (Vector3) — suspension top-mount positions in the **visual
+  vehicle frame** (same coordinate system as `obj_<UniqueName>` geos). `play.html`
+  places animated `Wheel0Name` meshes at these raw `(X, Y, Z)` values after loading
+  the visual body via `geo-mesh.js` (see "Vehicle ↔ model linkage" below).
 - `SuspensionLength` (FrontRear) — max travel in meters
 - **`SuspensionStrength` (FrontRear, ~28–30) ✅ CONFIRMED: a per-unit-MASS spring
   constant.** Force = `strength · compression_meters · mass − damping · suspVel ·
@@ -775,20 +796,102 @@ This is Tier 3 scope.
 
 ## Vehicle ↔ model linkage (`play.html buildVehicleMesh`)
 
-- Body model: resolved from `PhysicsName`, falling back to `UniqueName`, against
-  the model-viewer's geo index (same convention as the level renderer).
-- Wheel model: `Wheel0Name` from the linked `CloneBaseWheelSet` (via
-  `DefaultWheelset`), instanced at each `WheelHardPoints[i]`, mirrored (`scale.x =
-  -1`) on the left side.
-- Wheel/body vertical alignment: see the `WheelHardPoints` Y-origin fix above —
-  neither the body nor the wheel's authored origin is trustworthy in isolation;
-  both are aligned via the suspension's resting geometry instead.
-- Wheel animation each frame: `steerPivot` (rotates Y for steering, front wheels
-  only) → `dropGroup` (translates Y by the *live* suspension compression, so the
-  wheel visibly drops toward full extension when airborne) → `wheelMesh` (rotates
-  X for rolling, driven by `wheel.wheelAngularVel`).
-- Missing body/wheel models fall back to a plain box (body) or are simply omitted
-  (wheels) — never a hard failure.
+Shared mesh assembly lives in `tools/model-viewer/geo-mesh.js` (pure helpers in
+`geo-mesh-lib.js`; tests in `geo-mesh.test.js`). Same LOD0 / no-shadow section
+filter and `buildMaterial` path as `index.html` / `viewer.js`.
+
+- **Body model**: resolved via `resolveModelStem()` — tries `obj_<UniqueName>`,
+  then `UniqueName`, then `obj_<PhysicsName>`, then `PhysicsName` against the
+  model-viewer geo index. Prefers the full visual `obj_veh_*` geo (wheels baked
+  in at correct positions) over the stripped physics-only `veh_*` body proxy.
+- **Body mesh**: `filterBodySections()` (`pickLod0Sections` + baked-wheel cull).
+  When `Wheel0Name` is present, separate low wheel sections in `obj_veh_*` geos are
+  omitted (vertex Y at the body XOBB floor and confined below center + 0.75 m).
+  If culling would remove every section, all LOD0 sections are kept so the body
+  never disappears on monolithic `veh_*` fallbacks.
+- **Wheel model**: `Wheel0Name` from the linked `CloneBaseWheelSet`, instanced at
+  each raw `WheelHardPoints[i]`. Per-wheel scale comes from `WheelRadius[i]` and
+  `WheelWidth[i]` (world meters) divided by the wheel geo's authored
+  `bodyBBox.radius` and X extent (`geoAuthoredWheelMetrics` /
+  `wheelMeshScaleFromPhysics` in `geo-mesh-lib.js`). Radius scales Y and Z
+  (roll axis is X); width scales X, negated on the left side for mirroring.
+  Example: Callisto X rear wheels use radius 0.83 m vs front 0.7 m on
+  `whl_h_4_01_rivits` (authored radius ~0.528 m).
+- **Wheel animation** each frame: `steerPivot` (rotates Y for steering, front wheels
+  only) → `dropGroup` (translates Y by live suspension compression) → `wheelMesh`
+  (rotates X for rolling, driven by `wheel.wheelAngularVel`).
+- Missing body/wheel models fall back to a plain box (body) or are omitted (wheels).
+
+---
+
+## Vehicle equipment linkage (Ghidra RE + `play.html` loadout panel)
+
+Data: `tools/model-viewer/equipment-catalog.json` (from `tools/AutoCore.EquipmentDump`).
+Compatibility: `vehicle-equipment-lib.js`; mesh mounting: `vehicle-equipment-mesh.js`.
+
+### Client equip path (`FUN_00502e90`)
+
+Inventory drag/drop calls a switch on equipped item clonebase type:
+
+| Type enum | Item | Stored on `CVOGVehicle` |
+|---|---|---|
+| 12 (`Weapon`) | Weapon | `weapons[3]` @ instance `+0x260` (slots 0=front, 1=turret, 2=rear) |
+| 16 (`WheelSet`) | Wheelset | `wheelset` @ `+0x600` |
+| 6 (`Item`, subtype 10) | Ornament kit | `ornament` @ `+0x26c` |
+| 28 (`Armor`) | Armor | `armor` @ `+0x254` |
+
+Weapon slot routing reads **chassis** `VehicleSpecific.VehicleFlags` (clonebase offset used at
+equip time matches the dumped short field):
+
+| Bit | Slot |
+|---|---|
+| `0x2` | Front weapon |
+| `0x4` | Rear weapon (`MaxWtWeaponDrop` weight limit) |
+| `0x10` | Turret |
+
+Observed values: `6` = front+rear, `22` = front+rear+turret (`0x2 \| 0x4 \| 0x10`).
+
+### Per-frame graphics (`CVOGVehicle::UpdateGraphics` @ `0x500560`)
+
+1. Wheels: child graphics `[0 .. wheelCount-1]` at `WheelHardPoints[i]` (same as physics port).
+2. Weapons: child index `wheelCount + slotIndex`; transform from `FUN_005fb6a0`:
+   chassis matrix × `HardPoints[slotIndex]` basis × weapon `FirePoint` local offset.
+3. If `WheelAxle > 2` and slot index is even, apply 180° yaw (mirror).
+
+`HardPoints[3]` and `HardPointFacing` live in `VehicleSpecific` ([`VehicleSpecific.cs`](src/AutoCore.Game/CloneBases/Specifics/VehicleSpecific.cs))
+but were omitted from the physics-only dump; the equipment catalog includes them.
+
+### Compatibility checks (replicated in `vehicle-equipment-lib.js`)
+
+| Check | Source |
+|---|---|
+| Slot exists | `VehicleFlags` bits above |
+| Weapon allowed on slot | `WeaponSpecific.Flags` → `CanBeFront/Back/Turret` |
+| Weight | `Mass <= MaxWtWeaponFront/Turret/Drop` or `MaxWtArmor` |
+| Turret size | `weapon.TurretSize <= vehicle.TurretSize` |
+| Class | `RequiredClass` is a **character** prerequisite; skipped in `play.html` (no avatar) |
+
+Weapon flag bits (from `tWeapon` schema): bit0=front (`0x1`), bit1/2=rear/drop
+(`0x2`/`0x4`), bit4=turret (`0x10`).
+
+### `play.html` loadout UI
+
+Toggleable **Loadout** sidebar tab (HUD button or **L** key; **Escape** closes):
+front / turret / rear weapons, wheelset, ornament, armor.
+Lists filtered by `listCompatibleParts()`; mesh rebuild via `buildVehicleMesh(vehicle, loadout)`.
+Loadout choices persist per vehicle CBID in `sessionStorage`.
+
+### `play.html` equipment mesh transforms (`vehicle-equipment-mesh.js`)
+
+Simplified port of `FUN_005fb6a0` (full 4×4 hardpoint basis not yet dumped):
+
+- **Weapons:** translate to `HardPoints[slot]`; yaw = 180° on rear slot; extra 180° on
+  even slots when `WheelAxle > 2`. Local offset seats geo min-Z/min-Y on the hardpoint
+  (`weaponMeshLocalOffset`). `HardPointFacing` is **not** a degrees field — do not
+  apply it as yaw. `FirePoint` is a muzzle offset for projectiles, not mesh placement.
+- **Ornaments / armor:** additive mount on `bodyContainer`; `alignKitToBodyOffset`
+  shifts kit min-Y (and X/Z) to match the loaded body geo floor so kits authored in
+  `obj_veh` space align with `veh_*` / `obj_veh_*` bodies.
 
 ---
 

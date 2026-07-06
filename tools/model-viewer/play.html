@@ -9,7 +9,7 @@
   VehicleAction::applyAction @ 0x598650 (autoassault.exe).
 
   Terrain: heightfield from the level's .tga alpha channel × 4.0 (same as level.html).
-  Vehicle models: .geo files parsed in-browser (geo-parser.js + materials.js).
+  Vehicle models: .geo files parsed in-browser (geo-parser.js + geo-mesh.js + materials.js).
 -->
 <html lang="en">
 <head>
@@ -63,6 +63,17 @@
   #cache-info summary { cursor: pointer; color: var(--warn); font-weight: 600; }
   #cache-info p { margin: 6px 0; line-height: 1.5; }
   #cache-info code { color: var(--accent); }
+  .loadout-scroll { flex: 1; overflow-y: auto; padding: 8px 12px 12px; }
+  .loadout-slot { margin-bottom: 14px; }
+  .loadout-slot h3 { margin: 0 0 6px; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--dim); }
+  .loadout-slot.disabled h3 { opacity: 0.45; }
+  .loadout-slot select { width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel2); color: var(--text); font-size: 12px; }
+  .loadout-slot.disabled select { opacity: 0.45; pointer-events: none; }
+  .loadout-hint { color: var(--dim); font-size: 11px; margin: 0 0 10px; line-height: 1.4; }
+  #loadout-toggle-hud { position: absolute; top: 12px; right: 180px; pointer-events: auto; z-index: 2; }
+  #loadout-toggle-hud button { background: rgba(22,27,38,.92); border: 1px solid var(--line); color: var(--text); border-radius: 6px; padding: 6px 12px; font-size: 12px; cursor: pointer; }
+  #loadout-toggle-hud button:hover { border-color: var(--accent); color: var(--accent); }
+  #loadout-toggle-hud button.active { border-color: var(--accent); background: #24446e; }
 </style>
 <script type="importmap">
 { "imports": {
@@ -80,6 +91,7 @@
     <div class="tabs">
       <div class="tab active" data-tab="vehicles">Vehicles</div>
       <div class="tab" data-tab="levels">Levels</div>
+      <div class="tab" data-tab="loadout">Loadout</div>
     </div>
     <div class="tab-panel active" data-panel="vehicles">
       <div style="padding: 8px 12px;">
@@ -95,6 +107,12 @@
       </div>
       <ul class="picker-list" id="level-list"></ul>
     </div>
+    <div class="tab-panel" data-panel="loadout">
+      <div class="loadout-scroll">
+        <p class="loadout-hint">Swap compatible parts for the selected vehicle. Press <b>L</b> to toggle this tab.</p>
+        <div id="loadout-slots"></div>
+      </div>
+    </div>
   </aside>
   <div id="main">
     <div id="canvas-wrap"></div>
@@ -106,12 +124,14 @@
         <div id="rpm-bar-bg"><div id="rpm-bar"></div></div>
       </div>
       <div id="debug-line"></div>
+      <div id="loadout-toggle-hud"><button type="button" id="loadout-toggle-btn" title="Loadout (L)">Loadout</button></div>
       <div id="controls">
         W/S — throttle / brake<br>
         A/D — steer<br>
         Q/E — sharp turn<br>
         SPACE — handbrake<br>
         R — reset<br>
+        L — loadout panel<br>
         Mouse — look
       </div>
       <div id="info-panel"></div>
@@ -130,9 +150,26 @@
 <script type="module">
 import * as THREE from 'three';
 import { parseGeo } from './geo-parser.js';
-import { TextureBank, buildMaterial } from './materials.js';
+import { TextureBank } from './materials.js';
+import {
+  buildGeoGroup,
+  filterBodySections,
+  geoAuthoredWheelMetrics,
+  pickLod0Sections,
+  resolveModelStem,
+  wheelMeshScaleFromPhysics,
+} from './geo-mesh.js';
 import { VehicleAction } from './vehicle/vehicleAction.js';
 import { Vec3, Quat } from './vehicle/hkMath.js';
+import {
+  defaultLoadoutForVehicle,
+  emptyLoadout,
+  getVehicleEquipment,
+  listCompatibleParts,
+  parseWeaponSlotFlags,
+  resolveWheelNames,
+} from './vehicle-equipment-lib.js';
+import { attachLoadoutEquipment } from './vehicle-equipment-mesh.js';
 
 const ROOT = '../../';
 
@@ -191,19 +228,20 @@ let currentLevel = null;
 let currentVehicle = null;
 let controller = null;
 let vehicleGroup = null;
+let equipmentCatalog = null;
+let loadout = emptyLoadout();
 let terrainHeightFn = null;
 let terrainData = null;
 let geoCache = new Map();
 
 // ── Tab switching ──
-document.querySelectorAll('.tab').forEach(t => {
-  t.addEventListener('click', () => {
-    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
-    document.querySelectorAll('.tab-panel').forEach(x => x.classList.remove('active'));
-    t.classList.add('active');
-    document.querySelector(`[data-panel="${t.dataset.tab}"]`).classList.add('active');
-  });
+document.querySelectorAll('.tab').forEach((t) => {
+  t.addEventListener('click', () => switchToTab(t.dataset.tab));
 });
+
+function loadoutStorageKey(cbid) {
+  return `autocore-loadout-${cbid}`;
+}
 
 // ── Load asset index (for model/texture resolution) ──
 async function loadAssetIndex() {
@@ -324,26 +362,13 @@ async function loadLevel(name) {
     if (tga && tga.w === t.Width && tga.h === t.Height) {
       terrainData = { tga, width: t.Width, height: t.Height, grid, heightScale: HEIGHT_SCALE };
 
-      // Decimation shared by BOTH the visual mesh and the collision height function.
-      // The rendered mesh only samples every `step`-th heightfield cell, so the
-      // collision surface must be evaluated on the SAME decimated grid — otherwise
-      // the physics collides against a finer, invisible surface (measured up to ~165
-      // world units off the drawn terrain on scrapvalley) and the vehicle appears to
-      // drive through the ground.
       const step = Math.max(1, Math.ceil(Math.max(t.Width, t.Height) / 400));
       const nx = Math.floor(t.Width / step);
       const nz = Math.floor(t.Height / step);
       const W = t.Width, H = t.Height;
 
-      // Height of a decimated vertex — identical sampling to the mesh's positions[i+1].
       const vh = (c, r) => tga.alpha[Math.min(r * step, H - 1) * W + Math.min(c * step, W - 1)] * HEIGHT_SCALE;
 
-      // Collision height = the EXACT plane of the rendered triangle covering (x, z).
-      // Barycentric interpolation over the same triangle split the index buffer uses
-      // (a, d2, b, b, d2, e2 → diagonal top-right→bottom-left, split line tx+tz=1),
-      // so collision height == drawn height everywhere, with no seams between cells.
-      // Out-of-range queries clamp to the nearest edge cell (not 0, which would pitch
-      // a vehicle off the map edge).
       const cw = step * grid;
       terrainHeightFn = (x, z) => {
         const gx = x / cw, gz = z / cw;
@@ -355,7 +380,6 @@ async function loadLevel(name) {
         return h11 + (1 - tx) * (h01 - h11) + (1 - tz) * (h10 - h11);
       };
 
-      // Build terrain mesh (uses the shared step/nx/nz above).
       const positions = new Float32Array(nx * nz * 3);
       let minY = Infinity, maxY = -Infinity;
       for (let r = 0; r < nz; r++) {
@@ -386,7 +410,6 @@ async function loadLevel(name) {
       mesh.receiveShadow = true;
       worldGroup.add(mesh);
     } else {
-      // Flat plane
       terrainHeightFn = () => 0;
       const geo = new THREE.PlaneGeometry(t.Width * grid, t.Height * grid);
       geo.rotateX(-Math.PI / 2);
@@ -394,7 +417,6 @@ async function loadLevel(name) {
       worldGroup.add(new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: 0x3a4150, roughness: 1 })));
     }
 
-    // Set sun shadow camera to cover terrain area
     const terrainSize = t.Width * grid;
     sun.position.set(t.Width * grid * 0.5 + 50, 200, t.Height * grid * 0.5 + 50);
     sun.target.position.set(t.Width * grid / 2, 0, t.Height * grid / 2);
@@ -403,7 +425,6 @@ async function loadLevel(name) {
     sun.shadow.camera.updateProjectionMatrix();
     scene.add(sun.target);
 
-    // If a vehicle is already selected, reposition it at the level entry point
     if (controller && currentVehicle) {
       const entry = data.Terrain.Entry;
       const spawnY = terrainHeightFn(entry[0], entry[2]) + 1.0;
@@ -440,98 +461,209 @@ async function loadGeoModel(stem) {
   }
 }
 
-async function buildVehicleMesh(vehicle) {
+
+function vehicleEntryForPhysics(vehicle, currentLoadout) {
+  const wheels = resolveWheelNames(vehicle, equipmentCatalog, currentLoadout);
+  return {
+    ...vehicle,
+    Wheel0Name: wheels.wheel0,
+    Wheel1Name: wheels.wheel1,
+    WheelFriction: wheels.friction ?? vehicle.WheelFriction,
+    WheelSetType: wheels.wheelSetType ?? vehicle.WheelSetType,
+  };
+}
+
+function switchToTab(tabName) {
+  document.querySelectorAll('.tab').forEach((x) => {
+    x.classList.toggle('active', x.dataset.tab === tabName);
+  });
+  document.querySelectorAll('.tab-panel').forEach((x) => {
+    x.classList.toggle('active', x.dataset.panel === tabName);
+  });
+  sessionStorage.setItem('autocore-play-tab', tabName);
+  $('loadout-toggle-btn')?.classList.toggle('active', tabName === 'loadout');
+}
+
+function toggleLoadoutTab() {
+  const loadoutTab = document.querySelector('.tab[data-tab="loadout"]');
+  if (loadoutTab?.classList.contains('active')) {
+    switchToTab('vehicles');
+  } else {
+    switchToTab('loadout');
+  }
+}
+
+async function loadEquipmentCatalog() {
+  try {
+    equipmentCatalog = await fetch(ROOT + 'tools/model-viewer/equipment-catalog.json').then((r) => r.json());
+  } catch (e) {
+    console.warn('equipment-catalog.json not loaded', e);
+    equipmentCatalog = { Vehicles: [], Weapons: [], WheelSets: [], Ornaments: [], Armors: [] };
+  }
+}
+
+function renderLoadoutPanel() {
+  const root = $('loadout-slots');
+  if (!root) return;
+  root.textContent = '';
+  if (!currentVehicle || !equipmentCatalog) {
+    root.textContent = 'Select a vehicle first.';
+    return;
+  }
+
+  const vehicleEq = getVehicleEquipment(equipmentCatalog, currentVehicle.Cbid);
+  const slotFlags = parseWeaponSlotFlags(vehicleEq?.VehicleFlags ?? currentVehicle.VehicleSpecific?.VehicleFlags ?? 0);
+
+  const slots = [
+    { key: 'front', label: 'Front weapon', kind: 'front', enabled: slotFlags.front },
+    { key: 'turret', label: 'Turret', kind: 'turret', enabled: slotFlags.turret },
+    { key: 'rear', label: 'Rear weapon', kind: 'rear', enabled: slotFlags.rear },
+    { key: 'wheelset', label: 'Wheelset', kind: 'wheelset', enabled: true },
+    { key: 'ornament', label: 'Ornament', kind: 'ornament', enabled: true },
+    { key: 'armor', label: 'Armor', kind: 'armor', enabled: true },
+  ];
+
+  for (const slot of slots) {
+    const wrap = document.createElement('div');
+    wrap.className = 'loadout-slot' + (slot.enabled ? '' : ' disabled');
+
+    const h = document.createElement('h3');
+    h.textContent = slot.label;
+    wrap.appendChild(h);
+
+    const sel = document.createElement('select');
+    sel.disabled = !slot.enabled;
+
+    const none = document.createElement('option');
+    none.value = '';
+    none.textContent = '— None —';
+    sel.appendChild(none);
+
+    const parts = listCompatibleParts(equipmentCatalog, currentVehicle.Cbid, slot.kind)
+      .sort((a, b) => Number(b.compatible) - Number(a.compatible) || (a.ShortDesc || a.UniqueName).localeCompare(b.ShortDesc || b.UniqueName));
+
+    for (const part of parts) {
+      const opt = document.createElement('option');
+      opt.value = String(part.Cbid);
+      const label = part.ShortDesc || part.UniqueName || `CBID ${part.Cbid}`;
+      opt.textContent = part.compatible ? label : `${label} (${part.reason || 'incompatible'})`;
+      opt.disabled = !part.compatible;
+      if (loadout[slot.key] === part.Cbid) opt.selected = true;
+      sel.appendChild(opt);
+    }
+
+    if (loadout[slot.key] == null) none.selected = true;
+
+    sel.addEventListener('change', () => {
+      const v = sel.value ? Number(sel.value) : null;
+      loadout[slot.key] = v;
+      applyLoadoutChange();
+    });
+
+    wrap.appendChild(sel);
+    root.appendChild(wrap);
+  }
+}
+
+async function applyLoadoutChange() {
+  if (!currentVehicle) return;
+  setStatus('Updating loadout…');
+
+  let pos = null;
+  let rot = null;
+  if (controller) {
+    pos = controller.chassis.position.clone();
+    rot = controller.chassis.orientation.clone();
+  }
+
+  const physicsEntry = vehicleEntryForPhysics(currentVehicle, loadout);
+  controller = new VehicleAction(physicsEntry);
+  if (terrainHeightFn) controller.setTerrain(terrainHeightFn);
+  if (pos && rot) controller.reset(pos, rot);
+
+  if (vehicleGroup) worldGroup.remove(vehicleGroup);
+  vehicleGroup = await buildVehicleMesh(currentVehicle, loadout);
+  worldGroup.add(vehicleGroup);
+
+  if (currentVehicle) {
+    sessionStorage.setItem(loadoutStorageKey(currentVehicle.Cbid), JSON.stringify(loadout));
+  }
+  renderLoadoutPanel();
+  setStatus('');
+}
+
+async function buildVehicleMesh(vehicle, currentLoadout = loadout) {
   const group = new THREE.Group();
   const vs = vehicle.VehicleSpecific;
+  const wheelsResolved = resolveWheelNames(vehicle, equipmentCatalog, currentLoadout);
+  const vehicleEq = getVehicleEquipment(equipmentCatalog, vehicle.Cbid);
 
-  // Resolve body model — try PhysicsName, then UniqueName
-  const bodyStem = vehicle.PhysicsName || vehicle.UniqueName;
-  const bodyGeo = await loadGeoModel(bodyStem);
+  const bodyStem = resolveModelStem(modelByStem, [vehicle.UniqueName, vehicle.PhysicsName]);
+  const bodyGeo = bodyStem ? await loadGeoModel(bodyStem) : null;
 
-  // The body model and the extracted WheelHardPoints do not share a consistent
-  // vertical origin across vehicles, so we can't place either directly from the raw
-  // hardpoint Y (that is what makes wheels appear above the car). Instead we align
-  // everything to a single ground line derived from the suspension geometry:
-  //
-  //   - A wheel hangs BELOW its hardpoint by (suspensionLength − compression); at
-  //     rest the compression settles at ~gravity/(4·strength).
-  //   - The body is then lifted so its underside meets the resting wheel bottom.
-  //
-  // This keeps the wheels tucked under the car and the body resting on the terrain,
-  // independent of each model's authored origin, and stays consistent with the
-  // raycast suspension the physics actually simulates.
   const bodyContainer = new THREE.Group();
-  // Body underside in the model's own frame (fallback box is 1 unit tall, centered).
-  let bodyBottom = -0.5;
+  bodyContainer.name = 'bodyContainer';
   if (bodyGeo) {
-    bodyBottom = Infinity;
-    for (const section of bodyGeo.sections) {
-      const pos = section.positions;
-      for (let i = 1; i < pos.length; i += 3) if (pos[i] < bodyBottom) bodyBottom = pos[i];
-    }
-    for (const section of bodyGeo.sections) {
-      const geometry = new THREE.BufferGeometry();
-      geometry.setAttribute('position', new THREE.BufferAttribute(section.positions, 3));
-      if (section.normals) geometry.setAttribute('normal', new THREE.BufferAttribute(section.normals, 3));
-      if (section.uvs) geometry.setAttribute('uv', new THREE.BufferAttribute(section.uvs, 2));
-      geometry.setIndex(new THREE.BufferAttribute(section.indices, 1));
-      if (!section.normals) geometry.computeVertexNormals();
-      const { material: mat } = buildMaterial(section, textureBank, { texturesEnabled: true });
-      const mesh = new THREE.Mesh(geometry, mat);
-      mesh.castShadow = true;
-      mesh.receiveShadow = true;
-      bodyContainer.add(mesh);
-    }
+    const sections = filterBodySections(bodyGeo.sections, bodyGeo.bodyBBox, !!wheelsResolved.wheel0);
+    const { group: bodyGroup } = buildGeoGroup(
+      { sections },
+      textureBank,
+      { texturesEnabled: true, castShadow: true, receiveShadow: true },
+    );
+    bodyContainer.add(bodyGroup);
   } else {
     const box = new THREE.Mesh(
       new THREE.BoxGeometry(2, 1, 4),
-      new THREE.MeshStandardMaterial({ color: 0x556677, roughness: 0.5 })
+      new THREE.MeshStandardMaterial({ color: 0x556677, roughness: 0.5 }),
     );
     box.castShadow = true;
     bodyContainer.add(box);
   }
 
-  // Resting wheel geometry (front wheel as the reference for the body height).
-  const hp0 = (vs.WheelHardPoints && vs.WheelHardPoints[0]) || { X: 0, Y: 0, Z: 0 };
-  const suspLenF = vs.SuspensionLength.Front;
-  const strengthF = vs.SuspensionStrength.Front || 1;
-  const radiusF = (vs.WheelRadius && vs.WheelRadius[0]) || 0.4;
-  const restCompF = Math.min(suspLenF, 9.81 / (4 * strengthF));
-  const wheelRestCenterY = hp0.Y - (suspLenF - restCompF);      // wheel centre at rest
-  // Lift the body so its underside meets the resting wheel bottom.
-  bodyContainer.position.y = (wheelRestCenterY - radiusF) - bodyBottom;
+  if (vehicleEq && equipmentCatalog) {
+    await attachLoadoutEquipment(
+      bodyContainer,
+      vehicleEq,
+      currentLoadout,
+      equipmentCatalog,
+      modelByStem,
+      loadGeoModel,
+      textureBank,
+      bodyGeo?.bodyBBox ?? null,
+    );
+  }
+
   group.add(bodyContainer);
 
-  // Load wheel models
-  const wheelStem = vehicle.Wheel0Name;
+  const wheelStem = wheelsResolved.wheel0;
   if (wheelStem) {
     const wheelGeo = await loadGeoModel(wheelStem);
     if (wheelGeo) {
+      const wheelSections = pickLod0Sections(wheelGeo.sections);
+      const authoredWheel = geoAuthoredWheelMetrics(wheelGeo);
       const wheelCount = vs.WheelExistance || 4;
       for (let i = 0; i < wheelCount; i++) {
         const hp = vs.WheelHardPoints[i];
         if (!hp) continue;
-        // steerPivot (at the hardpoint, rotates Y for steering)
-        //   └ dropGroup (translates Y down the strut by the live suspension travel)
-        //       └ wheelMesh (rotates X for rolling)
         const steerPivot = new THREE.Group();
         steerPivot.position.set(hp.X, hp.Y, hp.Z);
         const dropGroup = new THREE.Group();
         const wheelMesh = new THREE.Group();
-        for (const section of wheelGeo.sections) {
-          const geometry = new THREE.BufferGeometry();
-          geometry.setAttribute('position', new THREE.BufferAttribute(section.positions, 3));
-          if (section.normals) geometry.setAttribute('normal', new THREE.BufferAttribute(section.normals, 3));
-          if (section.uvs) geometry.setAttribute('uv', new THREE.BufferAttribute(section.uvs, 2));
-          geometry.setIndex(new THREE.BufferAttribute(section.indices, 1));
-          if (!section.normals) geometry.computeVertexNormals();
-          const { material: mat } = buildMaterial(section, textureBank, { texturesEnabled: true });
-          const mesh = new THREE.Mesh(geometry, mat);
-          mesh.castShadow = true;
-          wheelMesh.add(mesh);
-        }
-        // Mirror left-side wheels
-        if (hp.X < 0) wheelMesh.scale.x = -1;
+        const { group: wheelParts } = buildGeoGroup(
+          { sections: wheelSections },
+          textureBank,
+          { texturesEnabled: true, castShadow: true },
+        );
+        wheelMesh.add(wheelParts);
+        const targetRadius = vs.WheelRadius?.[i] ?? authoredWheel.radius;
+        const targetWidth = vs.WheelWidth?.[i] ?? authoredWheel.width;
+        const scale = wheelMeshScaleFromPhysics(
+          authoredWheel,
+          targetRadius,
+          targetWidth,
+          hp.X < 0,
+        );
+        wheelMesh.scale.set(scale.x, scale.y, scale.z);
         dropGroup.add(wheelMesh);
         steerPivot.add(dropGroup);
         group.add(steerPivot);
@@ -553,7 +685,6 @@ async function selectVehicle(vehicle) {
   currentVehicle = vehicle;
   renderVehicleList();
 
-  // Show exotic warning if needed
   const warn = $('exotic-warning');
   if (vehicle.IsExotic) {
     warn.style.display = 'block';
@@ -562,16 +693,24 @@ async function selectVehicle(vehicle) {
     warn.style.display = 'none';
   }
 
-  // Build physics controller
-  controller = new VehicleAction(vehicle);
+  loadout = defaultLoadoutForVehicle(equipmentCatalog, vehicle.Cbid);
+  try {
+    const saved = sessionStorage.getItem(loadoutStorageKey(vehicle.Cbid));
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed && typeof parsed === 'object') loadout = { ...loadout, ...parsed };
+    }
+  } catch { /* ignore */ }
+
+  const physicsEntry = vehicleEntryForPhysics(vehicle, loadout);
+  controller = new VehicleAction(physicsEntry);
   if (terrainHeightFn) controller.setTerrain(terrainHeightFn);
 
-  // Build vehicle mesh
   if (vehicleGroup) worldGroup.remove(vehicleGroup);
-  vehicleGroup = await buildVehicleMesh(vehicle);
+  vehicleGroup = await buildVehicleMesh(vehicle, loadout);
   worldGroup.add(vehicleGroup);
+  renderLoadoutPanel();
 
-  // Spawn at level entry or origin
   let spawnX = 0, spawnZ = 0;
   if (currentLevel) {
     const entry = currentLevel.data.Terrain.Entry;
@@ -580,7 +719,6 @@ async function selectVehicle(vehicle) {
   const spawnY = terrainHeightFn ? terrainHeightFn(spawnX, spawnZ) + 1.0 : 5;
   controller.reset(new Vec3(spawnX, spawnY, spawnZ), new Quat(0, 0, 0, 1));
 
-  // Update info panel
   updateInfoPanel(vehicle);
 
   setStatus('');
@@ -601,13 +739,10 @@ function updateInfoPanel(v) {
 }
 
 // ── Input ──
-// A/D = "Steer Left/Right Soft" (limited), Q/E = "Steer Left/Right" (sharp turn
-// with rear-traction cut) — the retail client's two steering binding sets.
-// (No boost key: boost in AA is server-driven only, not a client control.)
 const keys = { forward: false, backward: false, left: false, right: false, sharpLeft: false, sharpRight: false, handbrake: false, reset: false };
 document.addEventListener('keydown', e => {
   if (e.repeat) return;
-  if (e.target.tagName === 'INPUT') return;
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
   switch (e.code) {
     case 'KeyW': case 'ArrowUp': keys.forward = true; break;
     case 'KeyS': case 'ArrowDown': keys.backward = true; break;
@@ -617,6 +752,12 @@ document.addEventListener('keydown', e => {
     case 'KeyE': keys.sharpRight = true; break;
     case 'Space': keys.handbrake = true; e.preventDefault(); break;
     case 'KeyR': keys.reset = true; break;
+    case 'KeyL': toggleLoadoutTab(); break;
+    case 'Escape':
+      if (document.querySelector('.tab[data-tab="loadout"]')?.classList.contains('active')) {
+        switchToTab('vehicles');
+      }
+      break;
   }
 });
 document.addEventListener('keyup', e => {
@@ -634,10 +775,6 @@ document.addEventListener('keyup', e => {
 
 // Mouse look
 let mouseDown = false, lastMX = 0, lastMY = 0;
-// camYaw = the camera's current orbit heading (smoothly chases the car). camYawOffset
-// = a manual orbit offset the mouse adds, which decays back to behind-the-car while
-// driving. camPitch = elevation angle above the horizon. camInit forces a snap (no
-// swing) on the first frame after (re)spawning.
 let camYaw = 0, camYawOffset = 0, camPitch = 0.30, camDist = 9, camInit = false;
 renderer.domElement.addEventListener('contextmenu', e => e.preventDefault());
 renderer.domElement.addEventListener('mousedown', e => {
@@ -655,16 +792,12 @@ renderer.domElement.addEventListener('wheel', e => {
   e.preventDefault();
 }, { passive: false });
 
-// ── Chase camera (GTA-style) ──
-// Stays level with the world (ignores the car's roll/pitch so bumps don't tip the
-// view), lags smoothly behind the car's heading, swings behind the direction of
-// travel at speed, looks slightly ahead, and rides up over terrain.
+// ── Chase camera ──
 const _camGoal = new THREE.Vector3();
 const _lookGoal = new THREE.Vector3();
 const _lookNow = new THREE.Vector3();
 const _fwd = new Vec3();
 
-// Shortest-path angular lerp (handles the ±π wrap).
 function angleLerp(a, b, t) {
   let d = b - a;
   while (d > Math.PI) d -= 2 * Math.PI;
@@ -678,28 +811,20 @@ function updateCamera(dt) {
   const q = controller.chassis.orientation;
   const vel = controller.chassis.linearVelocity;
 
-  // Car heading yaw — YAW ONLY. Take the chassis forward, flatten to the XZ plane,
-  // so the camera never rolls or pitches with the car body.
   q.vmult(new Vec3(0, 0, 1), _fwd);
   let headingYaw = Math.atan2(_fwd.x, _fwd.z);
 
-  // At speed, bias toward the direction of travel (the cam swings behind a slide),
-  // but only while moving forward — reversing keeps the nose-heading so we don't
-  // whip the camera around.
   const groundSpeed = Math.hypot(vel.x, vel.z);
   if (groundSpeed > 3 && (_fwd.x * vel.x + _fwd.z * vel.z) > 0) {
     const velYaw = Math.atan2(vel.x, vel.z);
     headingYaw = angleLerp(headingYaw, velYaw, Math.min(1, (groundSpeed - 3) / 12));
   }
 
-  // Manual mouse orbit decays back to center once you're driving again.
   if (!mouseDown && groundSpeed > 2) camYawOffset *= Math.max(0, 1 - dt * 1.5);
 
-  // Smoothly chase the target yaw (frame-rate independent). Snap while dragging.
   const targetYaw = headingYaw + camYawOffset;
   camYaw = mouseDown ? targetYaw : angleLerp(camYaw, targetYaw, 1 - Math.exp(-dt * 4));
 
-  // Spherical placement behind + above the car.
   const hx = Math.sin(camYaw), hz = Math.cos(camYaw);
   const flat = Math.cos(camPitch) * camDist;
   _camGoal.set(
@@ -708,10 +833,8 @@ function updateCamera(dt) {
     pos.z - hz * flat
   );
 
-  // Look slightly ahead of and above the car for a sense of speed.
   _lookGoal.set(pos.x + hx * 3.0, pos.y + 1.4, pos.z + hz * 3.0);
 
-  // Snap on (re)spawn / level change, otherwise ease in.
   if (!camInit || camera.position.distanceTo(_camGoal) > camDist * 4) {
     camera.position.copy(_camGoal);
     _lookNow.copy(_lookGoal);
@@ -722,7 +845,6 @@ function updateCamera(dt) {
     _lookNow.lerp(_lookGoal, 1 - Math.exp(-dt * 10));
   }
 
-  // Don't let the camera clip into hills.
   if (terrainHeightFn) {
     const gy = terrainHeightFn(camera.position.x, camera.position.z) + 1.2;
     if (camera.position.y < gy) camera.position.y = gy;
@@ -742,7 +864,6 @@ function animate(ts) {
   lastTS = ts;
 
   if (controller) {
-    // Reset
     if (keys.reset) {
       let spawnX = 0, spawnZ = 0;
       if (currentLevel) {
@@ -754,14 +875,12 @@ function animate(ts) {
       camInit = false;
     }
 
-    // Physics tick (fixed 60Hz)
     accumulator += dt;
     while (accumulator >= FIXED_DT) {
       controller.step(FIXED_DT, keys);
       accumulator -= FIXED_DT;
     }
 
-    // Sync vehicle mesh to physics
     if (vehicleGroup) {
       vehicleGroup.position.set(
         controller.chassis.position.x,
@@ -775,16 +894,12 @@ function animate(ts) {
         controller.chassis.orientation.w
       );
 
-      // Animate wheels: steerPivot handles Y (steer), dropGroup slides down the
-      // strut by the live suspension travel, wheelMesh handles X (roll).
       for (const child of vehicleGroup.children) {
         if (child.userData.isWheel) {
           const wheel = controller.suspension.wheels[child.userData.wheelIdx];
           if (wheel) {
             const rollAngle = wheel.wheelAngularVel * dt;
             child.userData.wheelMesh.rotateX(rollAngle);
-            // Wheel hangs below the hardpoint by (suspensionLength − compression):
-            // fully extended when airborne, rising toward the mount under load.
             child.userData.dropGroup.position.y = -(wheel.suspensionLength - wheel.compression);
             if (child.userData.isFront) {
               child.rotation.y = wheel.steerAngle;
@@ -794,7 +909,6 @@ function animate(ts) {
       }
     }
 
-    // Update HUD
     const t = controller.getTelemetry();
     $('speed-val').textContent = t.speedMPH;
     $('gear-box').textContent = t.gear;
@@ -813,13 +927,16 @@ function animate(ts) {
 (async () => {
   setStatus('Loading assets…');
   await loadAssetIndex();
+  await loadEquipmentCatalog();
   await loadVehicles();
   await loadLevels();
 
-  // Auto-load a default level (scrapvalley — the starter zone)
+  $('loadout-toggle-btn')?.addEventListener('click', toggleLoadoutTab);
+  const savedTab = sessionStorage.getItem('autocore-play-tab');
+  if (savedTab) switchToTab(savedTab);
+
   await loadLevel('sec_f_b_map_hwy_a2_1_scrapvalley');
 
-  // Auto-select a default vehicle (first non-exotic)
   const defaultVehicle = vehicles.find(v => !v.IsExotic) || vehicles[0];
   if (defaultVehicle) await selectVehicle(defaultVehicle);
 

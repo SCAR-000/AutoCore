@@ -3,578 +3,1224 @@
     "label": " (Universal)",
     "tile": "tile_mnt_ground_01.dds",
     "tile2": "tile2_mnt_ground_01.dds",
-    "layerScales": [
-      0.5,
-      0.5,
-      1.0,
-      0.8
-    ],
+    "tileSpec": "tile_mnt_ground_01_spec.dds",
     "layerIndices": [
       5,
       5,
       2,
-      4
+      4,
+      2,
+      0,
+      1,
+      6
+    ],
+    "layerScales": [
+      0.5,
+      0.5,
+      1.0,
+      0.8,
+      1.0,
+      0.6,
+      0.3,
+      0.4
+    ],
+    "layerColors": [
+      "#1e2327",
+      "#495965",
+      "#525758",
+      "#33383f",
+      "#3d4142",
+      "#1d2d30",
+      "#ded2bc",
+      "#2d4f38"
     ]
   },
   "1": {
     "label": "Mountain",
     "tile": "tile_mnt_ground_01.dds",
     "tile2": "tile2_mnt_ground_01.dds",
-    "layerScales": [
-      0.5,
-      0.5,
-      1.0,
-      0.8
-    ],
+    "tileSpec": "tile_mnt_ground_01_spec.dds",
     "layerIndices": [
       5,
       5,
       2,
-      4
+      4,
+      2,
+      0,
+      1,
+      6
+    ],
+    "layerScales": [
+      0.5,
+      0.5,
+      1.0,
+      0.8,
+      1.0,
+      0.6,
+      0.3,
+      0.4
+    ],
+    "layerColors": [
+      "#1e2327",
+      "#495965",
+      "#525758",
+      "#33383f",
+      "#3d4142",
+      "#1d2d30",
+      "#ded2bc",
+      "#2d4f38"
     ]
   },
   "2": {
     "label": "Arena - Dirt",
     "tile": "tile_mnt_ground_01.dds",
     "tile2": "tile2_mnt_ground_01.dds",
-    "layerScales": [
-      0.5,
-      0.5,
-      1.0,
-      0.8
-    ],
+    "tileSpec": "tile_mnt_ground_01_spec.dds",
     "layerIndices": [
       5,
       5,
       2,
-      4
+      4,
+      2,
+      0,
+      1,
+      6
+    ],
+    "layerScales": [
+      0.5,
+      0.5,
+      1.0,
+      0.8,
+      1.0,
+      0.6,
+      0.3,
+      0.4
+    ],
+    "layerColors": [
+      "#1e2327",
+      "#495965",
+      "#525758",
+      "#33383f",
+      "#3d4142",
+      "#1d2d30",
+      "#ded2bc",
+      "#2d4f38"
     ]
   },
   "3": {
     "label": "Desert",
     "tile": "tile_des_ground_01.dds",
     "tile2": "tile2_des_ground_01.dds",
-    "layerScales": [
-      0.5,
-      0.8,
-      1.0,
-      1.0
-    ],
+    "tileSpec": "tile_des_ground_01_spec.dds",
     "layerIndices": [
       5,
       4,
       2,
-      2
+      2,
+      3,
+      4,
+      2,
+      6
+    ],
+    "layerScales": [
+      0.5,
+      0.8,
+      1.0,
+      1.0,
+      0.5,
+      0.8,
+      1.0,
+      0.4
+    ],
+    "layerColors": [
+      "#2e3744",
+      "#38414f",
+      "#425e88",
+      "#465b7c",
+      "#62798d",
+      "#3b485a",
+      "#464a51",
+      "#2d4f38"
     ]
   },
   "4": {
     "label": "Town - Mutant",
     "tile": "tile_f_m_ground_01.dds",
     "tile2": "tile2_f_m_ground_01.dds",
-    "layerScales": [
-      0.8,
-      1.0,
-      1.0,
-      1.0
-    ],
+    "tileSpec": "tile_f_m_ground_01_spec.dds",
     "layerIndices": [
       4,
       2,
       2,
-      2
+      2,
+      2,
+      0,
+      6,
+      6
+    ],
+    "layerScales": [
+      0.8,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      0.6,
+      0.4,
+      0.4
+    ],
+    "layerColors": [
+      "#192637",
+      "#2f333a",
+      "#364f5b",
+      "#334d59",
+      "#244548",
+      "#0b3630",
+      "#0d2411",
+      "#2d4f38"
     ]
   },
   "5": {
     "label": "Jungle (Old)",
     "tile": "tile_tro_ground_01.dds",
     "tile2": "tile2_tro_ground_01.dds",
-    "layerScales": [
-      0.8,
-      0.8,
-      1.0,
-      0.8
-    ],
+    "tileSpec": "tile_tro_ground_01_spec.dds",
     "layerIndices": [
       4,
       4,
       2,
-      4
+      4,
+      2,
+      0,
+      1,
+      0
+    ],
+    "layerScales": [
+      0.8,
+      0.8,
+      1.0,
+      0.8,
+      1.0,
+      0.6,
+      0.3,
+      0.6
+    ],
+    "layerColors": [
+      "#1e2326",
+      "#495965",
+      "#525657",
+      "#33383f",
+      "#3d4142",
+      "#1d2d30",
+      "#ded2bc",
+      "#116539"
     ]
   },
   "6": {
     "label": "Swamp",
     "tile": "tile_swa_ground_01.dds",
     "tile2": "tile2_swa_ground_01.dds",
-    "layerScales": [
-      0.4,
-      0.5,
-      1.0,
-      0.8
-    ],
+    "tileSpec": "tile_swa_ground_01_spec.dds",
     "layerIndices": [
       6,
       5,
       2,
-      4
+      4,
+      2,
+      0,
+      0,
+      6
+    ],
+    "layerScales": [
+      0.4,
+      0.5,
+      1.0,
+      0.8,
+      1.0,
+      0.6,
+      0.6,
+      0.4
+    ],
+    "layerColors": [
+      "#0c221a",
+      "#233441",
+      "#283d49",
+      "#25313d",
+      "#2e373e",
+      "#0f332c",
+      "#1a3131",
+      "#2d4f38"
     ]
   },
   "7": {
     "label": "Plains (Old)",
     "tile": "tile_pla_ground_01.dds",
     "tile2": "tile2_pla_ground_01.dds",
-    "layerScales": [
-      0.8,
-      0.8,
-      1.0,
-      0.8
-    ],
+    "tileSpec": "tile_pla_ground_01_spec.dds",
     "layerIndices": [
       4,
       4,
       2,
-      4
+      4,
+      2,
+      0,
+      1,
+      0
+    ],
+    "layerScales": [
+      0.8,
+      0.8,
+      1.0,
+      0.8,
+      1.0,
+      0.6,
+      0.3,
+      0.6
+    ],
+    "layerColors": [
+      "#1e2326",
+      "#495965",
+      "#525657",
+      "#33383f",
+      "#3d4142",
+      "#1d2d30",
+      "#ded2bc",
+      "#116539"
     ]
   },
   "8": {
     "label": "IceCap (Old)",
     "tile": "tile_ice_ground_01.dds",
     "tile2": "tile2_ice_ground_01.dds",
-    "layerScales": [
-      0.8,
-      0.8,
-      1.0,
-      0.8
-    ],
+    "tileSpec": "tile_ice_ground_01_spec.dds",
     "layerIndices": [
       4,
       4,
       2,
-      4
+      4,
+      2,
+      0,
+      1,
+      0
+    ],
+    "layerScales": [
+      0.8,
+      0.8,
+      1.0,
+      0.8,
+      1.0,
+      0.6,
+      0.3,
+      0.6
+    ],
+    "layerColors": [
+      "#1e2326",
+      "#495965",
+      "#525657",
+      "#33383f",
+      "#3d4142",
+      "#1d2d30",
+      "#ded2bc",
+      "#116539"
     ]
   },
   "9": {
     "label": "Volcanic (Old)",
     "tile": "tile_vol_ground_01.dds",
     "tile2": "tile2_vol_ground_01.dds",
-    "layerScales": [
-      0.8,
-      0.8,
-      1.0,
-      0.8
-    ],
+    "tileSpec": "tile_vol_ground_01_spec.dds",
     "layerIndices": [
       4,
       4,
       2,
-      4
+      4,
+      2,
+      0,
+      1,
+      0
+    ],
+    "layerScales": [
+      0.8,
+      0.8,
+      1.0,
+      0.8,
+      1.0,
+      0.6,
+      0.3,
+      0.6
+    ],
+    "layerColors": [
+      "#1e2326",
+      "#495965",
+      "#525657",
+      "#33383f",
+      "#3d4142",
+      "#1d2d30",
+      "#ded2bc",
+      "#116539"
     ]
   },
   "10": {
     "label": "Alien (Old)",
     "tile": "tile_xos_ground_01.dds",
     "tile2": "tile2_xos_ground_01.dds",
-    "layerScales": [
-      0.8,
-      0.8,
-      1.0,
-      0.8
-    ],
+    "tileSpec": "tile_xos_ground_01_spec.dds",
     "layerIndices": [
       4,
       4,
       2,
-      4
+      4,
+      2,
+      0,
+      1,
+      0
+    ],
+    "layerScales": [
+      0.8,
+      0.8,
+      1.0,
+      0.8,
+      1.0,
+      0.6,
+      0.3,
+      0.6
+    ],
+    "layerColors": [
+      "#24282c",
+      "#262b2d",
+      "#545759",
+      "#272e31",
+      "#2e3436",
+      "#1e2d30",
+      "#191b1d",
+      "#136d3f"
     ]
   },
   "11": {
     "label": "(Old) Subterranean",
     "tile": "tile_sub_ground_01.dds",
     "tile2": "tile2_sub_ground_01.dds",
-    "layerScales": [
-      0.8,
-      0.8,
-      1.0,
-      0.8
-    ],
+    "tileSpec": "tile_sub_ground_01_spec.dds",
     "layerIndices": [
       4,
       4,
       2,
-      4
+      4,
+      2,
+      0,
+      1,
+      0
+    ],
+    "layerScales": [
+      0.8,
+      0.8,
+      1.0,
+      0.8,
+      1.0,
+      0.6,
+      0.3,
+      0.6
+    ],
+    "layerColors": [
+      "#1e2326",
+      "#495965",
+      "#525657",
+      "#33383f",
+      "#3d4142",
+      "#1d2d30",
+      "#ded2bc",
+      "#116539"
     ]
   },
   "12": {
     "label": "Arena",
     "tile": "tile_mnt_ground_01.dds",
     "tile2": "tile2_mnt_ground_01.dds",
-    "layerScales": [
-      0.5,
-      0.5,
-      1.0,
-      0.8
-    ],
+    "tileSpec": "tile_mnt_ground_01_spec.dds",
     "layerIndices": [
       5,
       5,
       2,
-      4
+      4,
+      2,
+      0,
+      1,
+      6
+    ],
+    "layerScales": [
+      0.5,
+      0.5,
+      1.0,
+      0.8,
+      1.0,
+      0.6,
+      0.3,
+      0.4
+    ],
+    "layerColors": [
+      "#1e2327",
+      "#495965",
+      "#525758",
+      "#33383f",
+      "#3d4142",
+      "#1d2d30",
+      "#ded2bc",
+      "#2d4f38"
     ]
   },
   "13": {
     "label": "Town - Biomek",
     "tile": "tile_f_b_ground_01.dds",
     "tile2": "tile2_f_b_ground_01.dds",
-    "layerScales": [
-      0.5,
-      1.0,
-      1.0,
-      0.8
-    ],
+    "tileSpec": "tile_f_b_ground_01_spec.dds",
     "layerIndices": [
       5,
       2,
       2,
-      4
+      4,
+      2,
+      2,
+      1,
+      1
+    ],
+    "layerScales": [
+      0.5,
+      1.0,
+      1.0,
+      0.8,
+      1.0,
+      1.0,
+      0.3,
+      0.3
+    ],
+    "layerColors": [
+      "#1e2327",
+      "#525758",
+      "#32383d",
+      "#33383f",
+      "#3d4142",
+      "#52575a",
+      "#cac8b8",
+      "#ded2bc"
     ]
   },
   "14": {
     "label": "Town - Human",
     "tile": "tile_f_h_ground_01.dds",
     "tile2": "tile2_f_h_ground_01.dds",
-    "layerScales": [
-      0.5,
-      1.0,
-      0.8,
-      0.8
-    ],
+    "tileSpec": "tile_f_h_ground_01_spec.dds",
     "layerIndices": [
       5,
       2,
       4,
-      4
+      4,
+      2,
+      0,
+      2,
+      2
+    ],
+    "layerScales": [
+      0.5,
+      1.0,
+      0.8,
+      0.8,
+      1.0,
+      0.6,
+      1.0,
+      1.0
+    ],
+    "layerColors": [
+      "#171a1d",
+      "#2b2b2b",
+      "#3a444a",
+      "#394449",
+      "#4b595e",
+      "#1d2d30",
+      "#434a4d",
+      "#494e51"
     ]
   },
   "15": {
     "label": "Urban",
     "tile": "tile_urb_ground_01.dds",
     "tile2": "tile2_urb_ground_01.dds",
-    "layerScales": [
-      0.8,
-      1.0,
-      1.0,
-      1.0
-    ],
+    "tileSpec": "tile_urb_ground_01_spec.dds",
     "layerIndices": [
       4,
       2,
       2,
-      2
+      2,
+      4,
+      2,
+      0,
+      6
+    ],
+    "layerScales": [
+      0.8,
+      1.0,
+      1.0,
+      1.0,
+      0.8,
+      1.0,
+      0.6,
+      0.4
+    ],
+    "layerColors": [
+      "#1a1c1f",
+      "#282f31",
+      "#30393c",
+      "#323b40",
+      "#2d3639",
+      "#3c4549",
+      "#22323c",
+      "#2d4f38"
     ]
   },
   "16": {
     "label": "Mountain - Arid",
     "tile": "tile_mnt_ground_02_arid.dds",
     "tile2": "tile2_mnt_ground_02_arid.dds",
-    "layerScales": [
-      0.8,
-      1.0,
-      1.0,
-      0.8
-    ],
+    "tileSpec": "tile_mnt_ground_02_arid_spec.dds",
     "layerIndices": [
       4,
       2,
       2,
-      4
+      4,
+      2,
+      3,
+      0,
+      6
+    ],
+    "layerScales": [
+      0.8,
+      1.0,
+      1.0,
+      0.8,
+      1.0,
+      0.5,
+      0.6,
+      0.4
+    ],
+    "layerColors": [
+      "#2f3a45",
+      "#3e4b5d",
+      "#464e5a",
+      "#3f4956",
+      "#464b51",
+      "#444e5a",
+      "#24333b",
+      "#2d4f38"
     ]
   },
   "17": {
     "label": "Mountain - Xosen",
     "tile": "tile_mnt_ground_03_xos.dds",
     "tile2": "tile2_mnt_ground_03_xos.dds",
-    "layerScales": [
-      0.8,
-      0.6,
-      1.0,
-      0.8
-    ],
+    "tileSpec": "tile_mnt_ground_03_xos_spec.dds",
     "layerIndices": [
       4,
       0,
       2,
-      4
+      4,
+      2,
+      2,
+      2,
+      6
+    ],
+    "layerScales": [
+      0.8,
+      0.6,
+      1.0,
+      0.8,
+      1.0,
+      1.0,
+      1.0,
+      0.4
+    ],
+    "layerColors": [
+      "#2d3435",
+      "#1d2d2f",
+      "#525758",
+      "#262e30",
+      "#111112",
+      "#101115",
+      "#181b1c",
+      "#2d4f38"
     ]
   },
   "18": {
     "label": "Indoor 1",
     "tile": "tile_f_ind_ground_01.dds",
     "tile2": "tile2_f_ind_ground_01.dds",
-    "layerScales": [
-      0.5,
-      0.8,
-      1.0,
-      1.0
-    ],
+    "tileSpec": "tile_f_ind_ground_01_spec.dds",
     "layerIndices": [
       5,
       4,
       2,
-      2
+      2,
+      2,
+      2,
+      4,
+      6
+    ],
+    "layerScales": [
+      0.5,
+      0.8,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      0.8,
+      0.4
+    ],
+    "layerColors": [
+      "#1e2327",
+      "#2d3034",
+      "#3d4142",
+      "#494c4c",
+      "#27313a",
+      "#5a5b55",
+      "#324855",
+      "#2d4f38"
     ]
   },
   "19": {
     "label": "Indoor 2",
     "tile": "tile_f_ind_ground_02.dds",
     "tile2": "tile2_f_ind_ground_02.dds",
-    "layerScales": [
-      0.5,
-      1.0,
-      1.0,
-      1.0
-    ],
+    "tileSpec": "tile_f_ind_ground_02_spec.dds",
     "layerIndices": [
       5,
       2,
       2,
-      2
+      2,
+      2,
+      2,
+      2,
+      6
+    ],
+    "layerScales": [
+      0.5,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      0.4
+    ],
+    "layerColors": [
+      "#1f2325",
+      "#2e3237",
+      "#32363b",
+      "#52575a",
+      "#3f4748",
+      "#252a2b",
+      "#17181c",
+      "#2d4f38"
     ]
   },
   "20": {
     "label": "Urban 2",
     "tile": "tile_urb_ground_02.dds",
     "tile2": "tile2_urb_ground_02.dds",
-    "layerScales": [
-      0.8,
-      1.0,
-      1.0,
-      1.0
-    ],
+    "tileSpec": "tile_urb_ground_02_spec.dds",
     "layerIndices": [
       4,
       2,
       2,
-      2
+      2,
+      4,
+      2,
+      0,
+      6
+    ],
+    "layerScales": [
+      0.8,
+      1.0,
+      1.0,
+      1.0,
+      0.8,
+      1.0,
+      0.6,
+      0.4
+    ],
+    "layerColors": [
+      "#1a1c1f",
+      "#2d3435",
+      "#30393c",
+      "#33383e",
+      "#2d3639",
+      "#41484a",
+      "#1a2c28",
+      "#2d4f38"
     ]
   },
   "21": {
     "label": "Mountain Moab",
     "tile": "tile_mnt_ground_04_moab.dds",
     "tile2": "tile2_mnt_ground_04_moab.dds",
-    "layerScales": [
-      1.0,
-      0.8,
-      1.0,
-      0.8
-    ],
+    "tileSpec": "tile_mnt_ground_04_moab_spec.dds",
     "layerIndices": [
       2,
       4,
       2,
-      4
+      4,
+      2,
+      0,
+      4,
+      6
+    ],
+    "layerScales": [
+      1.0,
+      0.8,
+      1.0,
+      0.8,
+      1.0,
+      0.6,
+      0.8,
+      0.4
+    ],
+    "layerColors": [
+      "#595d60",
+      "#5c6163",
+      "#666f73",
+      "#505557",
+      "#2e373e",
+      "#1c2c31",
+      "#747b7f",
+      "#2d4f38"
     ]
   },
   "22": {
     "label": "Desert 2",
     "tile": "tile_des_ground_02.dds",
     "tile2": "tile2_des_ground_02.dds",
-    "layerScales": [
-      0.5,
-      0.8,
-      1.0,
-      1.0
-    ],
+    "tileSpec": "tile_des_ground_02_spec.dds",
     "layerIndices": [
       5,
       4,
       2,
-      2
+      2,
+      3,
+      4,
+      2,
+      6
+    ],
+    "layerScales": [
+      0.5,
+      0.8,
+      1.0,
+      1.0,
+      0.5,
+      0.8,
+      1.0,
+      0.4
+    ],
+    "layerColors": [
+      "#405166",
+      "#4d5e75",
+      "#5b687a",
+      "#506179",
+      "#5f7588",
+      "#435162",
+      "#4f545c",
+      "#2d4f38"
     ]
   },
   "23": {
     "label": "Town - Mutant 2 (Subdued)",
     "tile": "tile_f_m_ground_02.dds",
     "tile2": "tile2_f_m_ground_02.dds",
-    "layerScales": [
-      0.8,
-      1.0,
-      1.0,
-      1.0
-    ],
+    "tileSpec": "tile_f_m_ground_02_spec.dds",
     "layerIndices": [
       4,
       2,
       2,
-      2
+      2,
+      2,
+      0,
+      5,
+      6
+    ],
+    "layerScales": [
+      0.8,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      0.6,
+      0.5,
+      0.4
+    ],
+    "layerColors": [
+      "#192637",
+      "#303439",
+      "#3e4c53",
+      "#3b4a51",
+      "#2c3f40",
+      "#132d29",
+      "#0e141e",
+      "#2d4f38"
     ]
   },
   "24": {
     "label": "Town - Human 2",
     "tile": "tile_f_h_ground_02.dds",
     "tile2": "tile2_f_h_ground_02.dds",
-    "layerScales": [
-      0.5,
-      0.8,
-      1.0,
-      1.0
-    ],
+    "tileSpec": "tile_f_h_ground_02_spec.dds",
     "layerIndices": [
       5,
       4,
       2,
-      2
+      2,
+      0,
+      2,
+      2,
+      1
+    ],
+    "layerScales": [
+      0.5,
+      0.8,
+      1.0,
+      1.0,
+      0.6,
+      1.0,
+      1.0,
+      0.3
+    ],
+    "layerColors": [
+      "#1f2326",
+      "#3a3f43",
+      "#30393c",
+      "#2d3639",
+      "#354a50",
+      "#434a4d",
+      "#494e51",
+      "#ded2bc"
     ]
   },
   "25": {
     "label": "Town - Biomek 2",
     "tile": "tile_f_b_ground_02.dds",
     "tile2": "tile2_f_b_ground_02.dds",
-    "layerScales": [
-      0.8,
-      0.5,
-      1.0,
-      0.8
-    ],
+    "tileSpec": "tile_f_b_ground_02_spec.dds",
     "layerIndices": [
       4,
       5,
       2,
-      4
+      4,
+      2,
+      0,
+      4,
+      6
+    ],
+    "layerScales": [
+      0.8,
+      0.5,
+      1.0,
+      0.8,
+      1.0,
+      0.6,
+      0.8,
+      0.4
+    ],
+    "layerColors": [
+      "#252728",
+      "#51585d",
+      "#525657",
+      "#37393b",
+      "#3e4142",
+      "#232929",
+      "#6a7479",
+      "#2d4f38"
     ]
   },
   "26": {
     "label": "Town - Biomek 3",
     "tile": "tile_f_b_ground_03.dds",
     "tile2": "tile2_f_b_ground_03.dds",
-    "layerScales": [
-      0.8,
-      0.5,
-      1.0,
-      0.8
-    ],
+    "tileSpec": "tile_f_b_ground_03_spec.dds",
     "layerIndices": [
       4,
       5,
       2,
-      4
+      4,
+      2,
+      0,
+      4,
+      6
+    ],
+    "layerScales": [
+      0.8,
+      0.5,
+      1.0,
+      0.8,
+      1.0,
+      0.6,
+      0.8,
+      0.4
+    ],
+    "layerColors": [
+      "#737b81",
+      "#51585d",
+      "#525657",
+      "#37393b",
+      "#3e4142",
+      "#232929",
+      "#6a7479",
+      "#2d4f38"
     ]
   },
   "27": {
     "label": "Mountain - Desat",
     "tile": "tile_mnt_ground_05_desat.dds",
     "tile2": "tile2_mnt_ground_05_desat.dds",
-    "layerScales": [
-      0.5,
-      0.5,
-      1.0,
-      0.8
-    ],
+    "tileSpec": "tile_mnt_ground_05_desat_spec.dds",
     "layerIndices": [
       5,
       5,
       2,
-      4
+      4,
+      2,
+      0,
+      1,
+      6
+    ],
+    "layerScales": [
+      0.5,
+      0.5,
+      1.0,
+      0.8,
+      1.0,
+      0.6,
+      0.3,
+      0.4
+    ],
+    "layerColors": [
+      "#292c2b",
+      "#51595d",
+      "#525758",
+      "#3f4142",
+      "#3d4142",
+      "#262d2f",
+      "#ded2bc",
+      "#2d4f38"
     ]
   },
   "28": {
     "label": "Mountain - Scrap",
     "tile": "tile_mnt_ground_06_sv.dds",
     "tile2": "tile2_mnt_ground_06_sv.dds",
-    "layerScales": [
-      0.4,
-      0.5,
-      1.0,
-      0.8
-    ],
+    "tileSpec": "tile_mnt_ground_06_sv_spec.dds",
     "layerIndices": [
       8,
       5,
       2,
-      4
+      4,
+      2,
+      0,
+      1,
+      6
+    ],
+    "layerScales": [
+      0.4,
+      0.5,
+      1.0,
+      0.8,
+      1.0,
+      0.6,
+      0.3,
+      0.4
+    ],
+    "layerColors": [
+      "#060811",
+      "#4f585e",
+      "#525657",
+      "#33383f",
+      "#3d4142",
+      "#2f3839",
+      "#dbd2c0",
+      "#2d4f38"
     ]
   },
   "29": {
     "label": "Town - Mutant 3",
     "tile": "tile_f_m_ground_03.dds",
     "tile2": "tile2_f_m_ground_03.dds",
-    "layerScales": [
-      0.8,
-      1.0,
-      1.0,
-      1.0
-    ],
+    "tileSpec": "tile_f_m_ground_03_spec.dds",
     "layerIndices": [
       4,
       2,
       2,
-      2
+      2,
+      2,
+      0,
+      5,
+      6
+    ],
+    "layerScales": [
+      0.8,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      0.6,
+      0.5,
+      0.4
+    ],
+    "layerColors": [
+      "#21272f",
+      "#2f333a",
+      "#3a4d56",
+      "#384b54",
+      "#294144",
+      "#152d2a",
+      "#152217",
+      "#2d4f38"
     ]
   },
   "30": {
     "label": "Mountain  No specular",
     "tile": "tile_mnt_ground_07_nospecgrass.dds",
     "tile2": "tile2_mnt_ground_07_nospecgrass.dds",
-    "layerScales": [
-      0.5,
-      0.5,
-      1.0,
-      0.8
-    ],
+    "tileSpec": "tile_mnt_ground_07_nospecgrass_spec.dds",
     "layerIndices": [
       5,
       5,
       2,
-      4
+      4,
+      2,
+      0,
+      1,
+      6
+    ],
+    "layerScales": [
+      0.5,
+      0.5,
+      1.0,
+      0.8,
+      1.0,
+      0.6,
+      0.3,
+      0.4
+    ],
+    "layerColors": [
+      "#1e2327",
+      "#495965",
+      "#525758",
+      "#33383f",
+      "#3d4142",
+      "#1d2d30",
+      "#ded2bc",
+      "#2d4f38"
     ]
   },
   "31": {
     "label": "Mountain  Region 3",
     "tile": "tile_mnt_ground_08_R3.dds",
     "tile2": "tile2_mnt_ground_08_R3.dds",
-    "layerScales": [
-      0.5,
-      0.5,
-      1.0,
-      0.8
-    ],
+    "tileSpec": "tile_mnt_ground_08_R3_spec.dds",
     "layerIndices": [
       5,
       5,
       2,
-      4
+      4,
+      2,
+      0,
+      2,
+      6
+    ],
+    "layerScales": [
+      0.5,
+      0.5,
+      1.0,
+      0.8,
+      1.0,
+      0.6,
+      1.0,
+      0.4
+    ],
+    "layerColors": [
+      "#2b2d2d",
+      "#4f585e",
+      "#525758",
+      "#3c3f40",
+      "#3d4142",
+      "#212a2c",
+      "#41484a",
+      "#2d4f38"
     ]
   },
   "32": {
     "label": "Urban 3",
     "tile": "tile_urb_ground_03.dds",
     "tile2": "tile2_urb_ground_03.dds",
-    "layerScales": [
-      0.8,
-      1.0,
-      1.0,
-      1.0
-    ],
+    "tileSpec": "tile_urb_ground_03_spec.dds",
     "layerIndices": [
       4,
       2,
       2,
-      2
+      2,
+      2,
+      2,
+      0,
+      6
+    ],
+    "layerScales": [
+      0.8,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      0.6,
+      0.4
+    ],
+    "layerColors": [
+      "#1a1c1f",
+      "#2d3435",
+      "#4f5657",
+      "#33383e",
+      "#30393c",
+      "#5f7588",
+      "#1c2a27",
+      "#2d4f38"
     ]
   },
   "33": {
     "label": "Mountain Embers",
     "tile": "tile_mnt_ground_09_embers.dds",
     "tile2": "tile2_mnt_ground_09_embers.dds",
-    "layerScales": [
-      1.0,
-      0.5,
-      1.0,
-      0.8
-    ],
+    "tileSpec": "tile_mnt_ground_09_embers_spec.dds",
     "layerIndices": [
       2,
       5,
       2,
-      4
+      4,
+      0,
+      4,
+      2,
+      2
+    ],
+    "layerScales": [
+      1.0,
+      0.5,
+      1.0,
+      0.8,
+      0.6,
+      0.8,
+      1.0,
+      1.0
+    ],
+    "layerColors": [
+      "#515558",
+      "#4a4f51",
+      "#596062",
+      "#4c5052",
+      "#323c45",
+      "#5e666a",
+      "#0c0e12",
+      "#0f1422"
     ]
   }
 }

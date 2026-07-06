@@ -13,7 +13,8 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { parseGeo } from './geo-parser.js';
-import { TextureBank, buildMaterial, isShadowEffect, TINT_DEFAULTS } from './materials.js';
+import { buildGeoGroup, pickLod0Sections } from './geo-mesh.js';
+import { TextureBank, isShadowEffect, TINT_DEFAULTS } from './materials.js';
 
 const ROOT = '../../'; // page lives at /tools/model-viewer/
 
@@ -172,6 +173,9 @@ function disposeCurrent() {
 
 function visibleSections() {
   if (!current) return [];
+  if (state.lod === Math.min(...current.parsed.sections.map((s) => s.lod)) && !state.showShadows) {
+    return pickLod0Sections(current.parsed.sections);
+  }
   return current.parsed.sections.filter((s) =>
     s.lod === state.lod && (state.showShadows || !isShadowEffect(s.effect)));
 }
@@ -192,27 +196,17 @@ function rebuild({ refit = false } = {}) {
     current.boxHelper = null;
   }
 
-  const group = new THREE.Group();
-  const infos = [];
-  for (const section of visibleSections()) {
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute('position', new THREE.BufferAttribute(section.positions, 3));
-    if (section.normals) geometry.setAttribute('normal', new THREE.BufferAttribute(section.normals, 3));
-    if (section.uvs) geometry.setAttribute('uv', new THREE.BufferAttribute(section.uvs, 2));
-    geometry.setIndex(new THREE.BufferAttribute(section.indices, 1));
-    if (!section.normals) geometry.computeVertexNormals();
-
-    const { material, info } = buildMaterial(section, bank, {
+  const { group, infos } = buildGeoGroup(
+    { sections: visibleSections() },
+    bank,
+    {
       tintScheme: state.tintScheme,
       primary: state.primary,
       secondary: state.secondary,
       texturesEnabled: state.textures,
-    });
-    material.wireframe = state.wireframe;
-    infos.push({ section, info });
-
-    group.add(new THREE.Mesh(geometry, material));
-  }
+      wireframe: state.wireframe,
+    },
+  );
   scene.add(group);
   current.group = group;
   current.infos = infos;

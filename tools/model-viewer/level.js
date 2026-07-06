@@ -16,6 +16,17 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { parseGeo } from './geo-parser.js';
 import { TextureBank, buildMaterial } from './materials.js';
+import { isTrigger, placementCategory, resolvedMeshCategory, countTriggers, markerKindInfo, pickTriggerHit } from './level-visibility.js';
+import { buildTriggerInspectorHTML, buildReactionDetailHTML, getTriggers, triggerColor, lookupTrigger, buildTriggerTooltipHTML, triggerWireframeCssColor } from './trigger-graph.js?v=4';
+import { FlyControls } from './fly-controls.js';
+import {
+  shouldIgnoreKeyEvent,
+  clampCameraSpeed,
+  focusCameraOffset,
+  focusViewDistance,
+  CAMERA_SPEED_MIN,
+  mapDefaultCameraSpeed,
+} from './fly-controls-helpers.js';
 
 const ROOT = '../../';
 const HEIGHT_SCALE = 4.0;       // per-256 units of the 16-bit height (world Y = h16 * HEIGHT_SCALE/256)
@@ -30,6 +41,25 @@ const countEl = el('count');
 const infoEl = el('info');
 const statusEl = el('status');
 const tooltipEl = el('tooltip');
+const reactionInspectorEl = el('reaction-inspector');
+const reactionInspectorTreeEl = el('reaction-inspector-tree');
+const reactionInspectorDetailEl = el('reaction-inspector-detail');
+const reactionInspectorCloseEl = el('reaction-inspector-close');
+const triggerRailEl = el('trigger-rail');
+const triggerListToggleEl = el('trigger-list-toggle');
+const triggerListEl = el('trigger-list');
+const triggerListSearchEl = el('trigger-list-search');
+const triggerListCountEl = el('trigger-list-count');
+const showTriggerRailEl = el('show-trigger-rail');
+const cameraSpeedEl = el('camera-speed');
+const cameraSpeedValueEl = el('camera-speed-value');
+
+const _focusTarget = new THREE.Vector3();
+
+let selectedTrigger = null;
+let selectedTriggerCoid = null;
+let selectedReactionCoid = null;
+let cameraSpeedMax = 420;
 
 // --- tooltip / highlight state -----------------------------------------------
 const raycaster = new THREE.Raycaster();
@@ -58,6 +88,63 @@ const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.08;
 
+const clock = new THREE.Clock();
+const fly = new FlyControls(camera, renderer.domElement);
+fly.connect();
+controls.enabled = false;
+fly.setEnabled(true);
+
+function formatCameraSpeedLabel(speed) {
+  return Math.round(speed).toLocaleString();
+}
+
+function setCameraSpeed(speed, { updateSlider = true } = {}) {
+  const clamped = clampCameraSpeed(speed, CAMERA_SPEED_MIN, cameraSpeedMax);
+  fly.setSpeed(clamped);
+  if (updateSlider && cameraSpeedEl) {
+    cameraSpeedEl.value = String(Math.round(clamped));
+  }
+  if (cameraSpeedValueEl) {
+    cameraSpeedValueEl.textContent = formatCameraSpeedLabel(clamped);
+  }
+}
+
+function configureCameraSpeedRange(maxSpeed, initialSpeed = maxSpeed) {
+  cameraSpeedMax = Math.max(maxSpeed, CAMERA_SPEED_MIN);
+  if (cameraSpeedEl) {
+    cameraSpeedEl.min = String(CAMERA_SPEED_MIN);
+    cameraSpeedEl.max = String(Math.round(cameraSpeedMax));
+  }
+  setCameraSpeed(initialSpeed);
+}
+
+function applyCameraSpeedFromSlider() {
+  if (!cameraSpeedEl) return;
+  setCameraSpeed(Number(cameraSpeedEl.value), { updateSlider: false });
+}
+
+function focusWorldPoint(pos, radiusHint = 40) {
+  if (!pos) return;
+  _focusTarget.set(pos[0], pos[1], pos[2]);
+  const span = focusViewDistance(camera.position.distanceTo(_focusTarget), radiusHint);
+  const off = focusCameraOffset(span);
+  camera.position.set(_focusTarget.x + off.x, _focusTarget.y + off.y, _focusTarget.z + off.z);
+  camera.lookAt(_focusTarget);
+  controls.target.copy(_focusTarget);
+  fly.syncFromCamera();
+}
+
+function focusSelected() {
+  if (selectedTrigger?.Pos) {
+    focusWorldPoint(selectedTrigger.Pos, Math.max(selectedTrigger.Scale || 1, 1));
+    return;
+  }
+  if (highlightMesh.visible) {
+    const hint = Math.max(highlightMesh.scale.x, highlightMesh.scale.y, highlightMesh.scale.z, 8);
+    focusWorldPoint([highlightMesh.position.x, highlightMesh.position.y, highlightMesh.position.z], hint);
+  }
+}
+
 const sun = new THREE.DirectionalLight(0xfff4e2, 2.2);
 sun.position.set(1, 1.6, 0.8);
 scene.add(sun);
@@ -77,8 +164,11 @@ function resize() {
 }
 window.addEventListener('resize', resize);
 renderer.domElement.addEventListener('mousemove', onMouseMove);
+renderer.domElement.addEventListener('click', onCanvasClick);
 renderer.setAnimationLoop(() => {
-  controls.update();
+  const dt = Math.min(clock.getDelta(), 0.05);
+  fly.update(dt);
+  if (controls.enabled) controls.update();
   processHover();
   renderer.render(scene, camera);
 });
@@ -92,7 +182,20 @@ let tilesetTable = null; // tileset-table.json: TileSet byte -> { tile2, ... }
 let current = null;      // { name, data, groups: {terrain, objects, markers, paths, boxes} }
 const geoCache = new Map(); // path -> parsed geo (or null)
 
-const layers = { terrain: null, objects: null, markers: null, paths: null, boxes: null };
+const layers = {
+  terrain: null,
+  terrainGrid: null,
+  roads: null,
+  objects: null,
+  triggers: null,
+  boxes: null,
+  boxesFailed: null,
+  markers: null,
+  markerKinds: { spawn: null, enter: null, store: null, outpost: null },
+  paths: null,
+};
+
+const MARKER_KINDS = ['spawn', 'enter', 'store', 'outpost'];
 
 // --- helpers -----------------------------------------------------------------
 function setStatus(msg, err = false) { statusEl.textContent = msg; statusEl.classList.toggle('error', err); }
@@ -156,25 +259,40 @@ function parseTGARgba(buf) {
 }
 
 // --- tooltip HTML builder ----------------------------------------------------
-const MARKER_LABELS = { spawn: 'Spawn Point', enter: 'Enter Point', store: 'Store', outpost: 'Outpost' };
+function markerDescRow(info) {
+  return `<div class="tt-row tt-desc"><span class="tt-swatch" style="background:${info.color}"></span> ${info.description}</div>`;
+}
 
 function buildTooltipHTML(obj, kind) {
   if (kind === 'marker') {
-    const lbl = MARKER_LABELS[obj.Kind] || obj.Kind;
+    const info = markerKindInfo(obj.Kind);
     const pos = obj.Pos;
-    return `<div class="tt-title">${lbl}<span class="tt-badge marker">${obj.Kind}</span></div>
+    return `<div class="tt-title">${info.label}<span class="tt-badge marker">${obj.Kind}</span></div>
+      ${markerDescRow(info)}
       <div class="tt-row">position: <span>${pos[0].toFixed(1)}, ${pos[1].toFixed(1)}, ${pos[2].toFixed(1)}</span></div>`;
   }
 
-  // Object / box
-  const name = obj.Unique || obj.Physics || obj.Short || 'unnamed';
+  // Object / box / trigger
+  const name = obj.Name || obj.Unique || obj.Physics || obj.Short || 'unnamed';
   let html = `<div class="tt-title">${name}`;
-  if (!obj._resolved) html += `<span class="tt-badge warn">unresolved</span>`;
+  if (obj._category === 'trigger') html += `<span class="tt-badge warn">trigger</span>`;
+  else if (!obj._resolved) html += `<span class="tt-badge warn">unresolved</span>`;
+  else if (obj._category === 'parse-failed') html += `<span class="tt-badge warn">parse failed</span>`;
   html += `</div>`;
   html += `<div class="tt-row">CBID: <span>${obj.Cbid}</span> · COID: <span>${obj.Coid}</span></div>`;
+  if (obj.Type) html += `<div class="tt-row">type: <span>${obj.Type}</span></div>`;
   html += `<div class="tt-row">position: <span>${obj.Pos[0].toFixed(1)}, ${obj.Pos[1].toFixed(1)}, ${obj.Pos[2].toFixed(1)}</span></div>`;
-  html += `<div class="tt-row">rotation: <span>${obj.Rot[0].toFixed(3)}, ${obj.Rot[1].toFixed(3)}, ${obj.Rot[2].toFixed(3)}, ${obj.Rot[3].toFixed(3)}</span></div>`;
-  html += `<div class="tt-row">scale: <span>${(obj.Scale || 1).toFixed(2)}</span></div>`;
+  if (obj._category === 'trigger') {
+    const canonical = current?.data ? (resolveTriggerRecord(obj) ?? lookupTrigger(current.data, obj)) : obj;
+    html += buildTriggerTooltipHTML(canonical ?? obj);
+    html += `<div class="tt-row">radius: <span>${Math.max(obj.Scale || 1, 1).toFixed(1)}</span></div>`;
+    const rx = canonical?.Reactions ?? canonical?.reactions ?? [];
+    if (rx.length) html += `<div class="tt-row">reactions: <span>${rx.length}</span></div>`;
+    html += `<div class="tt-row" style="color:var(--accent)">click to inspect chain</div>`;
+  } else {
+    html += `<div class="tt-row">rotation: <span>${obj.Rot[0].toFixed(3)}, ${obj.Rot[1].toFixed(3)}, ${obj.Rot[2].toFixed(3)}, ${obj.Rot[3].toFixed(3)}</span></div>`;
+    html += `<div class="tt-row">scale: <span>${(obj.Scale || 1).toFixed(2)}</span></div>`;
+  }
   if (obj._modelPath) html += `<div class="tt-row">model: <span>${obj._modelPath}</span></div>`;
   return html;
 }
@@ -188,6 +306,169 @@ function showTooltip(html, x, y) {
 
 function hideTooltip() {
   tooltipEl.classList.remove('visible');
+}
+
+function hideTriggerPanel() {
+  selectedTrigger = null;
+  selectedTriggerCoid = null;
+  selectedReactionCoid = null;
+  reactionInspectorEl?.classList.remove('open');
+  if (reactionInspectorTreeEl) reactionInspectorTreeEl.innerHTML = '';
+  if (reactionInspectorDetailEl) reactionInspectorDetailEl.innerHTML = '';
+  renderTriggerList();
+}
+
+/** Build COID/index lookups at load time (avoids stale click hints). */
+function buildTriggerCatalog(data) {
+  const byCoid = new Map();
+  for (let i = 0; i < (data.Triggers?.length ?? 0); i++) {
+    const trigger = data.Triggers[i];
+    const coid = Number(trigger.Coid);
+    if (!Number.isFinite(coid)) continue;
+    byCoid.set(coid, { trigger, index: i });
+  }
+  return { byCoid };
+}
+
+function resolveTriggerRecord(triggerHint) {
+  if (!current?.data || triggerHint == null) return null;
+  const coid = Number(typeof triggerHint === 'object' ? triggerHint.Coid : triggerHint);
+  if (Number.isFinite(coid) && current.byCoid?.has(coid)) {
+    return current.byCoid.get(coid).trigger;
+  }
+  const idx = triggerHint?._triggerIndex;
+  if (idx != null && current.data.Triggers?.[idx]) {
+    const indexed = current.data.Triggers[idx];
+    if (!Number.isFinite(coid) || Number(indexed.Coid) === coid) return indexed;
+  }
+  return lookupTrigger(current.data, triggerHint);
+}
+
+function renderReactionInspectorTree() {
+  if (!reactionInspectorTreeEl || !current?.data || !selectedTrigger) return;
+  reactionInspectorTreeEl.innerHTML = buildTriggerInspectorHTML(selectedTrigger, current.data, {
+    selectedReactionCoid,
+  });
+}
+
+function showReactionDetail(reactionCoid) {
+  if (!current?.data || !reactionInspectorDetailEl) return;
+  selectedReactionCoid = Number(reactionCoid);
+  renderReactionInspectorTree();
+  reactionInspectorDetailEl.innerHTML = buildReactionDetailHTML(selectedReactionCoid, current.data);
+}
+
+function showTriggerPanel(triggerHint) {
+  if (!current?.data) return;
+  const trigger = resolveTriggerRecord(triggerHint) ?? triggerHint;
+  selectedTrigger = trigger;
+  selectedTriggerCoid = Number(trigger?.Coid);
+  selectedReactionCoid = null;
+  renderReactionInspectorTree();
+  if (reactionInspectorDetailEl) reactionInspectorDetailEl.innerHTML = '';
+  reactionInspectorEl?.classList.add('open');
+  if (trigger.Pos) {
+    highlightMesh.position.set(trigger.Pos[0], trigger.Pos[1], trigger.Pos[2]);
+    highlightMesh.quaternion.identity();
+    const dim = Math.max(trigger.Scale || 1, 1) * 0.6;
+    highlightMesh.scale.set(dim, dim, dim);
+    highlightMesh.visible = true;
+  }
+  renderTriggerList();
+  const active = triggerListEl?.querySelector(`li[data-coid="${selectedTriggerCoid}"]`);
+  active?.scrollIntoView({ block: 'nearest' });
+}
+
+function focusTriggerPosition(trigger) {
+  if (!trigger?.Pos) return;
+  focusWorldPoint(trigger.Pos, Math.max(trigger.Scale || 1, 1));
+}
+
+function escapeListHtml(s) {
+  return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function renderTriggerList() {
+  if (!triggerListEl) return;
+  const triggers = current?.data ? getTriggers(current.data) : [];
+  const q = triggerListSearchEl?.value.trim().toLowerCase() ?? '';
+  const filtered = q
+    ? triggers.filter((t) => {
+        const name = (t.Name || '').toLowerCase();
+        const target = (t.TargetType || '').toLowerCase();
+        return name.includes(q) || target.includes(q) || String(t.Coid).includes(q);
+      })
+    : triggers;
+  if (triggerListCountEl) {
+    triggerListCountEl.textContent = filtered.length === triggers.length
+      ? String(triggers.length)
+      : `${filtered.length}/${triggers.length}`;
+  }
+  triggerListEl.textContent = '';
+  if (!triggers.length) {
+    triggerListEl.innerHTML = '<li class="empty">No triggers on this map</li>';
+    return;
+  }
+  const frag = document.createDocumentFragment();
+  filtered.forEach((t) => {
+    const idx = current.byCoid?.get(Number(t.Coid))?.index;
+    const li = document.createElement('li');
+    li.dataset.coid = String(t.Coid);
+    if (Number(selectedTriggerCoid) === Number(t.Coid)) li.classList.add('active');
+    const swatch = triggerWireframeCssColor(t);
+    const radius = Math.max(t.Scale || 1, 1).toFixed(1);
+    const rx = (t.Reactions || []).length;
+    li.innerHTML = `<span class="tl-swatch" style="background:${swatch}"></span>`
+      + `<span class="tl-text"><span class="tl-name">${escapeListHtml(t.Name || 'Trigger')}</span>`
+      + `<span class="tl-meta">${escapeListHtml(t.TargetType || '?')} · r${radius}${rx ? ` · ${rx} rx` : ''}</span></span>`;
+    li.addEventListener('click', () => {
+      focusTriggerPosition(t);
+      showTriggerPanel({
+        Coid: t.Coid,
+        _triggerIndex: idx,
+        _category: 'trigger',
+        Pos: t.Pos,
+        Scale: t.Scale,
+        TargetType: t.TargetType,
+        Color: t.Color,
+      });
+    });
+    frag.appendChild(li);
+  });
+  triggerListEl.appendChild(frag);
+}
+
+function applyTriggerRailVisibility() {
+  if (!triggerRailEl || !showTriggerRailEl) return;
+  triggerRailEl.classList.toggle('hidden', !showTriggerRailEl.checked);
+  if (!showTriggerRailEl.checked) return;
+  resize();
+}
+
+function applyTriggerListCollapsed() {
+  const collapsed = triggerRailEl?.classList.contains('collapsed') ?? false;
+  triggerListToggleEl?.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+  resize();
+}
+
+function toggleTriggerListCollapsed() {
+  triggerRailEl?.classList.toggle('collapsed');
+  applyTriggerListCollapsed();
+}
+
+function focusCoid(coid) {
+  if (!current?.data) return;
+  const index = current.data.ObjectIndex || {};
+  const entry = index[String(coid)];
+  if (!entry?.Pos) return;
+
+  focusWorldPoint(entry.Pos, 40);
+
+  highlightMesh.position.set(entry.Pos[0], entry.Pos[1], entry.Pos[2]);
+  highlightMesh.quaternion.identity();
+  const dim = 8;
+  highlightMesh.scale.set(dim, dim, dim);
+  highlightMesh.visible = true;
 }
 
 // --- level list --------------------------------------------------------------
@@ -211,9 +492,10 @@ function renderList() {
 async function loadLevel(name) {
   setStatus(`Loading ${name}…`);
   try {
-    const data = await (await fetch(`./levels/${name}.json`)).json();
+    const data = await (await fetch(`./levels/${name}.json`, { cache: 'no-store' })).json();
     clearWorld();
-    current = { name, data };
+    const { byCoid } = buildTriggerCatalog(data);
+    current = { name, data, byCoid };
     history.replaceState(null, '', `#${encodeURIComponent(name)}`);
     renderList();
 
@@ -222,11 +504,14 @@ async function loadLevel(name) {
     setStatus(`Placing ${data.Objects.length.toLocaleString()} objects…`);
     // Yield so terrain shows before the (heavier) object build.
     await new Promise((r) => setTimeout(r, 0));
+    buildTriggers(data);
     await buildObjects(data);
+    await buildRoads(data);
     buildMarkers(data);
     buildPaths(data);
     applyVisibility();
     renderInfo();
+    renderTriggerList();
     setStatus('');
   } catch (e) {
     console.error(e);
@@ -236,10 +521,21 @@ async function loadLevel(name) {
 
 function clearWorld() {
   worldGroup.clear();
-  for (const k of Object.keys(layers)) layers[k] = null;
+  layers.terrain = null;
+  layers.terrainGrid = null;
+  layers.roads = null;
+  layers.objects = null;
+  layers.triggers = null;
+  layers.boxes = null;
+  layers.boxesFailed = null;
+  layers.markers = null;
+  for (const kind of MARKER_KINDS) layers.markerKinds[kind] = null;
+  layers.paths = null;
   worldGroup.add(highlightMesh);
   highlightMesh.visible = false;
   hideTooltip();
+  hideTriggerPanel();
+  renderTriggerList();
 }
 
 async function buildTerrain(data) {
@@ -280,6 +576,19 @@ async function buildTerrain(data) {
         indices.push(a, d2, b, b, d2, e2);
       }
     }
+    // Bilinear height sampler over the DECIMATED render grid, so draped geometry
+    // (roads) can follow the rendered surface rather than the full-res heights.
+    const cell = step * grid;
+    current.terrainSampler = (x, z) => {
+      const fx = Math.min(Math.max(x / cell, 0), nx - 1.001);
+      const fz = Math.min(Math.max(z / cell, 0), nz - 1.001);
+      const c0 = Math.floor(fx), r0 = Math.floor(fz);
+      const tx = fx - c0, tz = fz - r0;
+      const h = (r, c) => positions[(r * nx + c) * 3 + 1];
+      return (h(r0, c0) * (1 - tx) + h(r0, c0 + 1) * tx) * (1 - tz)
+           + (h(r0 + 1, c0) * (1 - tx) + h(r0 + 1, c0 + 1) * tx) * tz;
+    };
+
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     geo.setIndex(indices);
@@ -301,10 +610,13 @@ async function buildTerrain(data) {
     geo.translate(bounds.maxX / 2, 0, bounds.maxZ / 2);
     group.add(new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: 0x3a4150, roughness: 1 })));
   }
-  // Grid overlay
+  // Grid overlay (separate layer for independent toggle)
+  const gridGroup = new THREE.Group();
+  layers.terrainGrid = gridGroup;
   const gh = new THREE.GridHelper(Math.max(bounds.maxX, bounds.maxZ), 32, 0x2a3242, 0x1c2230);
   gh.position.set(bounds.maxX / 2, bounds.minY - 1, bounds.maxZ / 2);
-  group.add(gh);
+  gridGroup.add(gh);
+  worldGroup.add(gridGroup);
   return bounds;
 }
 
@@ -315,11 +627,18 @@ async function buildObjects(data) {
   const boxGroup = new THREE.Group();
   layers.boxes = boxGroup;
   worldGroup.add(boxGroup);
+  const failGroup = new THREE.Group();
+  layers.boxesFailed = failGroup;
+  worldGroup.add(failGroup);
+
+  const nonTriggers = data.Triggers?.length
+    ? data.Objects
+    : data.Objects.filter((o) => !isTrigger(o));
 
   // Group placements by resolved model path.
   const byModel = new Map();  // path -> [obj...]
   const unresolved = [];
-  for (const o of data.Objects) {
+  for (const o of nonTriggers) {
     const p = resolveModelPath(o);
     if (p) { (byModel.get(p) ?? byModel.set(p, []).get(p)).push(o); }
     else unresolved.push(o);
@@ -330,29 +649,22 @@ async function buildObjects(data) {
   const boxedEntries = modelEntries.slice(MAX_UNIQUE_MODELS);
   for (const [, objs] of boxedEntries) unresolved.push(...objs);
 
+  const triggerCount = countTriggers(data);
+
   current.stats = {
     total: data.Objects.length,
+    triggers: triggerCount,
     uniqueModels: modelEntries.length,
     loadedModels: loadEntries.length,
     boxed: unresolved.length,
+    physics: nonTriggers.filter((o) => o.Type !== 'Object').length,
+    graphics: nonTriggers.filter((o) => o.Type === 'Object').length,
+    parseFailed: 0,
   };
 
   // Boxes for unresolved / over-cap (single instanced mesh).
   if (unresolved.length) {
-    const boxGeo = new THREE.BoxGeometry(1, 1, 1);
-    const boxMat = new THREE.MeshStandardMaterial({ color: 0x8a5cff, roughness: 0.8, transparent: true, opacity: 0.55 });
-    const inst = new THREE.InstancedMesh(boxGeo, boxMat, unresolved.length);
-    inst.userData.objs = unresolved.map((o) => ({ ...o, _resolved: false }));
-    const m = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), p = new THREE.Vector3();
-    unresolved.forEach((o, i) => {
-      const sc = Math.min(Math.max((o.Scale || 1) * 3, 2), 40);
-      p.set(o.Pos[0], o.Pos[1] + sc / 2, o.Pos[2]);
-      q.set(o.Rot[0], o.Rot[1], o.Rot[2], o.Rot[3]);
-      s.set(sc, sc, sc);
-      inst.setMatrixAt(i, m.compose(p, q, s));
-    });
-    inst.instanceMatrix.needsUpdate = true;
-    boxGroup.add(inst);
+    addPlacementBoxes(boxGroup, unresolved, 0x8a5cff, 0.55, false);
   }
 
   // Load resolved models with bounded concurrency; build instanced meshes per section.
@@ -364,19 +676,28 @@ async function buildObjects(data) {
       setStatus(`Loading models ${my + 1}/${loadEntries.length}…`);
       const parsed = await loadGeo(path);
       if (!parsed) { // parse failed -> box them
-        addBoxes(boxGroup, objs); continue;
+        current.stats.parseFailed += objs.length;
+        addPlacementBoxes(failGroup, objs, 0xff5c5c, 0.5, true);
+        continue;
       }
       const lod0 = pickLod0(parsed.sections);
-      // Some models are authored at an arbitrary local scale; the body-level XOBB gives the
-      // TRUE world size. Correct = bodyExtent / visualExtent (≈1 for the ~90% already correct,
-      // the shrink factor for the inflated ones e.g. husk cars ~37x too big).
       const correction = modelCorrection(parsed, lod0);
+      const category = resolvedMeshCategory(objs[0]?.Type);
+      // invis_* models are editor-only physics proxies (purple MatDiffuse, Phase
+      // Translucent) — retail never draws them. Ghost them so they don't wall off maps.
+      const isInvis = /(^|\/)invis[^/]*\.geo$/i.test(path);
       for (const section of lod0) {
         if (!section.indices.length) continue;
         const geo = sectionGeometry(section);
         const { material } = buildMaterial(section, bank, {});
+        if (isInvis) {
+          material.transparent = true;
+          material.opacity = 0.08;
+          material.depthWrite = false;
+        }
         const inst = new THREE.InstancedMesh(geo, material, objs.length);
-        inst.userData.objs = objs.map((o) => ({ ...o, _resolved: true, _modelPath: path }));
+        inst.userData.objs = objs.map((o) => ({ ...o, _resolved: true, _modelPath: path, _category: category }));
+        inst.userData.category = category;
         const m = new THREE.Matrix4(), q = new THREE.Quaternion(), sv = new THREE.Vector3(), pv = new THREE.Vector3();
         objs.forEach((o, i) => {
           pv.set(o.Pos[0], o.Pos[1], o.Pos[2]);
@@ -394,12 +715,56 @@ async function buildObjects(data) {
   await Promise.all(Array.from({ length: MODEL_FETCH_CONCURRENCY }, worker));
 }
 
-function addBoxes(boxGroup, objs) {
-  const inst = new THREE.InstancedMesh(
-    new THREE.BoxGeometry(1, 1, 1),
-    new THREE.MeshStandardMaterial({ color: 0xff5c5c, roughness: 0.8, transparent: true, opacity: 0.5 }),
-    objs.length);
-  inst.userData.objs = objs.map((o) => ({ ...o, _resolved: false }));
+function buildTriggers(data) {
+  const triggers = getTriggers(data);
+  const group = new THREE.Group();
+  layers.triggers = group;
+  worldGroup.add(group);
+  if (!triggers.length) return;
+
+  const geo = new THREE.SphereGeometry(1, 16, 12);
+  const mat = new THREE.MeshBasicMaterial({
+    color: 0xffa040,
+    wireframe: true,
+    transparent: true,
+    opacity: 0.55,
+  });
+  const inst = new THREE.InstancedMesh(geo, mat, triggers.length);
+  inst.userData.objs = triggers.map((o, i) => ({
+    Coid: o.Coid,
+    Cbid: o.Cbid,
+    Pos: o.Pos,
+    Scale: o.Scale,
+    Name: o.Name,
+    TargetType: o.TargetType,
+    Color: o.Color,
+    _triggerIndex: i,
+    _category: 'trigger',
+  }));
+  const m = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), p = new THREE.Vector3();
+  triggers.forEach((o, i) => {
+    const radius = Math.max(o.Scale || 1, 1);
+    p.set(o.Pos[0], o.Pos[1], o.Pos[2]);
+    q.set(o.Rot?.[0] ?? 0, o.Rot?.[1] ?? 0, o.Rot?.[2] ?? 0, o.Rot?.[3] ?? 1);
+    s.set(radius, radius, radius);
+    inst.setMatrixAt(i, m.compose(p, q, s));
+    inst.setColorAt(i, new THREE.Color(triggerColor(o)));
+  });
+  inst.instanceMatrix.needsUpdate = true;
+  if (inst.instanceColor) inst.instanceColor.needsUpdate = true;
+  inst.frustumCulled = false;
+  group.add(inst);
+}
+
+function addPlacementBoxes(targetGroup, objs, color, opacity, parseFailed) {
+  const boxGeo = new THREE.BoxGeometry(1, 1, 1);
+  const boxMat = new THREE.MeshStandardMaterial({ color, roughness: 0.8, transparent: true, opacity });
+  const inst = new THREE.InstancedMesh(boxGeo, boxMat, objs.length);
+  inst.userData.objs = objs.map((o) => ({
+    ...o,
+    _resolved: false,
+    _category: placementCategory(o, { parseFailed }),
+  }));
   const m = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), p = new THREE.Vector3();
   objs.forEach((o, i) => {
     const sc = Math.min(Math.max((o.Scale || 1) * 3, 2), 40);
@@ -409,7 +774,7 @@ function addBoxes(boxGroup, objs) {
     inst.setMatrixAt(i, m.compose(p, q, s));
   });
   inst.instanceMatrix.needsUpdate = true;
-  boxGroup.add(inst);
+  targetGroup.add(inst);
 }
 
 function modelCorrection(parsed, lod0) {
@@ -626,7 +991,184 @@ function buildMarkers(data) {
     list.forEach((mk, i) => { p.set(mk.Pos[0], mk.Pos[1] + 12, mk.Pos[2]); inst.setMatrixAt(i, m.compose(p, q, s)); });
     inst.instanceMatrix.needsUpdate = true;
     group.add(inst);
+    if (kind in layers.markerKinds) layers.markerKinds[kind] = inst;
   }
+}
+
+// --- roads ---------------------------------------------------------------------
+// Road/river ribbons generated from the .fam RoadNodes graph (exported by MapDump).
+// Node `Tex` = profile name, e.g. "road_2laneasphalt_20": also the .dds texture stem
+// (mq_/lq_ tiers resolved by TextureBank) and the trailing _NN = road width in world
+// units (VOGRoadNode.cpp @0x5e6c40: atof after last '_', default 10). The square road
+// textures run ALONG u, so u advances by distance/width (square tiling); v = across.
+// Junction nodes carry a pad piece model (road_*.geo) + up to 6 arm attach points
+// (local, rotated by `Rotation` around Y) that chain endpoints snap to.
+
+const ROAD_LIFT = 0.4;          // lift above terrain to avoid z-fighting
+const ROAD_SUBDIV = 4;          // spline subdivisions per node interval
+
+function roadWidth(tex) {
+  const m = /_(\d+(?:\.\d+)?)$/.exec(tex || '');
+  return m ? Math.max(parseFloat(m[1]), 2) : 10;
+}
+
+function rotY(v, ang) {
+  const c = Math.cos(ang), s = Math.sin(ang);
+  return new THREE.Vector3(v[0] * c + v[2] * s, v[1], -v[0] * s + v[2] * c);
+}
+
+/** Walk the node graph into chains between junctions / degree!=2 nodes (plus loops). */
+function roadChains(roads, byId) {
+  const links = (n) => n.Links.filter((l) => l >= 0 && byId.has(l) && l !== n.Id);
+  const seen = new Set();
+  const ek = (a, b) => (a < b ? a + '|' + b : b + '|' + a);
+  const chains = [];
+  const walk = (start, firstId) => {
+    const chain = [start];
+    let prev = start, cur = byId.get(firstId);
+    seen.add(ek(start.Id, firstId));
+    while (cur) {
+      chain.push(cur);
+      if (cur.Type === 'junction' || cur.Id === start.Id) break;
+      const next = links(cur).filter((x) => x !== prev.Id && !seen.has(ek(cur.Id, x)));
+      if (next.length !== 1) break;
+      seen.add(ek(cur.Id, next[0]));
+      prev = cur; cur = byId.get(next[0]);
+    }
+    return chain;
+  };
+  for (const n of roads) {
+    if (n.Type !== 'junction' && links(n).length === 2) continue; // interior node
+    for (const l of links(n)) if (!seen.has(ek(n.Id, l))) chains.push(walk(n, l));
+  }
+  for (const n of roads) { // leftover pure loops
+    for (const l of links(n)) if (!seen.has(ek(n.Id, l))) chains.push(walk(n, l));
+  }
+  return chains;
+}
+
+/** Ribbon mesh along a chain of nodes. */
+function ribbonGeometry(points, width, drape = true) {
+  const curve = new THREE.CatmullRomCurve3(points, false, 'centripetal', 0.5);
+  const divisions = Math.max(1, (points.length - 1) * ROAD_SUBDIV);
+  const pts = curve.getSpacedPoints(divisions);
+  const n = pts.length;
+  const pos = new Float32Array(n * 6);
+  const uv = new Float32Array(n * 4);
+  const half = width / 2;
+  let dist = 0;
+  const tan = new THREE.Vector3(), side = new THREE.Vector3();
+  // Drape onto the (decimated) rendered terrain: node heights are exact, but the
+  // render mesh deviates by several units on big maps and would bury the ribbon.
+  // Rivers are NOT draped — their water surface legitimately sits below the banks.
+  const sample = drape ? current?.terrainSampler : null;
+  for (let i = 0; i < n; i++) {
+    const p = pts[i];
+    if (sample) p.y = Math.max(p.y, sample(p.x, p.z));
+    if (i > 0) dist += p.distanceTo(pts[i - 1]);
+    tan.subVectors(pts[Math.min(i + 1, n - 1)], pts[Math.max(i - 1, 0)]);
+    side.set(tan.z, 0, -tan.x).normalize().multiplyScalar(half);
+    if (!isFinite(side.x)) side.set(half, 0, 0);
+    pos[i * 6] = p.x - side.x; pos[i * 6 + 1] = p.y + ROAD_LIFT; pos[i * 6 + 2] = p.z - side.z;
+    pos[i * 6 + 3] = p.x + side.x; pos[i * 6 + 4] = p.y + ROAD_LIFT; pos[i * 6 + 5] = p.z + side.z;
+    const u = dist / width;
+    uv[i * 4] = u; uv[i * 4 + 1] = 0;
+    uv[i * 4 + 2] = u; uv[i * 4 + 3] = 1;
+  }
+  const idx = [];
+  for (let i = 0; i < n - 1; i++) {
+    const a = i * 2;
+    idx.push(a, a + 2, a + 1, a + 1, a + 2, a + 3);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  return g;
+}
+
+function roadMaterial(tex, isRiver) {
+  const name = `${tex}.dds`;
+  const opts = {
+    side: THREE.DoubleSide,
+    polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
+  };
+  if (bank.has(name)) {
+    const { texture } = bank.load(name, { srgb: true });
+    opts.map = texture;
+  } else {
+    opts.color = isRiver ? 0x24404a : 0x2c2c30; // untextured fallback
+  }
+  if (isRiver) { opts.transparent = true; opts.opacity = 0.85; }
+  const mat = new THREE.MeshPhongMaterial(opts);
+  mat.shininess = isRiver ? 60 : 4;
+  return mat;
+}
+
+async function buildRoads(data) {
+  const group = new THREE.Group();
+  layers.roads = group;
+  worldGroup.add(group);
+  const roads = data.Roads || [];
+  if (!roads.length) { current.stats.roadNodes = 0; return; }
+  const byId = new Map(roads.map((r) => [r.Id, r]));
+
+  // Ribbons (roads + rivers), one mesh per chain, materials shared per profile.
+  const matCache = new Map();
+  for (const chain of roadChains(roads, byId)) {
+    const profile = chain.find((c) => c.Type !== 'junction' && c.Tex)?.Tex;
+    if (!profile) continue;
+    const isRiver = chain.some((c) => c.Type === 'river');
+    const width = roadWidth(profile);
+    const points = chain.map((node, i) => {
+      // Snap chain ends to the junction's matching arm attach point.
+      if (node.Type === 'junction' && node.ArmPos) {
+        const other = chain[i === 0 ? 1 : chain.length - 2];
+        const arm = node.Links.indexOf(other?.Id);
+        if (arm >= 0 && arm < node.ArmPos.length) {
+          return rotY(node.ArmPos[arm], node.Rotation || 0)
+            .add(new THREE.Vector3(node.Pos[0], node.Pos[1], node.Pos[2]));
+        }
+      }
+      return new THREE.Vector3(node.Pos[0], node.Pos[1], node.Pos[2]);
+    });
+    if (points.length < 2) continue;
+    let mat = matCache.get(profile);
+    if (!mat) { mat = roadMaterial(profile, isRiver); matCache.set(profile, mat); }
+    group.add(new THREE.Mesh(ribbonGeometry(points, width, !isRiver), mat));
+  }
+
+  // Junction pads: the node's Tex names a road piece .geo, placed at Pos, yaw = Rotation.
+  const pads = new Map(); // model path -> [junction...]
+  for (const j of roads) {
+    if (j.Type !== 'junction' || !j.Tex) continue;
+    const path = modelByStem.get(j.Tex.toLowerCase());
+    if (path) (pads.get(path) ?? pads.set(path, []).get(path)).push(j);
+  }
+  for (const [path, list] of pads) {
+    const parsed = await loadGeo(path);
+    if (!parsed) continue;
+    const lod0 = pickLod0(parsed.sections);
+    const correction = modelCorrection(parsed, lod0);
+    for (const section of lod0) {
+      if (!section.indices.length) continue;
+      const inst = new THREE.InstancedMesh(sectionGeometry(section), buildMaterial(section, bank, {}).material, list.length);
+      const m = new THREE.Matrix4(), q = new THREE.Quaternion(), sv = new THREE.Vector3(), pv = new THREE.Vector3();
+      const sample = current?.terrainSampler;
+      list.forEach((j, i) => {
+        const gy = sample ? Math.max(j.Pos[1], sample(j.Pos[0], j.Pos[2])) : j.Pos[1];
+        pv.set(j.Pos[0], gy + ROAD_LIFT * 0.5, j.Pos[2]);
+        q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), j.Rotation || 0);
+        sv.setScalar(correction);
+        inst.setMatrixAt(i, m.compose(pv, q, sv));
+      });
+      inst.instanceMatrix.needsUpdate = true;
+      inst.frustumCulled = false;
+      group.add(inst);
+    }
+  }
+  current.stats.roadNodes = roads.length;
 }
 
 function buildPaths(data) {
@@ -650,8 +1192,8 @@ function buildPaths(data) {
 function fitCamera(b, data) {
   const cx = (b.minX + b.maxX) / 2, cz = (b.minZ + b.maxZ) / 2, cy = (b.minY + b.maxY) / 2;
   const span = Math.max(b.maxX - b.minX, b.maxZ - b.minZ, 1);
-  controls.target.set(cx, cy, cz);
-  camera.position.set(cx + span * 0.5, cy + span * 0.6, cz + span * 0.7);
+  configureCameraSpeedRange(mapDefaultCameraSpeed(span));
+  focusWorldPoint([cx, cy, cz], span * 0.25);
   camera.near = Math.max(span / 5000, 0.5);
   camera.far = span * 12;
   camera.updateProjectionMatrix();
@@ -659,10 +1201,35 @@ function fitCamera(b, data) {
 
 function applyVisibility() {
   if (layers.terrain) layers.terrain.visible = el('show-terrain').checked;
-  if (layers.objects) layers.objects.visible = el('show-objects').checked;
-  if (layers.markers) layers.markers.visible = el('show-markers').checked;
+  if (layers.terrainGrid) layers.terrainGrid.visible = el('show-grid').checked;
+  if (layers.roads) layers.roads.visible = el('show-roads')?.checked ?? true;
+
+  const showObjects = el('show-objects').checked;
+  const showResolved = showObjects && el('show-resolved').checked;
+  const showPhysics = showResolved && el('show-physics').checked;
+  const showGraphics = showResolved && el('show-graphics').checked;
+
+  if (layers.objects) {
+    for (const child of layers.objects.children) {
+      if (!child.isInstancedMesh) continue;
+      const cat = child.userData.category;
+      if (cat === 'resolved-graphics') child.visible = showGraphics;
+      else child.visible = showPhysics;
+    }
+  }
+
+  if (layers.triggers) layers.triggers.visible = el('show-triggers').checked;
+  if (layers.boxes) layers.boxes.visible = showObjects && el('show-unresolved').checked;
+  if (layers.boxesFailed) layers.boxesFailed.visible = showObjects && el('show-failed').checked;
+
+  const showMarkers = el('show-markers').checked;
+  if (layers.markers) layers.markers.visible = showMarkers;
+  for (const kind of MARKER_KINDS) {
+    const mesh = layers.markerKinds[kind];
+    if (mesh) mesh.visible = showMarkers && el(`show-marker-${kind}`).checked;
+  }
+
   if (layers.paths) layers.paths.visible = el('show-paths').checked;
-  if (layers.boxes) layers.boxes.visible = el('show-boxes').checked && el('show-objects').checked;
 }
 
 function renderInfo() {
@@ -674,8 +1241,15 @@ function renderInfo() {
   html += line('map', current.name);
   html += line('terrain', `${t.Width}×${t.Height} @ grid ${t.GridSize} (world ${(t.Width * t.GridSize).toLocaleString()}×${(t.Height * t.GridSize).toLocaleString()})`);
   html += line('objects', `${(s.total ?? 0).toLocaleString()} placed · ${s.loadedModels ?? 0}/${s.uniqueModels ?? 0} models loaded`);
-  if (s.boxed) html += `<div class="warn"><span class="k">boxed</span> ${s.boxed.toLocaleString()} unresolved/over-cap (shown as boxes)</div>`;
+  if (s.triggers) html += line('triggers', s.triggers.toLocaleString());
+  if (d.Reactions?.length) html += line('reactions', d.Reactions.length.toLocaleString());
+  if (s.physics || s.graphics) {
+    html += line('breakdown', `${(s.physics ?? 0).toLocaleString()} physics · ${(s.graphics ?? 0).toLocaleString()} graphics`);
+  }
+  if (s.boxed) html += `<div class="warn"><span class="k">unresolved</span> ${s.boxed.toLocaleString()} (purple boxes)</div>`;
+  if (s.parseFailed) html += `<div class="warn"><span class="k">parse failed</span> ${s.parseFailed.toLocaleString()} (red boxes)</div>`;
   html += line('markers', d.Markers.length + ' · paths ' + d.Paths.length);
+  if (s.roadNodes) html += line('roads', `${s.roadNodes.toLocaleString()} nodes`);
   infoEl.innerHTML = html;
 }
 
@@ -689,54 +1263,144 @@ function onMouseMove(e) {
   pendingHover = true;
 }
 
+function raycastPlacements(prioritizeTriggers = false) {
+  raycaster.setFromCamera(mouse, camera);
+  const targets = [];
+  const layerOrder = prioritizeTriggers
+    ? ['triggers', 'objects', 'boxes', 'boxesFailed']
+    : ['objects', 'triggers', 'boxes', 'boxesFailed'];
+  for (const layerKey of layerOrder) {
+    const layer = layers[layerKey];
+    if (!layer || !layer.visible) continue;
+    for (const child of layer.children) {
+      if (child.isInstancedMesh && child.visible && child.userData.objs) targets.push(child);
+    }
+  }
+  if (!prioritizeTriggers) {
+    for (const kind of MARKER_KINDS) {
+      const mesh = layers.markerKinds[kind];
+      if (mesh?.visible && mesh.userData.objs) targets.push(mesh);
+    }
+  }
+  return raycaster.intersectObjects(targets);
+}
+
+function getPlacementFromHit(hit) {
+  const objs = hit.object.userData?.objs;
+  if (!objs || hit.instanceId == null || hit.instanceId >= objs.length) return null;
+  return objs[hit.instanceId];
+}
+
+function selectRaycastHit(hits) {
+  if (!hits.length) return null;
+  const triggerHit = pickTriggerHit(hits, getPlacementFromHit);
+  return triggerHit ?? hits[0];
+}
+
+function placementFromHit(hit) {
+  const mesh = hit.object;
+  const idx = hit.instanceId;
+  const objs = mesh.userData.objs;
+  if (!objs || idx >= objs.length) return null;
+  const mat4 = new THREE.Matrix4();
+  mesh.getMatrixAt(idx, mat4);
+  const pos = new THREE.Vector3(), quat = new THREE.Quaternion(), scale = new THREE.Vector3();
+  mat4.decompose(pos, quat, scale);
+  highlightMesh.position.copy(pos);
+  highlightMesh.quaternion.copy(quat);
+  const maxDim = Math.max(scale.x, scale.y, scale.z) * 0.6;
+  highlightMesh.scale.set(maxDim, maxDim, maxDim);
+  highlightMesh.visible = true;
+  return objs[idx];
+}
+
+function onCanvasClick(e) {
+  if (e.button !== 0) return;
+  const rect = renderer.domElement.getBoundingClientRect();
+  mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+  mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+  const hits = raycastPlacements(true);
+  if (!hits.length) return;
+
+  const hit = selectRaycastHit(hits);
+  const obj = placementFromHit(hit);
+  if (obj?._category === 'trigger') {
+    showTriggerPanel(obj);
+  }
+}
+
 function processHover() {
   if (!pendingHover) return;
   pendingHover = false;
 
-  raycaster.setFromCamera(mouse, camera);
-
-  const targets = [];
-  for (const layerKey of ['objects', 'markers', 'boxes']) {
-    const layer = layers[layerKey];
-    if (!layer || !layer.visible) continue;
-    for (const child of layer.children) {
-      if (child.isInstancedMesh && child.userData.objs) targets.push(child);
-    }
-  }
-
-  const hits = raycaster.intersectObjects(targets);
+  const hits = raycastPlacements(false);
 
   if (hits.length > 0) {
-    const hit = hits[0];
-    const mesh = hit.object;
-    const idx = hit.instanceId;
-    const objs = mesh.userData.objs;
-    if (objs && idx < objs.length) {
-      const mat4 = new THREE.Matrix4();
-      mesh.getMatrixAt(idx, mat4);
-      const pos = new THREE.Vector3(), quat = new THREE.Quaternion(), scale = new THREE.Vector3();
-      mat4.decompose(pos, quat, scale);
-      highlightMesh.position.copy(pos);
-      highlightMesh.quaternion.copy(quat);
-      const maxDim = Math.max(scale.x, scale.y, scale.z) * 0.6;
-      highlightMesh.scale.set(maxDim, maxDim, maxDim);
-      highlightMesh.visible = true;
-
-      const obj = objs[idx];
-      const kind = obj.Kind !== undefined ? 'marker' : 'object';
-      showTooltip(buildTooltipHTML(obj, kind), mouseClientX, mouseClientY);
+    const hit = selectRaycastHit(hits);
+    const obj = placementFromHit(hit);
+    if (obj) {
+      const kind = obj.Kind !== undefined ? 'marker' : (obj._category === 'trigger' ? 'trigger' : 'object');
+      showTooltip(buildTooltipHTML(obj, kind === 'marker' ? 'marker' : 'object'), mouseClientX, mouseClientY);
       return;
     }
   }
 
-  highlightMesh.visible = false;
+  if (!selectedTrigger) {
+    highlightMesh.visible = false;
+  }
   hideTooltip();
 }
 
 // --- events ------------------------------------------------------------------
 searchEl.addEventListener('input', renderList);
-for (const id of ['show-terrain', 'show-objects', 'show-markers', 'show-paths', 'show-boxes'])
+triggerListSearchEl?.addEventListener('input', renderTriggerList);
+triggerListToggleEl?.addEventListener('click', toggleTriggerListCollapsed);
+showTriggerRailEl?.addEventListener('change', applyTriggerRailVisibility);
+applyTriggerRailVisibility();
+if (triggerRailEl && typeof ResizeObserver !== 'undefined') {
+  new ResizeObserver(() => resize()).observe(triggerRailEl);
+}
+const visibilityCheckboxIds = [
+  'show-terrain', 'show-grid', 'show-roads',
+  'show-objects', 'show-resolved', 'show-physics', 'show-graphics',
+  'show-triggers', 'show-unresolved', 'show-failed',
+  'show-markers', 'show-marker-spawn', 'show-marker-enter', 'show-marker-store', 'show-marker-outpost',
+  'show-paths',
+];
+for (const id of visibilityCheckboxIds)
   el(id).addEventListener('change', applyVisibility);
+
+reactionInspectorCloseEl?.addEventListener('click', hideTriggerPanel);
+reactionInspectorEl?.addEventListener('click', (e) => {
+  const nodeBtn = e.target.closest('.tp-node-select');
+  if (nodeBtn) {
+    const coid = Number(nodeBtn.dataset.reactionCoid);
+    if (Number.isFinite(coid)) showReactionDetail(coid);
+    return;
+  }
+  const focusBtn = e.target.closest('.tp-focus');
+  if (focusBtn) {
+    const coid = Number(focusBtn.dataset.coid);
+    if (Number.isFinite(coid)) focusCoid(coid);
+    return;
+  }
+  const triggerLink = e.target.closest('.tp-trigger-link');
+  if (triggerLink) {
+    const coid = Number(triggerLink.dataset.triggerCoid);
+    if (Number.isFinite(coid)) showTriggerPanel(coid);
+  }
+});
+
+cameraSpeedEl?.addEventListener('input', applyCameraSpeedFromSlider);
+cameraSpeedEl?.addEventListener('change', () => cameraSpeedEl?.blur());
+configureCameraSpeedRange(420);
+
+window.addEventListener('keydown', (e) => {
+  if (e.code !== 'KeyF' || e.repeat || shouldIgnoreKeyEvent(e)) return;
+  focusSelected();
+  e.preventDefault();
+});
 
 // --- boot --------------------------------------------------------------------
 async function boot() {
@@ -763,3 +1427,10 @@ async function boot() {
   if (start) loadLevel(start.name);
 }
 boot();
+
+// Debug hook for headless verification scripts (see docs/level-renderer.md Validation).
+window.__lv = {
+  camera, fly, layers,
+  get current() { return current; },
+  focusWorldPoint,
+};
