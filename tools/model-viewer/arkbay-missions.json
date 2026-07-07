@@ -1,0 +1,735 @@
+{
+  "ok": true,
+  "gamePath": "C:\\Program Files (x86)\\NetDevil\\Auto Assault",
+  "missions": [
+    {
+      "id": 554,
+      "name": "h_tas_Emergence_start",
+      "title": "New Day Dawning!",
+      "internalName": "CH - first evar",
+      "description": "You have just arrived in the Ark Bay 313, on your way to the Hestia Back Range, a training and testing ground for the Hestia Company.  \n\nYou will need to achieve your Hestia ID in order to be cleared for passage to Ascent Station, the first stop for all new freelancers.",
+      "continent": 707,
+      "type": 255,
+      "objectives": [
+        {
+          "sequence": 0,
+          "objectiveId": 714,
+          "objectiveName": "h_emergence_newday",
+          "title": "Check in with Rogers",
+          "mapName": "h_emergence_newday",
+          "requirements": [
+            "ObjectiveRequirementDeliver"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 3032,
+      "name": "h_1-1_tas_arkbay_liveanddirect",
+      "title": "Live and Direct",
+      "internalName": "Human tutorial 2",
+      "description": "OK then, looks like everything is in order. [$imp]Check in with Kelly Sweet[$/imp] on the [$loc]Emergence Terrace[$/loc]. She will get you on your way. \n\nAs you\u0027ll see on your drive, we\u0027ve got osterakes breeding out of control in the caves. I\u0027m sure no one would mind if their population thinned out a bit. [$emote]Rogers smirks.[$/emote]\n\n[$inst]The orange arrow at the top of the screen is a Waypoint arrow. It points toward your next mission objective. To reach your next objective, follow the arr\u2026",
+      "continent": 707,
+      "type": 255,
+      "objectives": [
+        {
+          "sequence": 0,
+          "objectiveId": 5424,
+          "objectiveName": "H_arkbay_liveanddirect_1",
+          "title": "Follow your Waypoint to Kelly Sweet",
+          "mapName": "H_arkbay_liveanddirect_1",
+          "requirements": [
+            "ObjectiveRequirementPatrol"
+          ]
+        },
+        {
+          "sequence": 1,
+          "objectiveId": 5425,
+          "objectiveName": "h_arkbay_liveanddirect_2",
+          "title": "Follow your waypoints to Kelly Sweet",
+          "mapName": "h_arkbay_liveanddirect_2",
+          "requirements": [
+            "ObjectiveRequirementPatrol"
+          ]
+        },
+        {
+          "sequence": 2,
+          "objectiveId": 5426,
+          "objectiveName": "h_arkbay_liveanddirect_3",
+          "title": "Follow your waypoints to Kelly Sweet",
+          "mapName": "h_arkbay_liveanddirect_3",
+          "requirements": [
+            "ObjectiveRequirementPatrol"
+          ]
+        },
+        {
+          "sequence": 3,
+          "objectiveId": 5427,
+          "objectiveName": "h_arkbay_liveanddirect_4",
+          "title": "Follow your waypoints to Kelly Sweet",
+          "mapName": "h_arkbay_liveanddirect_4",
+          "requirements": [
+            "ObjectiveRequirementPatrol"
+          ]
+        },
+        {
+          "sequence": 4,
+          "objectiveId": 5428,
+          "objectiveName": "h_arkbay_liveanddirect_5",
+          "title": "Follow your waypoints to Kelly Sweet",
+          "mapName": "h_arkbay_liveanddirect_5",
+          "requirements": [
+            "ObjectiveRequirementPatrol"
+          ]
+        },
+        {
+          "sequence": 5,
+          "objectiveId": 5429,
+          "objectiveName": "h_arkbay_liveanddirect_6",
+          "title": "Follow your waypoints to Kelly Sweet",
+          "mapName": "h_arkbay_liveanddirect_6",
+          "requirements": [
+            "ObjectiveRequirementPatrol"
+          ]
+        },
+        {
+          "sequence": 6,
+          "objectiveId": 5430,
+          "objectiveName": "h_arkbay_liveanddirect_7",
+          "title": "Follow your waypoints to Kelly Sweet",
+          "mapName": "h_arkbay_liveanddirect_7",
+          "requirements": [
+            "ObjectiveRequirementPatrol"
+          ]
+        },
+        {
+          "sequence": 7,
+          "objectiveId": 5431,
+          "objectiveName": "h_arkbay_liveanddirect_8",
+          "title": "Follow your waypoints to Kelly Sweet",
+          "mapName": "h_arkbay_liveanddirect_8",
+          "requirements": [
+            "ObjectiveRequirementPatrol"
+          ]
+        },
+        {
+          "sequence": 8,
+          "objectiveId": 5432,
+          "objectiveName": "h_arkbay_liveanddirect_9",
+          "title": "Follow your waypoints to Kelly Sweet",
+          "mapName": "h_arkbay_liveanddirect_9",
+          "requirements": [
+            "ObjectiveRequirementPatrol"
+          ]
+        },
+        {
+          "sequence": 9,
+          "objectiveId": 5433,
+          "objectiveName": "h_arkbay_liveanddirect_10",
+          "title": "Follow your waypoints to Kelly Sweet",
+          "mapName": "h_arkbay_liveanddirect_10",
+          "requirements": [
+            "ObjectiveRequirementPatrol"
+          ]
+        },
+        {
+          "sequence": 10,
+          "objectiveId": 5434,
+          "objectiveName": "h_arkbay_liveanddirect_11",
+          "title": "Follow your waypoints to Kelly Sweet",
+          "mapName": "h_arkbay_liveanddirect_11",
+          "requirements": [
+            "ObjectiveRequirementPatrol"
+          ]
+        },
+        {
+          "sequence": 11,
+          "objectiveId": 5530,
+          "objectiveName": "h_arkbay_liveanddirect_12",
+          "title": "Follow your waypoints to Kelly Sweet",
+          "mapName": "h_arkbay_liveanddirect_12",
+          "requirements": [
+            "ObjectiveRequirementPatrol"
+          ]
+        },
+        {
+          "sequence": 12,
+          "objectiveId": 5531,
+          "objectiveName": "h_arkbay_liveanddirect_13",
+          "title": "Follow your waypoints to Kelly Sweet",
+          "mapName": "h_arkbay_liveanddirect_13",
+          "requirements": [
+            "ObjectiveRequirementPatrol"
+          ]
+        },
+        {
+          "sequence": 13,
+          "objectiveId": 5532,
+          "objectiveName": "h_arkbay_liveanddirect_14",
+          "title": "Follow your waypoints to Kelly Sweet",
+          "mapName": "h_arkbay_liveanddirect_14",
+          "requirements": [
+            "ObjectiveRequirementPatrol"
+          ]
+        },
+        {
+          "sequence": 14,
+          "objectiveId": 5533,
+          "objectiveName": "h_arkbay_liveanddirect_15",
+          "title": "Follow your waypoints to Kelly Sweet",
+          "mapName": "h_arkbay_liveanddirect_15",
+          "requirements": [
+            "ObjectiveRequirementPatrol"
+          ]
+        },
+        {
+          "sequence": 15,
+          "objectiveId": 5534,
+          "objectiveName": "h_arkbay_liveanddirect_16",
+          "title": "Follow your waypoints to Kelly Sweet",
+          "mapName": "h_arkbay_liveanddirect_16",
+          "requirements": [
+            "ObjectiveRequirementPatrol"
+          ]
+        },
+        {
+          "sequence": 16,
+          "objectiveId": 5535,
+          "objectiveName": "h_arkbay_liveanddirect_17",
+          "title": "Follow your waypoints to Kelly Sweet",
+          "mapName": "h_arkbay_liveanddirect_17",
+          "requirements": [
+            "ObjectiveRequirementPatrol"
+          ]
+        },
+        {
+          "sequence": 17,
+          "objectiveId": 5536,
+          "objectiveName": "h_arkbay_liveanddirect_18",
+          "title": "Follow your waypoints to Kelly Sweet",
+          "mapName": "h_arkbay_liveanddirect_18",
+          "requirements": [
+            "ObjectiveRequirementPatrol"
+          ]
+        },
+        {
+          "sequence": 18,
+          "objectiveId": 5409,
+          "objectiveName": "H_arkbay_liveanddirect_19",
+          "title": "Follow your waypoints to Kelly Sweet",
+          "mapName": "H_arkbay_liveanddirect_19",
+          "requirements": [
+            "ObjectiveRequirementDeliver"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 3035,
+      "name": "h_1-1_tas_arkbay_redtape",
+      "title": "Red Tape",
+      "internalName": "ch tutorial 3",
+      "description": "[$name], while I\u0027ve got you here, could I ask you to do something for me?  One of the condensers on this floor is going haywire, and I need someone to shut it down.  The shut-down switch is on the front panel.  [$imp]Flip that switch[$/imp] and come back over here.  I should have you  processed by then.\n\n[$inst]Many objects you can interact with have a cog icon floating over them; others will be indicated by waypoint.  To interact, position yourself nearby and Left-Click on the object or use [$k\u2026",
+      "continent": 707,
+      "type": 255,
+      "objectives": [
+        {
+          "sequence": 0,
+          "objectiveId": 5446,
+          "objectiveName": "h_arkbay_redtape_1",
+          "title": "Shut Down the Malfunctioning Compressor",
+          "mapName": "h_arkbay_redtape_1",
+          "requirements": [
+            "ObjectiveRequirementUseItem"
+          ]
+        },
+        {
+          "sequence": 1,
+          "objectiveId": 5447,
+          "objectiveName": "h_arkbay_redtape_2",
+          "title": "Report the explosion to Kelly Sweet",
+          "mapName": "h_arkbay_redtape_2",
+          "requirements": [
+            "ObjectiveRequirementDeliver"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 3036,
+      "name": "h_1-1_tas_arkbay_gunsoftheexpansion",
+      "title": "Guns of the Expansion",
+      "internalName": "ch - tutorial 5",
+      "description": "Now that we\u0027ve gotten that taken care of, we can get you on your way.  \n\nHead down to the airlock. On your way through you might notice a little harmless static discharge--that\u0027s Hestia prepping your shields.\n\n[$npc]Gunny Sioux[$/npc] is waiting for you outside the airlock. He\u0027ll give you his once-over, and then clear you through to Ascent Station. That\u0027s the first stop in every \u0027lancer\u0027s career. It\u0027s a great place to master your ride and make new friends.\n\n[$imp]Go meet Gunny Sioux outside the \u2026",
+      "continent": 707,
+      "type": 255,
+      "objectives": [
+        {
+          "sequence": 0,
+          "objectiveId": 5421,
+          "objectiveName": "h_tas_arkbay_guns_1",
+          "title": "Go through the Airlock",
+          "mapName": "h_tas_arkbay_guns_1",
+          "requirements": [
+            "ObjectiveRequirementPatrol"
+          ]
+        },
+        {
+          "sequence": 1,
+          "objectiveId": 5461,
+          "objectiveName": "h_tas_arkbay_guns_2",
+          "title": "Meet with Gunny Sioux",
+          "mapName": "h_tas_arkbay_guns_2",
+          "requirements": [
+            "ObjectiveRequirementDeliver"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 3037,
+      "name": "h_1-1_tas_arkbay_finalexam",
+      "title": "Final Exam",
+      "internalName": "CH - tutorial 6 - kill gunny",
+      "description": "You\u0027ve gone through the [$class] track in school, right? Then I\u0027ll use my ride, \u0027Ol Bertie here, for your trial.  I need to see if you\u0027re worth the Company\u0027s investment. Ready?  I\u0027ll get into \u0027Ol Bertie and we\u0027ll pull off over into the ruins there, then we\u0027ll se if you can [$imp]defeat me[$/imp]. Don\u0027t worry about doin\u0027 me any harm; I\u0027ve got my INC contract in good standing, as do all of us working for Hestia out here.  \n\n[$imp]Meet me at the repair station behind me[$/imp] when we\u0027re through. I\u2026",
+      "continent": 707,
+      "type": 255,
+      "objectives": [
+        {
+          "sequence": 0,
+          "objectiveId": 5422,
+          "objectiveName": "h_1-1_arkbay_finalexam_1",
+          "title": "Defeat Gunny Sioux",
+          "mapName": "h_1-1_arkbay_finalexam_1",
+          "requirements": [
+            "ObjectiveRequirementKill"
+          ]
+        },
+        {
+          "sequence": 1,
+          "objectiveId": 5423,
+          "objectiveName": "h_1-1_arkbay_finalexam_2",
+          "title": "Meet Gunny Sioux at the repair station",
+          "mapName": "h_1-1_arkbay_finalexam_2",
+          "requirements": [
+            "ObjectiveRequirementPatrol",
+            "ObjectiveRequirementDeliver"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 3041,
+      "name": "h_1-1_tas_arkbay_offlabel",
+      "title": "Quick Thinking",
+      "internalName": "ch tutorial 4 (kill fixed)",
+      "description": "I guess you get to do some real work before you get your license.  We\u0027re all learning here, right?\n\nThat condenser is spewing fumes, and the safety cutoffs haven\u0027t triggered.  I need you to go over there and use your weapons to [$imp]destroy the whole module[$/imp].  That should trip the safety switches and cut off the fumes.\n\n[$inst]Use your cursor to position your turret TacArc over the desired target.  If you don\u0027t have a primary target, any buildings or objects in your TacArc may be hit.  To\u2026",
+      "continent": 707,
+      "type": 255,
+      "objectives": [
+        {
+          "sequence": 0,
+          "objectiveId": 5452,
+          "objectiveName": "h_arkbay_offlabel_1",
+          "title": "Destroy the malfunctioning condenser unit",
+          "mapName": "h_arkbay_offlabel_1",
+          "requirements": [
+            "ObjectiveRequirementKill"
+          ]
+        },
+        {
+          "sequence": 1,
+          "objectiveId": 5483,
+          "objectiveName": "h_arkbay_offlabel_2",
+          "title": "Return to Kelly Sweet",
+          "mapName": "h_arkbay_offlabel_2",
+          "requirements": [
+            "ObjectiveRequirementDeliver"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 3050,
+      "name": "h_1-1_tas_arkbay_healyerself",
+      "title": "What\u0027s a SCAB Field?",
+      "internalName": "CH tutorial 6",
+      "description": "[$emote]Gunny takes a small hand-held device.[$/emote] I\u0027m going to do a small amount of damage to your ride so I can demonstrate the units behind me--we call them SCAB fields.\n\nWhen the pulse hits your shields, [$imp]pull into one of those SCAB fields over there[$/imp] and your vehicle will be repaired, quickly and easily. Keep in mind where the nearest repair stop is. If you can\u0027t get back to one under your own power, remember that Hestia contracts with INC out in the wastelands for rapid pick\u2026",
+      "continent": 707,
+      "type": 255,
+      "objectives": [
+        {
+          "sequence": 0,
+          "objectiveId": 5467,
+          "objectiveName": "h_tas_arkbay_scabfield",
+          "title": "Repair your vehicle at a SCAB field generator",
+          "mapName": "h_tas_arkbay_scabfield",
+          "requirements": [
+            "ObjectiveRequirementPatrol"
+          ]
+        },
+        {
+          "sequence": 1,
+          "objectiveId": 5468,
+          "objectiveName": "h_tas_arkbay_scabfield_2",
+          "title": "Return to Gunny Sioux",
+          "mapName": "h_tas_arkbay_scabfield_2",
+          "requirements": [
+            "ObjectiveRequirementDeliver"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 3052,
+      "name": "h_1-1_tas_arkbay_toascent",
+      "title": "Freelancer, Roll Out!",
+      "internalName": "CH last in Arkbay transit to Backrange",
+      "description": "You\u0027re doing well [$name], I\u0027m going to verify your Hestia ID and sign you through to the Back Range.\n\n[$emote] Gunny glances at his tablet, concern creasing his face.[$/emote]  What\u0027s this? I\u0027ve got a bunch of contacts here.  Looks like a gang of Scavs is making a push from the [$loc]Back Range[$/loc].\n\nYou\u0027re done here, [$name].  Get on out of here before things get hairy.\n\n[$imp]Take your Hestia ID and report to Jason Hutchins in the Hestia Back Range.  Follow your waypoints to find him.[$/im\u2026",
+      "continent": 707,
+      "type": 255,
+      "objectives": [
+        {
+          "sequence": 0,
+          "objectiveId": 5473,
+          "objectiveName": "l1_arkbay_toascent_1",
+          "title": "Find the tunnel to the Hestia Back Range",
+          "mapName": "l1_arkbay_toascent_1",
+          "requirements": [
+            "ObjectiveRequirementPatrol"
+          ]
+        },
+        {
+          "sequence": 1,
+          "objectiveId": 5472,
+          "objectiveName": "l1_arkbay_toascent_2",
+          "title": "Find the tunnel to the Hestia Back Range",
+          "mapName": "l1_arkbay_toascent_2",
+          "requirements": [
+            "ObjectiveRequirementPatrol"
+          ]
+        },
+        {
+          "sequence": 2,
+          "objectiveId": 5471,
+          "objectiveName": "l1_arkbay_toascent_3",
+          "title": "Contact Jason Hutchins in the Hestia Back Range",
+          "mapName": "l1_arkbay_toascent_3",
+          "requirements": [
+            "ObjectiveRequirementDeliver"
+          ]
+        }
+      ]
+    }
+  ],
+  "objectives": [
+    {
+      "objectiveId": 714,
+      "questId": 554,
+      "sequence": 0,
+      "objectiveName": "h_emergence_newday",
+      "title": "Check in with Rogers",
+      "mapName": "h_emergence_newday",
+      "missionId": 554,
+      "missionName": "h_tas_Emergence_start",
+      "missionTitle": "New Day Dawning!",
+      "requirements": [
+        "ObjectiveRequirementDeliver"
+      ]
+    },
+    {
+      "objectiveId": 5421,
+      "questId": 3036,
+      "sequence": 0,
+      "objectiveName": "h_tas_arkbay_guns_1",
+      "title": "Go through the Airlock",
+      "mapName": "h_tas_arkbay_guns_1",
+      "missionId": 3036,
+      "missionName": "h_1-1_tas_arkbay_gunsoftheexpansion",
+      "missionTitle": "Guns of the Expansion",
+      "requirements": [
+        "ObjectiveRequirementPatrol"
+      ]
+    },
+    {
+      "objectiveId": 5422,
+      "questId": 3037,
+      "sequence": 0,
+      "objectiveName": "h_1-1_arkbay_finalexam_1",
+      "title": "Defeat Gunny Sioux",
+      "mapName": "h_1-1_arkbay_finalexam_1",
+      "missionId": 3037,
+      "missionName": "h_1-1_tas_arkbay_finalexam",
+      "missionTitle": "Final Exam",
+      "requirements": [
+        "ObjectiveRequirementKill"
+      ]
+    },
+    {
+      "objectiveId": 5425,
+      "questId": 3032,
+      "sequence": 1,
+      "objectiveName": "h_arkbay_liveanddirect_2",
+      "title": "Follow your waypoints to Kelly Sweet",
+      "mapName": "h_arkbay_liveanddirect_2",
+      "missionId": 3032,
+      "missionName": "h_1-1_tas_arkbay_liveanddirect",
+      "missionTitle": "Live and Direct",
+      "requirements": [
+        "ObjectiveRequirementPatrol"
+      ]
+    },
+    {
+      "objectiveId": 5426,
+      "questId": 3032,
+      "sequence": 2,
+      "objectiveName": "h_arkbay_liveanddirect_3",
+      "title": "Follow your waypoints to Kelly Sweet",
+      "mapName": "h_arkbay_liveanddirect_3",
+      "missionId": 3032,
+      "missionName": "h_1-1_tas_arkbay_liveanddirect",
+      "missionTitle": "Live and Direct",
+      "requirements": [
+        "ObjectiveRequirementPatrol"
+      ]
+    },
+    {
+      "objectiveId": 5427,
+      "questId": 3032,
+      "sequence": 3,
+      "objectiveName": "h_arkbay_liveanddirect_4",
+      "title": "Follow your waypoints to Kelly Sweet",
+      "mapName": "h_arkbay_liveanddirect_4",
+      "missionId": 3032,
+      "missionName": "h_1-1_tas_arkbay_liveanddirect",
+      "missionTitle": "Live and Direct",
+      "requirements": [
+        "ObjectiveRequirementPatrol"
+      ]
+    },
+    {
+      "objectiveId": 5428,
+      "questId": 3032,
+      "sequence": 4,
+      "objectiveName": "h_arkbay_liveanddirect_5",
+      "title": "Follow your waypoints to Kelly Sweet",
+      "mapName": "h_arkbay_liveanddirect_5",
+      "missionId": 3032,
+      "missionName": "h_1-1_tas_arkbay_liveanddirect",
+      "missionTitle": "Live and Direct",
+      "requirements": [
+        "ObjectiveRequirementPatrol"
+      ]
+    },
+    {
+      "objectiveId": 5429,
+      "questId": 3032,
+      "sequence": 5,
+      "objectiveName": "h_arkbay_liveanddirect_6",
+      "title": "Follow your waypoints to Kelly Sweet",
+      "mapName": "h_arkbay_liveanddirect_6",
+      "missionId": 3032,
+      "missionName": "h_1-1_tas_arkbay_liveanddirect",
+      "missionTitle": "Live and Direct",
+      "requirements": [
+        "ObjectiveRequirementPatrol"
+      ]
+    },
+    {
+      "objectiveId": 5430,
+      "questId": 3032,
+      "sequence": 6,
+      "objectiveName": "h_arkbay_liveanddirect_7",
+      "title": "Follow your waypoints to Kelly Sweet",
+      "mapName": "h_arkbay_liveanddirect_7",
+      "missionId": 3032,
+      "missionName": "h_1-1_tas_arkbay_liveanddirect",
+      "missionTitle": "Live and Direct",
+      "requirements": [
+        "ObjectiveRequirementPatrol"
+      ]
+    },
+    {
+      "objectiveId": 5431,
+      "questId": 3032,
+      "sequence": 7,
+      "objectiveName": "h_arkbay_liveanddirect_8",
+      "title": "Follow your waypoints to Kelly Sweet",
+      "mapName": "h_arkbay_liveanddirect_8",
+      "missionId": 3032,
+      "missionName": "h_1-1_tas_arkbay_liveanddirect",
+      "missionTitle": "Live and Direct",
+      "requirements": [
+        "ObjectiveRequirementPatrol"
+      ]
+    },
+    {
+      "objectiveId": 5432,
+      "questId": 3032,
+      "sequence": 8,
+      "objectiveName": "h_arkbay_liveanddirect_9",
+      "title": "Follow your waypoints to Kelly Sweet",
+      "mapName": "h_arkbay_liveanddirect_9",
+      "missionId": 3032,
+      "missionName": "h_1-1_tas_arkbay_liveanddirect",
+      "missionTitle": "Live and Direct",
+      "requirements": [
+        "ObjectiveRequirementPatrol"
+      ]
+    },
+    {
+      "objectiveId": 5433,
+      "questId": 3032,
+      "sequence": 9,
+      "objectiveName": "h_arkbay_liveanddirect_10",
+      "title": "Follow your waypoints to Kelly Sweet",
+      "mapName": "h_arkbay_liveanddirect_10",
+      "missionId": 3032,
+      "missionName": "h_1-1_tas_arkbay_liveanddirect",
+      "missionTitle": "Live and Direct",
+      "requirements": [
+        "ObjectiveRequirementPatrol"
+      ]
+    },
+    {
+      "objectiveId": 5434,
+      "questId": 3032,
+      "sequence": 10,
+      "objectiveName": "h_arkbay_liveanddirect_11",
+      "title": "Follow your waypoints to Kelly Sweet",
+      "mapName": "h_arkbay_liveanddirect_11",
+      "missionId": 3032,
+      "missionName": "h_1-1_tas_arkbay_liveanddirect",
+      "missionTitle": "Live and Direct",
+      "requirements": [
+        "ObjectiveRequirementPatrol"
+      ]
+    },
+    {
+      "objectiveId": 5447,
+      "questId": 3035,
+      "sequence": 1,
+      "objectiveName": "h_arkbay_redtape_2",
+      "title": "Report the explosion to Kelly Sweet",
+      "mapName": "h_arkbay_redtape_2",
+      "missionId": 3035,
+      "missionName": "h_1-1_tas_arkbay_redtape",
+      "missionTitle": "Red Tape",
+      "requirements": [
+        "ObjectiveRequirementDeliver"
+      ]
+    },
+    {
+      "objectiveId": 5467,
+      "questId": 3050,
+      "sequence": 0,
+      "objectiveName": "h_tas_arkbay_scabfield",
+      "title": "Repair your vehicle at a SCAB field generator",
+      "mapName": "h_tas_arkbay_scabfield",
+      "missionId": 3050,
+      "missionName": "h_1-1_tas_arkbay_healyerself",
+      "missionTitle": "What\u0027s a SCAB Field?",
+      "requirements": [
+        "ObjectiveRequirementPatrol"
+      ]
+    },
+    {
+      "objectiveId": 5468,
+      "questId": 3050,
+      "sequence": 1,
+      "objectiveName": "h_tas_arkbay_scabfield_2",
+      "title": "Return to Gunny Sioux",
+      "mapName": "h_tas_arkbay_scabfield_2",
+      "missionId": 3050,
+      "missionName": "h_1-1_tas_arkbay_healyerself",
+      "missionTitle": "What\u0027s a SCAB Field?",
+      "requirements": [
+        "ObjectiveRequirementDeliver"
+      ]
+    },
+    {
+      "objectiveId": 5471,
+      "questId": 3052,
+      "sequence": 2,
+      "objectiveName": "l1_arkbay_toascent_3",
+      "title": "Contact Jason Hutchins in the Hestia Back Range",
+      "mapName": "l1_arkbay_toascent_3",
+      "missionId": 3052,
+      "missionName": "h_1-1_tas_arkbay_toascent",
+      "missionTitle": "Freelancer, Roll Out!",
+      "requirements": [
+        "ObjectiveRequirementDeliver"
+      ]
+    },
+    {
+      "objectiveId": 5530,
+      "questId": 3032,
+      "sequence": 11,
+      "objectiveName": "h_arkbay_liveanddirect_12",
+      "title": "Follow your waypoints to Kelly Sweet",
+      "mapName": "h_arkbay_liveanddirect_12",
+      "missionId": 3032,
+      "missionName": "h_1-1_tas_arkbay_liveanddirect",
+      "missionTitle": "Live and Direct",
+      "requirements": [
+        "ObjectiveRequirementPatrol"
+      ]
+    },
+    {
+      "objectiveId": 5531,
+      "questId": 3032,
+      "sequence": 12,
+      "objectiveName": "h_arkbay_liveanddirect_13",
+      "title": "Follow your waypoints to Kelly Sweet",
+      "mapName": "h_arkbay_liveanddirect_13",
+      "missionId": 3032,
+      "missionName": "h_1-1_tas_arkbay_liveanddirect",
+      "missionTitle": "Live and Direct",
+      "requirements": [
+        "ObjectiveRequirementPatrol"
+      ]
+    },
+    {
+      "objectiveId": 5532,
+      "questId": 3032,
+      "sequence": 13,
+      "objectiveName": "h_arkbay_liveanddirect_14",
+      "title": "Follow your waypoints to Kelly Sweet",
+      "mapName": "h_arkbay_liveanddirect_14",
+      "missionId": 3032,
+      "missionName": "h_1-1_tas_arkbay_liveanddirect",
+      "missionTitle": "Live and Direct",
+      "requirements": [
+        "ObjectiveRequirementPatrol"
+      ]
+    },
+    {
+      "objectiveId": 5533,
+      "questId": 3032,
+      "sequence": 14,
+      "objectiveName": "h_arkbay_liveanddirect_15",
+      "title": "Follow your waypoints to Kelly Sweet",
+      "mapName": "h_arkbay_liveanddirect_15",
+      "missionId": 3032,
+      "missionName": "h_1-1_tas_arkbay_liveanddirect",
+      "missionTitle": "Live and Direct",
+      "requirements": [
+        "ObjectiveRequirementPatrol"
+      ]
+    },
+    {
+      "objectiveId": 5536,
+      "questId": 3032,
+      "sequence": 17,
+      "objectiveName": "h_arkbay_liveanddirect_18",
+      "title": "Follow your waypoints to Kelly Sweet",
+      "mapName": "h_arkbay_liveanddirect_18",
+      "missionId": 3032,
+      "missionName": "h_1-1_tas_arkbay_liveanddirect",
+      "missionTitle": "Live and Direct",
+      "requirements": [
+        "ObjectiveRequirementPatrol"
+      ]
+    }
+  ]
+}

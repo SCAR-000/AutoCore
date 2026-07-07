@@ -165,10 +165,19 @@ export class hkDefaultSuspension {
       const damping = (w.suspensionVelocity >= 0)
         ? this.wheelsDampingRelaxation[i]
         : this.wheelsDampingCompression[i];
+
+      // Smoothly scale down suspension forces on steep walls to prevent catapulting,
+      // while preserving full suspension compression travel for grip/cornering on the ground.
+      let wallScale = 1.0;
+      if (w.contactNormal.y < 0.6) {
+        wallScale = Math.max(0, (w.contactNormal.y - 0.3) / 0.3);
+      }
+
+      const compression = this.lengths[i] - w.currentLength;
       this.forces[i] = (
-        this.wheelsStrength[i] * (this.lengths[i] - w.currentLength) * w.clipFactor
+        this.wheelsStrength[i] * compression * w.clipFactor
         - damping * w.suspensionVelocity
-      ) * mass;
+      ) * mass * wallScale;
     }
   }
 }

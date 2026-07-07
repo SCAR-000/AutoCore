@@ -16,6 +16,8 @@
 import * as THREE from 'three';
 import { DDSLoader } from 'three/addons/loaders/DDSLoader.js';
 
+import { isShadowEffect, isTintEffect, isPalDiffMapEffect } from './materials-lib.js';
+
 const ddsLoader = new DDSLoader();
 
 export class TextureBank {
@@ -110,13 +112,7 @@ export const TINT_DEFAULTS = {
   tertiary: [1.0, 0.18, 0.13],
 };
 
-export function isShadowEffect(effect) {
-  return /shadowprojection/i.test(effect || '');
-}
-
-export function isTintEffect(effect) {
-  return /tint|humancar|biomekcar|mutantcar/i.test(effect || '');
-}
+export { isShadowEffect, isTintEffect, isPalDiffMapEffect } from './materials-lib.js';
 
 /** Paint schemes available for a diffuse texture: probe <stem>_NN_tint.dds. */
 export function tintSchemesFor(bank, diffuseName) {
@@ -149,7 +145,7 @@ export function buildMaterial(section, bank, opts = {}) {
   material.name = effect || 'default';
 
   const emissive = color4(params, 'MatEmissive', null);
-  if (emissive) material.emissive = emissive.multiplyScalar(0.35);
+  if (emissive) material.emissive = emissive.clone().multiplyScalar(0.35);
 
   if (isShadowEffect(effect)) {
     // Shadow-volume mesh: render as translucent slab if the user unhides it.
@@ -157,6 +153,18 @@ export function buildMaterial(section, bank, opts = {}) {
     material.transparent = true;
     material.opacity = 0.35;
     return { material, info };
+  }
+
+  // PalDiffMap covers both flat decals (road lines, drains — translucent /
+  // alpha-tested) AND opaque building surfaces (walls, pipes, ladders) that just
+  // happen to share the shader family. Only the decal-like ones belong in the
+  // decal path; routing opaque surfaces there strips their specular/emissive and
+  // adds polygonOffset, rendering them as unlit boxes pulled in front of the
+  // scene. Opaque PalDiffMap sections fall through to the standard surface path.
+  const palDiffMapDecal = isPalDiffMapEffect(effect)
+    && (params.AlphaTestEnable === true || /translucent/i.test(params.Phase || ''));
+  if (palDiffMapDecal) {
+    return buildPalDiffMapMaterial(section, bank, opts, info);
   }
 
   const texturesEnabled = opts.texturesEnabled !== false;
@@ -188,6 +196,17 @@ export function buildMaterial(section, bank, opts = {}) {
     } else {
       info.missing.push(glowName);
     }
+  }
+
+  // Self-illuminated surfaces (e.g. NDGlow.fx light panels): bright MatEmissive
+  // but no dedicated GlowTexture — the DIFFUSE texture IS the emissive source.
+  // Drive emissive by the diffuse map at full MatEmissive so the panel glows in
+  // its own colour instead of washing to a flat white emissive over a dimly-lit
+  // texture (the "pale pink" bug).
+  if (texturesEnabled && !glowName && material.map && emissive
+      && Math.max(emissive.r, emissive.g, emissive.b) > 0.5) {
+    material.emissiveMap = material.map;
+    material.emissive = emissive;
   }
 
   if (params.AlphaTestEnable === true) {
@@ -232,5 +251,55 @@ uniform vec3 uTintSecondary;`)
     }
   }
 
+  return { material, info };
+}
+
+/**
+ * PalDiffMap decals (road lines, trash, drains) sample a shared atlas with alpha.
+ * Retail uses Phase=Translucent; decals sit slightly above terrain via polygon offset.
+ */
+function buildPalDiffMapMaterial(section, bank, opts, info) {
+  const { effect, params } = section;
+  const texturesEnabled = opts.texturesEnabled !== false;
+  const diffuseName = typeof params.DiffuseTexture === 'string' ? params.DiffuseTexture : null;
+  const normalName = typeof params.NormalMapTexture === 'string' ? params.NormalMapTexture : null;
+  const translucent = /translucent/i.test(params.Phase || '');
+
+  const material = new THREE.MeshPhongMaterial({
+    color: color4(params, 'MatDiffuse', [1, 1, 1]),
+    specular: new THREE.Color(0, 0, 0),
+    shininess: 1,
+    transparent: translucent || params.AlphaTestEnable === true,
+    depthWrite: !translucent,
+    side: THREE.DoubleSide,
+    polygonOffset: true,
+    polygonOffsetFactor: -2,
+    polygonOffsetUnits: -2,
+  });
+  material.name = effect || 'PalDiffMap';
+
+  if (texturesEnabled && diffuseName) {
+    const { texture, resolved } = bank.load(diffuseName, { srgb: true });
+    material.map = texture;
+    (resolved ? info.textures : info.missing).push(diffuseName);
+  }
+  if (texturesEnabled && normalName && section.uvs) {
+    const { texture, resolved } = bank.load(normalName);
+    if (resolved) {
+      material.normalMap = texture;
+      material.normalScale = new THREE.Vector2(0.5, 0.5);
+      info.textures.push(normalName);
+    } else {
+      info.missing.push(normalName);
+    }
+  }
+
+  if (params.AlphaTestEnable === true) {
+    material.alphaTest = 0.4;
+  } else if (translucent) {
+    material.opacity = 0.95;
+  }
+
+  info.decal = true;
   return { material, info };
 }

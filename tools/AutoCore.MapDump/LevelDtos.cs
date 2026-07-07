@@ -34,10 +34,16 @@ public sealed class ObjectDto
     public float[] Rot { get; set; } = Array.Empty<float>();
     public float Scale { get; set; }
     public float CloneScale { get; set; }
+    public float TerrainOffset { get; set; }
+    public bool IsActive { get; set; } = true;
+    public string? FxCreateExtraName { get; set; }
     public string? Physics { get; set; }
     public string? Unique { get; set; }
     public string? Short { get; set; }
     public string Type { get; set; } = "";
+    /// <summary>Authoritative collidable flag from clonebase bitCollidable.
+    /// When false, the object should NOT participate in vehicle collision.</summary>
+    public bool Collidable { get; set; } = true;
     public long[]? TriggerEvents { get; set; }
 }
 
@@ -130,7 +136,15 @@ public sealed class ReactionTextDto
     public string Type { get; set; } = "";
     public string TargetType { get; set; } = "";
     public string? Main { get; set; }
+    public List<ReactionTextParamDto> Params { get; } = new();
     public List<ReactionTextChoiceDto> Choices { get; } = new();
+}
+
+public sealed class ReactionTextParamDto
+{
+    public string Type { get; set; } = "";
+    public int Id { get; set; }
+    public float CachedValue { get; set; }
 }
 
 public sealed class ReactionTextChoiceDto
@@ -191,8 +205,28 @@ public sealed class ResolvedGraphNodeDto
     public string Summary { get; set; } = "";
     public List<string> Details { get; } = new();
     public List<long> TargetCoids { get; } = new();
+    public List<long> LinkedTriggerCoids { get; } = new();
+    public ReactionSemanticsDto? Semantics { get; set; }
     public bool IsCycle { get; set; }
     public List<ResolvedGraphNodeDto> Children { get; } = new();
+}
+
+public sealed class ReactionSemanticsDto
+{
+    public string? SummaryLong { get; set; }
+    public string Realm { get; set; } = "";
+    public string? GhidraHandler { get; set; }
+    public string? ImplementationStatus { get; set; }
+    public List<string> FieldLabels { get; } = new();
+    public List<GhidraCalleeDto> Callees { get; } = new();
+}
+
+public sealed class GhidraCalleeDto
+{
+    public string Address { get; set; } = "";
+    public string Symbol { get; set; } = "";
+    public string LegacyName { get; set; } = "";
+    public string DecompiledSignature { get; set; } = "";
 }
 
 public sealed class ReactionDescriptionDto
@@ -201,4 +235,6 @@ public sealed class ReactionDescriptionDto
     public List<string> Details { get; } = new();
     public List<long> TargetCoids { get; } = new();
     public List<long> NestedReactionCoids { get; } = new();
+    public List<long> LinkedTriggerCoids { get; } = new();
+    public ReactionSemanticsDto? Semantics { get; set; }
 }

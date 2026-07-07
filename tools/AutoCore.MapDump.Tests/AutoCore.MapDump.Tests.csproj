@@ -24,6 +24,8 @@
 
   <ItemGroup>
     <None Include="..\..\assets\extracted\maps\sec_f_b_map_interior_a1_1_fort-logan-tavern.fam" Link="Fixtures\fort-logan-tavern.fam" CopyToOutputDirectory="PreserveNewest" Condition="Exists('..\..\assets\extracted\maps\sec_f_b_map_interior_a1_1_fort-logan-tavern.fam')" />
+    <Content Include="..\model-viewer\reaction-catalog.json" Link="reaction-catalog.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\model-viewer\ghidra-functions.json" Link="ghidra-functions.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

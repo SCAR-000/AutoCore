@@ -269,6 +269,36 @@ function parseBbox(dv, off, size) {
   };
 }
 
+/**
+ * Root transform from the TADB (phyBoneSharedData / "BDAT") chunk — a Havok-style
+ * hkQsTransform {rotation quaternion, translation, scale} that orients the raw
+ * mesh vertices into the model's true (bodyBBox) frame. Confirmed against the
+ * client's phyBoneSharedData::unserialize (v2 adds the scale component).
+ *
+ * The chunk begins with a variable-length bone-name string, so we locate the
+ * transform by scanning for the first 4-float run that forms a unit quaternion
+ * followed by a plausible translation + positive scale. Callers must still
+ * validate the result against bodyBBox before applying (the transform is only
+ * trusted when it improves geo↔body alignment).
+ */
+function parseBoneTransform(dv, bytes, off, size) {
+  const body = off + 16;
+  const end = Math.min(body + size, bytes.length) - 40;
+  for (let o = body; o <= end; o += 1) {
+    const f = (k) => dv.getFloat32(o + k * 4, true);
+    const q = [f(0), f(1), f(2), f(3)];
+    if (!q.every(Number.isFinite)) continue;
+    const mag = Math.hypot(q[0], q[1], q[2], q[3]);
+    if (Math.abs(mag - 1) > 0.02 || q.some((v) => Math.abs(v) > 1.0001)) continue;
+    const t = [f(4), f(5), f(6)];
+    const s = [f(7), f(8), f(9)];
+    if (![t[0], t[1], t[2], s[0], s[1], s[2]].every(Number.isFinite)) continue;
+    if (s.some((v) => v <= 0.001 || v > 1000) || t.some((v) => Math.abs(v) > 1e5)) continue;
+    return { quat: q, translation: t, scale: s };
+  }
+  return null;
+}
+
 /** The GPCE tail stores pieceName\0 immediately before the ADSU chunk header. */
 function pieceNameBefore(bytes, chunkOff, floor) {
   if (chunkOff - 1 <= floor || bytes[chunkOff - 1] !== 0) return '';
@@ -298,10 +328,14 @@ export function parseGeo(arrayBuffer) {
 
   const sections = [];
   let bodyBBox = null; // first DOBG-level XOBB = whole-body bounds in TRUE world units.
+  let rootTransform = null; // TADB bone transform (raw-verts -> body frame).
   for (const root of roots) {
     const rootBody = root.off + 16;
     for (const g of scanChildChunks(dv, bytes, rootBody, rootBody + root.size)) {
       if (g.tag === 'XOBB' && !bodyBBox) { bodyBBox = parseBbox(dv, g.off, g.size); continue; }
+      // TADB (phyBoneSharedData, carrying the transform) is nested INSIDE the
+      // NOBP (phyBone) chunk, so scan the NOBP body for it.
+      if (g.tag === 'NOBP' && !rootTransform) { rootTransform = parseBoneTransform(dv, bytes, g.off, g.size); continue; }
       if (g.tag !== 'ECPG') continue;
       const body = g.off + 16;
       const end = body + g.size;
@@ -351,5 +385,5 @@ export function parseGeo(arrayBuffer) {
       }
     }
   }
-  return { sections, warnings, bodyBBox };
+  return { sections, warnings, bodyBBox, rootTransform };
 }

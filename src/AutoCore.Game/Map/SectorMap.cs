@@ -19,6 +19,8 @@ public class SectorMap
     public Dictionary<TFID, ClonedObjectBase> Objects { get; } = new();
     public Dictionary<TFID, Trigger> Triggers { get; } = new();
     public Dictionary<TFID, Reaction> Reactions { get; } = new();
+    public MapVariableRuntime Variables { get; }
+    private readonly Dictionary<long, int> _playerRepairStations = new();
 
     // Loose world items spawned at runtime (e.g. via /loot) that can be picked up. Keyed by the
     // item's local coid so an incoming ItemPickup can be resolved back to the object. Kept on the
@@ -31,6 +33,7 @@ public class SectorMap
 
         MapData = AssetManager.Instance.GetMapData(ContinentId);
         LocalCoidCounter = MapData.HighestCoid + 1;
+        Variables = new MapVariableRuntime(MapData);
 
         InitializeLocalObjects();
     }
@@ -99,6 +102,12 @@ public class SectorMap
     }
 
     public ClonedObjectBase GetObject(TFID id) => Objects.TryGetValue(id, out var obj) ? obj : null;
+
+    public void SetPlayerRepairStation(long characterCoid, int stationId) =>
+        _playerRepairStations[characterCoid] = stationId;
+
+    public int? GetPlayerRepairStation(long characterCoid) =>
+        _playerRepairStations.TryGetValue(characterCoid, out var stationId) ? stationId : null;
 
     public void RegisterWorldItem(ClonedObjectBase item) => _worldItems[item.ObjectId.Coid] = item;
 

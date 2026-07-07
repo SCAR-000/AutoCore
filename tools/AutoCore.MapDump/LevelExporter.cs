@@ -119,7 +119,7 @@ public static class LevelExporter
 
                 case GraphicsObjectTemplate go:
                 {
-                    var (physics, unique, shortDesc, typeName, cloneScale) = ResolveNames(go.CBID);
+                    var (physics, unique, shortDesc, typeName, cloneScale, collidable) = ResolveNames(go.CBID);
                     var obj = new ObjectDto
                     {
                         Cbid = go.CBID,
@@ -128,10 +128,14 @@ public static class LevelExporter
                         Rot = new[] { go.Rotation.X, go.Rotation.Y, go.Rotation.Z, go.Rotation.W },
                         Scale = go.Scale <= 0 ? 1f : go.Scale,
                         CloneScale = cloneScale,
+                        TerrainOffset = go.TerrainOffset,
+                        IsActive = go.IsActive,
+                        FxCreateExtraName = Clean(go.FxCreateExtraName),
                         Physics = physics,
                         Unique = unique,
                         Short = shortDesc,
                         Type = typeName,
+                        Collidable = collidable,
                         TriggerEvents = go.TriggerEvents?.Length > 0 ? go.TriggerEvents : null,
                     };
                     level.Objects.Add(obj);
@@ -282,6 +286,16 @@ public static class LevelExporter
                     Text = Clean(choice.Text),
                 });
             }
+
+            foreach (var param in rt.Text.Params)
+            {
+                dto.Text.Params.Add(new ReactionTextParamDto
+                {
+                    Type = param.Type.ToString(),
+                    Id = param.Id,
+                    CachedValue = param.CachedValue,
+                });
+            }
         }
 
         return dto;
@@ -289,7 +303,7 @@ public static class LevelExporter
 
     private static MarkerDto MakeMarker(string kind, int cbid, int coid, float x, float y, float z, string? label = null)
     {
-        var (_, unique, shortDesc, _, _) = ResolveNames(cbid);
+        var (_, unique, shortDesc, _, _, _) = ResolveNames(cbid);
         return new MarkerDto
         {
             Kind = kind,
@@ -316,21 +330,34 @@ public static class LevelExporter
         };
     }
 
-    private static (string? physics, string? unique, string? shortDesc, string type, float cloneScale) ResolveNames(int cbid)
+    /// <summary>Bit 0 of SimpleObjectSpecific.Flags = bitCollidable from tSimpleObject.</summary>
+    private const short FlagCollidable = 0x0001;
+
+    private static (string? physics, string? unique, string? shortDesc, string type, float cloneScale, bool collidable) ResolveNames(int cbid)
     {
         var cb = AssetManager.Instance.GetCloneBase(cbid);
         if (cb == null)
-            return (null, null, null, "Unknown", 1f);
+            return (null, null, null, "Unknown", 1f, true);
 
         string? physics = null;
         var cloneScale = 1f;
+        var collidable = true;
+
+        // Graphics-only objects (CloneBaseObjectType.Object = 1) never have physics.
+        if (cb.Type == CloneBaseObjectType.Object)
+            collidable = false;
+
         if (cb is CloneBaseObject obj)
         {
             physics = Clean(obj.SimpleObjectSpecific.PhysicsName);
             cloneScale = obj.SimpleObjectSpecific.Scale;
+
+            // For ObjectGraphicsPhysics, check the authoritative bitCollidable flag.
+            if (cb.Type == CloneBaseObjectType.ObjectGraphicsPhysics)
+                collidable = (obj.SimpleObjectSpecific.Flags & FlagCollidable) != 0;
         }
 
-        return (physics, Clean(cb.CloneBaseSpecific.UniqueName), Clean(cb.CloneBaseSpecific.ShortDesc), cb.Type.ToString(), cloneScale);
+        return (physics, Clean(cb.CloneBaseSpecific.UniqueName), Clean(cb.CloneBaseSpecific.ShortDesc), cb.Type.ToString(), cloneScale, collidable);
     }
 
     private static string? Clean(string? s)

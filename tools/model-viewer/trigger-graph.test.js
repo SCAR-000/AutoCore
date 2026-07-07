@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { resolveTriggerGraph, buildTriggerPanelHTML, buildTriggerInspectorHTML, buildReactionDetailHTML, lookupReaction, getTriggers, formatCoid, triggerWireframeColorNote, buildTriggerTooltipHTML, triggerEffectiveRenderRgb, TRIGGER_WIREFRAME_MATERIAL_RGB } from './trigger-graph.js';
+import { resolveTriggerGraph, buildTriggerPanelHTML, buildTriggerInspectorHTML, buildReactionDetailHTML, lookupReaction, getTriggers, formatCoid, triggerWireframeColorNote, buildTriggerTooltipHTML, triggerEffectiveRenderRgb, TRIGGER_WIREFRAME_MATERIAL_RGB, buildReactionTypeReferenceHTML } from './trigger-graph.js';
 import { isTrigger, countTriggers, markerKindInfo, MARKER_KIND_INFO, pickTriggerHit } from './level-visibility.js';
 
 describe('level-visibility', () => {
@@ -223,5 +223,30 @@ describe('trigger-graph', () => {
     const modern = [{ Coid: 2, Name: 'T2', Reactions: [] }];
     assert.equal(getTriggers({ Triggers: modern, Objects: legacy }).length, 1);
     assert.equal(getTriggers({ Objects: legacy }).length, 1);
+  });
+
+  it('resolveTriggerGraph keeps dialog choices as linked triggers not children', () => {
+    const trigger = { Coid: 1, Reactions: [10] };
+    const data = {
+      Reactions: [
+        {
+          Coid: 10,
+          ReactionType: 'Text',
+          Text: { Type: 'ChoiceDialog', TargetType: 'Client', Main: 'Hi', Choices: [{ TriggerCoid: 99, Text: 'Go' }] },
+          Objects: [],
+        },
+      ],
+      ObjectIndex: {},
+      MapLogic: { Variables: [] },
+    };
+    const graph = resolveTriggerGraph(trigger, data);
+    assert.equal(graph.Nodes[0].LinkedTriggerCoids?.[0], 99);
+    assert.equal(graph.Nodes[0].Children.length, 0);
+  });
+
+  it('buildReactionTypeReferenceHTML lists catalog entries', () => {
+    const html = buildReactionTypeReferenceHTML('MarkRepair');
+    assert.match(html, /MarkRepairStation/);
+    assert.match(html, /CVOGReaction_Dispatch/);
   });
 });

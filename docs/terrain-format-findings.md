@@ -30,7 +30,7 @@ Companion files per map (same directory, `assets/extracted/textures/`):
   by `2 * tint`, so 0x7f = neutral). Carries much of the authored ground look on town maps.
 - `<map>_den.pgm` — lower-res density/detail map, not height.
 - `_verttint.png` (`CVOGTerrain_ReloadRandomTintFile` @ `0x4a9c70`) — 8px-tall random
-  per-vertex tint palette (subtle; not implemented in the viewer).
+  per-vertex tint palette. Loaded by `level.js` when present (`uVertTint` uniform).
 
 ### Reconstruction recipe
 1. `.fam` header → `width`, `height`, `gridSize`.

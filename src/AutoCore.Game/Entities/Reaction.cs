@@ -163,15 +163,14 @@ public class Reaction : ClonedObjectBase
         if (!CanTrigger(activator))
             return false;
 
-        switch (Template.ReactionType)
+        var context = new Reactions.ReactionHandlerContext
         {
-            //case ReactionType.TransferMap:
-            //    return false;
+            Map = activator.Map!,
+            Reaction = this,
+            Activator = activator,
+        };
 
-            default:
-                Logger.WriteLog(LogType.Error, $"Unhandled reaction type: {Template.ReactionType} for reaction {Template.COID}!");
-                return true;
-        }
+        return Reactions.ReactionHandlerRegistry.TryExecute(context);
     }
 
     public override int GetCurrentHP() => 1; 

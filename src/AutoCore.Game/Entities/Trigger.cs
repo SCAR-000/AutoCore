@@ -69,6 +69,11 @@ public class Trigger : GraphicsObject
 
         return true;
     }
+
+    public void ResetActivationState()
+    {
+        // Retail CVOGTrigger::Reset clears retrigger state; activation budget resets when configured.
+    }
 }
 
 public enum ConditionalType
@@ -109,11 +114,11 @@ public class TriggerConditional
 
     public bool Check(ClonedObjectBase activator)
     {
-        // TODO: Properly check conditions
-        //Debugger.Break();
+        if (activator?.Map is null)
+            return false;
 
-        var leftValue = 0.0f;
-        var rightValue = 0.0f;
+        var leftValue = activator.Map.Variables.Get(LeftId);
+        var rightValue = activator.Map.Variables.Get(RightId);
 
         return Type switch
         {
@@ -121,8 +126,8 @@ public class TriggerConditional
             ConditionalType.GreaterThan => leftValue > rightValue,
             ConditionalType.LessThanOrEqualTo => leftValue <= rightValue,
             ConditionalType.GreaterThanOrEqualTo => leftValue >= rightValue,
-            ConditionalType.EqualTo => leftValue == rightValue,
-            ConditionalType.NotEqualTo => leftValue != rightValue,
+            ConditionalType.EqualTo => Math.Abs(leftValue - rightValue) < 0.0001f,
+            ConditionalType.NotEqualTo => Math.Abs(leftValue - rightValue) >= 0.0001f,
             _ => false,
         };
     }

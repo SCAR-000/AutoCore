@@ -28,6 +28,8 @@ python -m http.server 8080     # from repo root
 
 Deep-link a specific map with `#<mapname>` (e.g. `level.html#sec_f_m_map_town_e7_1_citadel`).
 
+For particle/VFX preview see [vfx-viewer.md](vfx-viewer.md) (`tools/model-viewer/vfx.html`).
+
 ## Pipeline
 
 1. **`tools/AutoCore.MapDump/`** (C#, references `AutoCore.Game`) — loads `clonebase.wad`
@@ -42,16 +44,22 @@ Deep-link a specific map with `#<mapname>` (e.g. `level.html#sec_f_m_map_town_e7
      type, flags, `Reactions[]` (reaction COIDs), `TargetList`, `Conditions`, and a
      precomputed `Graph` (recursive reaction tree with cycle detection).
    - `Reactions`: logic nodes — `ReactionType`, target object COIDs, nested reaction COIDs,
-     map-transfer fields, dialog text, variable operands, etc.
+     map-transfer fields, dialog text (`Text.Params` included), variable operands, optional
+     `Semantics` (catalog summary, field labels, realm, Ghidra handler), etc.
    - `ObjectIndex`: COID → `{ Kind, Label, Pos, Cbid }` for cross-reference resolution.
    - `MapLogic`: map-level trigger COIDs (`PerPlayerLoadTrigger`, `OnKillTrigger`, …) and
      `Variables[]` (used to label conditional checks).
    - `Markers`: spawn / enter / store / outpost points (now include `Coid`).
    - `Paths`: map-path polylines (now include path `Coid`).
+   - `Roads`: the `.fam` `RoadNodes` graph (`MapData.RoadNodes`) — `road`/`junction`/`river`
+     nodes with `Pos`, `Tex` (profile/texture name), `Links` (node ids), and junction-only
+     `Rotation`/`ArmPos`/`ArmDir`. See "Roads & rivers" below.
    Plus `levels-index.json` (map list + object/marker/trigger/reaction counts). All 104
    extracted maps parse (0 failures).
-   Implementation: `LevelExporter`, `ReactionDescriber`, `TriggerGraphResolver` under
-   `tools/AutoCore.MapDump/` (tests in `tools/AutoCore.MapDump.Tests/`).
+   Implementation: `LevelExporter`, `ReactionDescriber`, `TriggerGraphResolver`,
+   `ReactionCatalog` under `tools/AutoCore.MapDump/` (tests in
+   `tools/AutoCore.MapDump.Tests/`). Field semantics come from
+   `tools/model-viewer/reaction-catalog.json` — see [reaction-types.md](reaction-types.md).
 2. **`tools/model-viewer/level.html` + `level.js`** — loads a level JSON, reconstructs:
    - **Terrain**: fetches `<map>.tga`, decodes the **16-bit height** (world Y =
      `((A<<8)|B) * HeightScale/256`, i.e. h16/64 — smooth, no terracing), downsamples to
@@ -66,7 +74,9 @@ Deep-link a specific map with `#<mapname>` (e.g. `level.html#sec_f_m_map_town_e7
      the map look rotated relative to its props.
    - **Objects**: resolves each placement's name candidates to a `.geo` via the model
      index, groups by model, and draws one `InstancedMesh` per LOD0 section (real
-     textures via `materials.js`). World axes line up with terrain (no transform needed).
+     textures via `materials.js`). Placements use raw JSON `Pos`/`Rot`; the whole
+     `worldGroup` is reflected along Z (`scale.z = -1`) for Three.js handedness parity with
+     `/play` — fly camera focus maps game Z → scene Z, materials forced `DoubleSide`.
      **Per-model scale correction:** ~10% of models are authored at an arbitrary local
      scale (e.g. `husk_police-car` visual geometry is 37× its true size). The **body-level
      XOBB** (first `XOBB`, a direct child of `DOBG`, before the sections) holds the true
@@ -82,13 +92,16 @@ Deep-link a specific map with `#<mapname>` (e.g. `level.html#sec_f_m_map_town_e7
      (precomputed in the dump; HTML is rebuilt on each open/selection so badges and drill-down
      stay in sync). Client-side fallback resolution lives in `trigger-graph.js`. Click hints
      only carry placement metadata + `_triggerIndex`. **Click a reaction node** in the tree to
-     open a drill-down pane with full `Reactions[]` fields. The tree lists affected object names
+     open a drill-down pane with full `Reactions[]` fields plus **catalog semantics**
+     (description, per-field labels, Ghidra handler, implementation status badge) and a
+     **Ghidra callees** block showing renamed symbol + decompiled signature per helper
+     (`ghidra-functions.json`). The tree lists affected object names
      inline in each reaction summary; **focus buttons** for those objects appear only in the
      drill-down detail pane (not duplicated in the tree). Each node shows an **execution
-     realm badge** (Server / Client UI / Server → all players / Server → convoy) inferred by
-     `reaction-execution.js` from reaction type and flags — map files have no explicit realm
-     field. Focus buttons jump the camera to linked target COIDs via `ObjectIndex`; dialog
-     choice buttons open linked triggers. Close the inspector with **×**. The bottom-left
+     realm badge** (Server / Client UI / Server → all players / Server → convoy) from
+     `reaction-catalog.json` via `reaction-execution.js` (heuristic fallback when catalog
+     lacks `realm`). Focus buttons jump the camera to linked target COIDs via `ObjectIndex`; dialog
+     choice buttons open linked **triggers** (`LinkedTriggerCoids`), not nested reactions. **View → Reaction types** opens a searchable catalog reference panel. Close the inspector with **×**. The bottom-left
      info overlay shows trigger and reaction counts when the dump includes them — if reactions
      reads 0, re-run mapdump and hard-refresh. Wireframe tooltip colors use **effective render
      color** (editor tint × orange base material); white editor tints display as orange.
@@ -110,12 +123,13 @@ Deep-link a specific map with `#<mapname>` (e.g. `level.html#sec_f_m_map_town_e7
      - **Markers**: master + per-kind (spawn / enter / store / outpost)
      - **Lines**: paths
      Classification helpers live in `tools/model-viewer/level-visibility.js` and
-     `tools/model-viewer/reaction-execution.js` (Node tests:
-     `node --test tools/model-viewer/reaction-execution.test.js tools/model-viewer/trigger-graph.test.js`).
+     `tools/model-viewer/reaction-execution.js` and      `reaction-catalog.js` and `ghidra-functions.js` (Node tests:
+     `node --test tools/model-viewer/ghidra-functions.test.js tools/model-viewer/reaction-catalog.test.js tools/model-viewer/reaction-execution.test.js tools/model-viewer/trigger-graph.test.js`).
    - **Hover/click inspection**: raycast against visible instanced meshes. Hover shows a
-     tooltip; trigger wireframes explain green vs orange/yellow editor tints and the
+     follow-cursor tooltip; **click** pins the same details in a fixed panel (bottom-right)
+     until another placement is clicked. Trigger wireframes explain green vs orange/yellow editor tints and the
      **activates-for** target type (Players, Vehicles, List, …). **Clicking a trigger**
-     opens the reaction inspector under the camera speed bar. `highlightMesh` marks the selected
+     also opens the reaction inspector under the camera speed bar. `highlightMesh` marks the selected
      trigger or a focused COID target.
    - The dump also carries `Terrain.TileSet` (the map's `.fam` tileset byte,
      `MapData.TileSet`) — consumed by the terrain shader, see "Terrain texturing"
@@ -123,27 +137,59 @@ Deep-link a specific map with `#<mapname>` (e.g. `level.html#sec_f_m_map_town_e7
 
 ## CBID → model resolution
 
-The clonebase gives no direct `.geo` filename, so `level.js` resolves by convention:
-try `Unique`, `Physics`, then `Short` (lowercased, and each with an `obj_` prefix) against
-the model index's geo stems. Measured on `scrapvalley`: **~82% of placements resolve to an
-exact `.geo`**; town maps like `citadel` hit ~100%. Unresolved placements (and any beyond
-the `MAX_UNIQUE_MODELS=400` per-map cap) render as translucent boxes, counted in the info
-panel. `Physics` is a **collision proxy** (`sphere`, `tree`), not always the visual mesh —
-`Unique` is tried first for that reason.
+The clonebase gives no direct `.geo` filename. Resolution lives in
+`tools/model-viewer/model-resolve.js` and is used by `level.js`:
+
+1. Try `Unique`, then `Physics`, then `Short` (each expanded to hyphen/underscore variants
+   and an `obj_` prefix).
+2. Suffix aliases (`-dead` → `_dead`, `-stump` → `_stump`, etc.).
+3. Controlled fuzzy match for `snag_tree` assets when only one stem matches.
+
+Run `node tools/audit-level-resolution.js` for per-map unresolved/capped stats.
+Measured globally after normalization: **~95%** of placements resolve (trees were the main
+gap). Town/tutorial maps like `arkbaytutorial` hit **100%**. Unresolved placements (and any
+beyond `MAX_UNIQUE_MODELS=800`) render as translucent boxes. `Physics` is a **collision
+proxy** — `Unique` is tried first.
+
+### Placement fidelity (MapDump → viewer)
+
+Each `Object` in the level JSON now includes:
+
+- `IsActive` — exported from the map file; **both `level.html` and `/play` render all
+  placements** regardless of `IsActive` (editor/inactive props remain visible in the viewer).
+- `TerrainOffset` — exported from the map file (terrain-fit metadata). **Do not add to
+  `Pos[1]` for rendering** — `Location.Y` in the dump is already the final world Y.
+  Verified on Ark Bay: adding `TerrainOffset` degrades median object–terrain fit and
+  shifts ~4700 props vertically.
+- `CloneScale` — multiplied with placement `Scale` and body-XOBB correction.
+- `FxCreateExtraName` — exported for future VFX attachment (not rendered yet).
+
+Object instancing lives in `tools/model-viewer/level-objects.js` (`buildInstancedObjects`);
+shared with AutoAssault.web `/play`.
+
+Re-run `mapdump.exe` after upgrading MapDump to populate these fields on existing JSON.
+
+**Model root transform (2026-07-06).** Each `.geo` carries a per-model root transform in its
+`NOBP`/`TADB` (phyBone) chunk — an `hkQsTransform` {rotation, translation, scale} — that
+orients the raw vertices into the model's true (body-`XOBB`) frame. See
+[geo-format.md → PBON](geo-format.md). `geo-parser.js` exposes it as `rootTransform`;
+`applyRootTransform()` in `level-objects.js` bakes it into the vertices **when the result
+matches the body XOBB** (a self-validating safety net — mis-located transforms are ignored),
+and its scale then replaces `modelCorrection`. Without this, vehicle props render on their
+side and tunnel doors sink ~half their height into the ground; buildings are mostly identity
+and unaffected.
 
 ### Known gaps / limits
-- **Trees** are the main unresolved class: clonebase `Unique` names (e.g.
-  `obj_mnt_n_snag_tree_01_pine-yellowish-dead`) don't exactly match the shipped geo stems
-  (variant suffix differences). A fuzzy/prefix match could recover most, at the risk of
-  wrong models — deliberately left as boxes for now. This is the obvious next improvement.
-- **Editor placeholders**: triggers are no longer boxed — they use the dedicated trigger
-  layer. Other unresolved placeholders (e.g. trees with mismatched geo names) still box out.
+- **Trees** with ambiguous fuzzy matches still box out (unique-match-only policy).
+- **Editor placeholders**: triggers use the dedicated trigger layer; unresolved models box.
 
 ## Trigger / reaction graph (Ghidra notes)
 
+See [reaction-types.md](reaction-types.md) for the full 88-type catalog, field semantics, and server implementation status.
+
 Trigger activation in retail `autoassault.exe` uses radius check against `Scale` (matches
 `Trigger.CanTrigger` in `AutoCore.Game`). Reaction dispatch is centralized in
-`VOGReaction.cpp` (`FUN_0057c500` — switch on reaction type byte). Map variable lookups
+`VOGReaction.cpp` as **`CVOGReaction_Dispatch`** at **`0x0057c500`** — switch on reaction type byte 0–87. Map variable lookups
 for conditionals and variable reactions use `FUN_005b05f0` (hash lookup by variable id);
 therefore `TriggerConditional.LeftId` / `RightId` are **map variable ids**, resolved to
 names via `MapLogic.Variables` in the viewer. The debug console string *"Shows when
@@ -152,16 +198,23 @@ variables are set/checked on conditionals"* confirms this interpretation.
 Global TFIDs (`TargetList[].Global === true`) may reference objects outside the current
 map — the viewer shows them as `global:#<coid>` without a focus button when no
 `ObjectIndex` entry exists.
-- **Per-map unique-model cap** (400) bounds load time on the largest maps; the rest box.
+- **Per-map unique-model cap** (800) bounds load time on the largest maps; the rest box.
 - A stray 404 during load is a missing/renamed `.dds` for one material — non-fatal
   (that material falls back to a magenta placeholder).
 
 ## Terrain texturing (IMPLEMENTED — game-accurate)
 
-Fully reverse-engineered from `autoassault.exe` (all functions renamed + plate-commented
-in the Ghidra project) and the shipped shader source
-`assets/extracted/shaders/NDDiffTerrainLayered2.fx`. Implemented in `level.js`
-(`buildTerrainMaterial`, `TERRAIN_FRAG`).
+Fully reverse-engineered from `autoassault.exe` (Ghidra: `CVOGTerrain_BuildTileUVTable`
+@ `0x5bedd0`, `CVOGTerrainChunk_BuildVertexBuffer` @ `0x5c01e0`) and
+`assets/extracted/shaders/NDDiffTerrainLayered2.fx`. Implemented in
+`tools/model-viewer/terrain-uv-table.js` (4096-entry UV LUT), `terrain-render.js`
+(shared terrain mesh + tile-blend shader), and `level.js` / AutoAssault.web `/play`.
+
+The renderer uses **per-pixel** tile blending in the fragment shader (world X/Z → tile
+corners → atlas layers). This stays correct when the height mesh is decimated (each render
+quad can span many tile cells). Solid-variant U offset is hashed per **tile cell** (not per
+render quad) to avoid seams. The 4096-entry UV LUT in `terrain-uv-table.js` mirrors
+`CVOGTerrain_BuildTileUVTable` for tests.
 
 ### Map TGA channels (32bpp BGRA, `assets/extracted/textures/<map>.tga`)
 
@@ -214,12 +267,61 @@ B = +x, C = +z, D = +xz):
 
 `<map>_tint.tga` (ships beside the map TGA, same dimensions) = per-cell RGBA vertex
 color (`CVOGTerrain_LoadTintMap` 0x4ab100; default `0x7f7f7f`). Loaded async into the
-`uTint` uniform; this carries a lot of the authored look (streets, scorch, garden plots
-are painted into it on town maps).
+`uTint` uniform and sampled with `LinearFilter` so it interpolates smoothly (matching the
+engine's per-vertex `VertColor`); this carries a lot of the authored look (streets, scorch,
+garden plots are painted into it on town maps). `VertColor` in `NDTerrainLayered` is this
+tint **and nothing else** — the final color is exactly `2 * uTint * light * blend`. There
+is no separate per-vertex "verttint" texture multiply (an earlier `uVertTint`/`_verttint.png`
+term was removed as it stamped a per-cell brightness grid not present in the game).
+
+### Terrain lighting (environments)
+
+The terrain shader lights each fragment exactly like the game's `NDDiffTerrainLayered2.fx`
+(`PalLighting.fxh`): **one hemispheric light + one directional sun, no spec**:
+`light = lerp(hemiBottom, hemiTop, 0.5*(N.y+1)) + saturate(dot(N,-sunDir))*sunColor`,
+then `final = 2 * uTint * light * blend`. The real values come from the game's per-region
+environment files `assets/extracted/data/env_<zone>[_<subarea>]_<tod>_nfx.xml` (parsed by
+the env loader `FUN_004a18b0` @0x4a18b0): `hemiTopColor`, `hemiBottomColor`,
+`directionalDifuse` (sun color), `directionalDirection` (sun vector), plus fog/sky.
+
+`tools/build_env_lighting.py` extracts all of these into
+`tools/model-viewer/env-lighting.json` (key = env name minus `_<tod>_nfx`, with a `tod`
+map of dawn/midday/night/sunset). At load, `level.js` `resolveEnvKey()` picks the map's
+zone env (preferring the zone-level entry) at **midday** by default; the **Lighting** panel
+(region + time-of-day `<select>`s) switches it live. The game binds environments to
+sub-area *regions* as you drive — that binding isn't in our exports, so a map defaults to
+one representative region and the picker covers the rest. Maps with no shipped env (e.g.
+interior missions like `titaniumfactory`) use a neutral default. Colors are converted
+sRGB→linear; the env also drives the object fill lights and the background/horizon tint.
 
 Not implemented (follow-ups): spec/glow layer pass, the game's far-LOD single-texture
-path, and `play.html` still uses the old 8-bit alpha height (switching it changes the
-physics collision surface — do that deliberately).
+path, automatic per-region env switching by camera position, and `play.html` still uses the
+old 8-bit alpha height (switching it changes the physics collision surface — do that
+deliberately).
+
+## Sector decals (`sec_dec_*`, PalDiffMap)
+
+Ground markings (white lines, trash, drains) use `PalDiffMap*.fx` with the shared
+`sec_decals.dds` atlas. `materials.js` detects these effects and builds translucent
+materials with polygon offset to reduce z-fighting on terrain. Models like
+`sec_dec_white-line-fat.geo` resolve through the normal placement pipeline.
+
+**Decal vs. surface routing (2026-07-06).** The `PalDiffMap*` family covers *both* flat
+decals **and** opaque building surfaces (walls, pipes, ladders — `PalDiffMapNorMap`,
+`PalDiffMapNorSpecGlossMapGlow`, `…EnvMap*`, ~500 sections in Ark Bay). The old
+`isPalDiffMapEffect(effect)` routing sent them **all** to the decal material, which strips
+specular/emissive and adds polygon offset — rendering large opaque walls as unlit black
+panels pulled in front of the scene. Fix: route to the decal path only when the section is
+actually decal-like (`AlphaTestEnable` or translucent `Phase`); opaque `PalDiffMap` sections
+fall through to the standard surface material. `isPalDiffMapEffect` stays a family classifier
+(its test is unchanged) — only the routing decision in `buildMaterial` changed.
+
+**Self-illuminated glow (`NDGlow.fx`).** Light panels use bright `MatEmissive` (e.g. white
+`[1,1,1]`) with **no** `GlowTexture` — the *diffuse* texture is the emissive source. The
+standard path applied a flat white emissive over a dimly-lit texture, washing an orange panel
+to pale pink. Fix: when `MatEmissive` is bright and there's a diffuse map but no glow texture,
+drive `emissiveMap` from the diffuse map at full `MatEmissive` so the panel self-illuminates
+in its own colour.
 
 ## Roads & rivers (RoadNodes)
 
@@ -233,7 +335,8 @@ viewer regenerates ribbons the same way).
 - **`Tex`** = profile name, e.g. `road_2laneasphalt_20`: it is **both** the `.dds`
   texture stem (only `mq_`/`lq_` tiers ship — `TextureBank`'s prefix fallback resolves
   them) **and** the width source: the trailing `_NN` is parsed with `atof` after the
-  last `_` (`CVOGRoadNode.cpp`, fn @ `0x5e6c40`; default 10 when missing).
+  last `_` (Ghidra: `CVOGRoadNode_ParseWidthFromTexName` @ `0x5e6c40`; default 10 when
+  missing).
 - **Junctions** additionally carry a **pad piece model** in `Tex`
   (e.g. `road_dirt-into-asphalt_t_40` → same-named `.geo`), a yaw `Rotation`, and
   6 `ArmPos`/`ArmDir` pairs — local arm attach points (rotate by `Rotation` around Y,
@@ -242,13 +345,23 @@ viewer regenerates ribbons the same way).
   `distance / width` (square tiling); V spans the width.
 
 `level.js` (`buildRoads`): walks the graph into chains between junctions/endpoints,
-builds one Catmull-Rom ribbon mesh per chain (width from the profile, ends snapped to
-the junction's matching arm), instanced junction pad `.geo`s at `Pos`/`Rotation`, and
-river ribbons (translucent). Road ribbons are **draped onto the decimated render
-terrain** via `current.terrainSampler` (`max(nodeY, renderTerrainY) + lift`) — node
-heights are exact but the ≤400² render mesh deviates by several units on 2048² maps and
-would otherwise bury them. Rivers are *not* draped (water sits below the banks).
-Toggle: the "roads" checkbox under World.
+builds one Catmull-Rom ribbon mesh per chain (XZ-only path for roads; width from the
+profile, ends snapped to the junction's matching arm), instanced junction pad `.geo`s at
+`Pos`/`Rotation`, and river ribbons (translucent, 3D spline with authored node Y). Road
+ribbons are **draped onto the decimated render terrain** via `current.terrainSampler`
+(`renderTerrainY + small lift`) — authored node Y is not preserved when it exceeds the
+visible mesh, which previously floated roads above ground. Rivers are *not* draped (water
+sits below the banks). Toggle: the "roads" checkbox under World.
+
+### Known gaps
+- **End caps not placed**: terminal nodes (degree 1, e.g. `road_asphalt_end_10`,
+  `road_asphalt_culdesac_10`) render as an open ribbon end — the dedicated end-cap/
+  culdesac `.geo` pieces aren't instanced there yet.
+- **Rivers can be partially hidden** where the decimated (≤400² segment) render terrain
+  sits above the actual riverbed on wide/deep sections — the terrain mesh isn't cut out
+  under water.
+- Town maps (e.g. `citadel`) legitimately have **zero** road nodes — their streets are
+  painted directly into the terrain tile/tint layers, not generated as ribbons.
 
 ## Invisible physics proxies
 

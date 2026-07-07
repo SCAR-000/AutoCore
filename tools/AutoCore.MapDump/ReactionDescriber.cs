@@ -6,6 +6,7 @@ public static class ReactionDescriber
     {
         var result = new ReactionDescriptionDto();
         var type = reaction.ReactionType;
+        var catalog = SafeCatalog();
 
         switch (type)
         {
@@ -34,7 +35,7 @@ public static class ReactionDescriber
                     foreach (var choice in reaction.Text.Choices)
                     {
                         if (choice.TriggerCoid > 0)
-                            result.NestedReactionCoids.Add(choice.TriggerCoid);
+                            result.LinkedTriggerCoids.Add(choice.TriggerCoid);
                     }
                 }
                 break;
@@ -62,6 +63,10 @@ public static class ReactionDescriber
                 result.Summary = $"{type} mission={reaction.GenericVar1} objective={reaction.ObjectiveIDCheck}";
                 if (reaction.Missions.Count > 0)
                     result.Details.Add($"Missions: {string.Join(", ", reaction.Missions)}");
+                break;
+
+            case "MarkRepairStation":
+                result.Summary = $"Mark repair station id={reaction.GenericVar1}";
                 break;
 
             case "GiveItemNumCBID":
@@ -161,7 +166,105 @@ public static class ReactionDescriber
             result.Details.Add("For convoy");
 
         result.NestedReactionCoids.AddRange(reaction.Reactions);
+        ApplyCatalogSemantics(result, reaction, catalog, variables);
         return result;
+    }
+
+    private static ReactionCatalog? SafeCatalog()
+    {
+        try
+        {
+            return ReactionCatalog.Instance;
+        }
+        catch (FileNotFoundException)
+        {
+            return null;
+        }
+    }
+
+    private static void ApplyCatalogSemantics(
+        ReactionDescriptionDto result,
+        ReactionDto reaction,
+        ReactionCatalog? catalog,
+        IReadOnlyDictionary<int, VariableDto> variables)
+    {
+        if (catalog == null || !catalog.TryGet(reaction.ReactionType, out var entry))
+            return;
+
+        var semantics = new ReactionSemanticsDto
+        {
+            SummaryLong = entry.Description ?? entry.Summary,
+            Realm = entry.Realm,
+            GhidraHandler = entry.Ghidra?.Handler ?? catalog.Ghidra.DispatchSymbol,
+            ImplementationStatus = entry.ImplementationStatus,
+        };
+
+        if (entry.Fields != null)
+        {
+            foreach (var (fieldName, role) in entry.Fields)
+            {
+                if (fieldName is "Objects" or "Text")
+                    continue;
+
+                var label = FormatCatalogFieldValue(reaction, fieldName, role.Label, variables);
+                if (label != null)
+                    semantics.FieldLabels.Add(label);
+            }
+        }
+
+        if (!result.Details.Contains(entry.Summary) && entry.Summary != result.Summary)
+            result.Details.Insert(0, entry.Summary);
+
+        var ghidra = GhidraFunctionRegistry.TryLoad();
+        if (ghidra != null && entry.Callees != null)
+        {
+            foreach (var fn in ghidra.ResolveCallees(entry.Callees))
+            {
+                semantics.Callees.Add(new GhidraCalleeDto
+                {
+                    Address = fn.Address,
+                    Symbol = fn.Symbol,
+                    LegacyName = fn.LegacyName,
+                    DecompiledSignature = fn.DecompiledSignature,
+                });
+            }
+        }
+
+        result.Semantics = semantics;
+    }
+
+    private static string? FormatCatalogFieldValue(
+        ReactionDto reaction,
+        string fieldName,
+        string label,
+        IReadOnlyDictionary<int, VariableDto> variables)
+    {
+        object? value = fieldName switch
+        {
+            "GenericVar1" => reaction.GenericVar1,
+            "GenericVar2" => reaction.GenericVar2,
+            "GenericVar3" => reaction.GenericVar3,
+            "ObjectiveIDCheck" => reaction.ObjectiveIDCheck,
+            "MapTransferData" => reaction.MapTransferData,
+            "MiscText" => reaction.MiscText,
+            "WaypointText" => reaction.WaypointText,
+            "WaypointType" => reaction.WaypointType,
+            _ => null,
+        };
+
+        if (value == null)
+            return null;
+        if (value is int i && i == 0)
+            return null;
+        if (value is float f && Math.Abs(f) < 0.0001f)
+            return null;
+        if (value is string s && string.IsNullOrWhiteSpace(s))
+            return null;
+
+        if (fieldName == "GenericVar1" && variables.TryGetValue(reaction.GenericVar1, out var v) && !string.IsNullOrWhiteSpace(v.Name))
+            return $"{label}: {v.Name} ({reaction.GenericVar1})";
+
+        return $"{label}: {value}";
     }
 
     private static string FormatTextReaction(ReactionDto reaction)
@@ -171,7 +274,7 @@ public static class ReactionDescriber
 
         var main = Truncate(reaction.Text.Main, 120);
         var choices = reaction.Text.Choices.Count;
-        return $"{reaction.ReactionType} [{reaction.Text.Type}]: \"{main}\"" + (choices > 0 ? $" (+{choices} choices)" : "");
+        return $"{reaction.ReactionType} [{reaction.Text.Type}]: \"{main}\"" + (choices > 0 ? $" (+{choices} choices → triggers)" : "");
     }
 
     private static string FormatTargetList(IEnumerable<long> coids, IReadOnlyDictionary<string, ObjectIndexEntryDto> index)

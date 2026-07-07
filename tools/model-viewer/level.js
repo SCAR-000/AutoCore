@@ -17,7 +17,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { parseGeo } from './geo-parser.js';
 import { TextureBank, buildMaterial } from './materials.js';
 import { isTrigger, placementCategory, resolvedMeshCategory, countTriggers, markerKindInfo, pickTriggerHit } from './level-visibility.js';
-import { buildTriggerInspectorHTML, buildReactionDetailHTML, getTriggers, triggerColor, lookupTrigger, buildTriggerTooltipHTML, triggerWireframeCssColor } from './trigger-graph.js?v=4';
+import { buildTriggerInspectorHTML, buildReactionDetailHTML, getTriggers, triggerColor, lookupTrigger, buildTriggerTooltipHTML, triggerWireframeCssColor, buildReactionTypeReferenceHTML } from './trigger-graph.js?v=5';
 import { FlyControls } from './fly-controls.js';
 import {
   shouldIgnoreKeyEvent,
@@ -27,11 +27,12 @@ import {
   CAMERA_SPEED_MIN,
   mapDefaultCameraSpeed,
 } from './fly-controls-helpers.js';
+import { resolveModelPath, buildModelStemMap } from './model-resolve.js';
 
 const ROOT = '../../';
 const HEIGHT_SCALE = 4.0;       // per-256 units of the 16-bit height (world Y = h16 * HEIGHT_SCALE/256)
 const TERRAIN_MAX_SEG = 400;    // cap terrain grid resolution per axis
-const MAX_UNIQUE_MODELS = 400;  // beyond this, remaining models render as boxes
+const MAX_UNIQUE_MODELS = 800;  // beyond this, remaining models render as boxes
 const MODEL_FETCH_CONCURRENCY = 12;
 
 const el = (id) => document.getElementById(id);
@@ -41,10 +42,16 @@ const countEl = el('count');
 const infoEl = el('info');
 const statusEl = el('status');
 const tooltipEl = el('tooltip');
+const selectionPanelEl = el('selection-panel');
 const reactionInspectorEl = el('reaction-inspector');
 const reactionInspectorTreeEl = el('reaction-inspector-tree');
 const reactionInspectorDetailEl = el('reaction-inspector-detail');
 const reactionInspectorCloseEl = el('reaction-inspector-close');
+const reactionTypeRefEl = el('reaction-type-ref');
+const reactionTypeRefBodyEl = el('reaction-type-ref-body');
+const reactionTypeRefSearchEl = el('reaction-type-ref-search');
+const reactionTypeRefCloseEl = el('reaction-type-ref-close');
+const showReactionTypeRefEl = el('show-reaction-type-ref');
 const triggerRailEl = el('trigger-rail');
 const triggerListToggleEl = el('trigger-list-toggle');
 const triggerListEl = el('trigger-list');
@@ -59,6 +66,7 @@ const _focusTarget = new THREE.Vector3();
 let selectedTrigger = null;
 let selectedTriggerCoid = null;
 let selectedReactionCoid = null;
+let selectedPlacement = null;
 let cameraSpeedMax = 420;
 
 // --- tooltip / highlight state -----------------------------------------------
@@ -125,7 +133,7 @@ function applyCameraSpeedFromSlider() {
 
 function focusWorldPoint(pos, radiusHint = 40) {
   if (!pos) return;
-  _focusTarget.set(pos[0], pos[1], pos[2]);
+  _focusTarget.set(pos[0], pos[1], gameToSceneZ(pos[2]));
   const span = focusViewDistance(camera.position.distanceTo(_focusTarget), radiusHint);
   const off = focusCameraOffset(span);
   camera.position.set(_focusTarget.x + off.x, _focusTarget.y + off.y, _focusTarget.z + off.z);
@@ -139,6 +147,11 @@ function focusSelected() {
     focusWorldPoint(selectedTrigger.Pos, Math.max(selectedTrigger.Scale || 1, 1));
     return;
   }
+  if (selectedPlacement?.Pos) {
+    const sc = Math.max(selectedPlacement.Scale || 1, 1);
+    focusWorldPoint(selectedPlacement.Pos, sc * 2);
+    return;
+  }
   if (highlightMesh.visible) {
     const hint = Math.max(highlightMesh.scale.x, highlightMesh.scale.y, highlightMesh.scale.z, 8);
     focusWorldPoint([highlightMesh.position.x, highlightMesh.position.y, highlightMesh.position.z], hint);
@@ -148,12 +161,21 @@ function focusSelected() {
 const sun = new THREE.DirectionalLight(0xfff4e2, 2.2);
 sun.position.set(1, 1.6, 0.8);
 scene.add(sun);
-scene.add(new THREE.AmbientLight(0x516080, 1.0));
-scene.add(new THREE.HemisphereLight(0x9db4ff, 0x2a2620, 0.5));
+// Object-lighting fill lights; recolored per-map from the env in applyEnv().
+const sceneAmbient = new THREE.AmbientLight(0x516080, 1.0);
+scene.add(sceneAmbient);
+const sceneHemi = new THREE.HemisphereLight(0x9db4ff, 0x2a2620, 0.5);
+scene.add(sceneHemi);
 
 const worldGroup = new THREE.Group();
+worldGroup.scale.z = -1; // LH game frame → RH Three.js (same fix as /play)
 scene.add(worldGroup);
 worldGroup.add(highlightMesh);
+
+/** Game Z → scene camera target (worldGroup is Z-reflected). */
+function gameToSceneZ(z) {
+  return -z;
+}
 
 function resize() {
   const w = renderer.domElement.parentElement.clientWidth;
@@ -200,18 +222,17 @@ const MARKER_KINDS = ['spawn', 'enter', 'store', 'outpost'];
 // --- helpers -----------------------------------------------------------------
 function setStatus(msg, err = false) { statusEl.textContent = msg; statusEl.classList.toggle('error', err); }
 
-function resolveModelPath(obj) {
-  const tryNames = [];
-  for (const v of [obj.Unique, obj.Physics, obj.Short]) {
-    if (!v) continue;
-    const s = v.trim().toLowerCase();
-    tryNames.push(s, `obj_${s}`);
-  }
-  for (const n of tryNames) {
-    const p = modelByStem.get(n);
-    if (p) return p;
-  }
-  return null;
+function placementObjects(data) {
+  return data.Triggers?.length ? data.Objects : data.Objects.filter((o) => !isTrigger(o));
+}
+
+/** World Y from dump — Location.Y is already terrain-resolved; do not add TerrainOffset. */
+function placementY(o) {
+  return o.Pos?.[1] ?? 0;
+}
+
+function placementScale(o, correction = 1) {
+  return (o.Scale || 1) * (o.CloneScale ?? 1) * correction;
 }
 
 function parseTGA(buf) {
@@ -308,6 +329,24 @@ function hideTooltip() {
   tooltipEl.classList.remove('visible');
 }
 
+function placementKind(obj) {
+  if (obj.Kind !== undefined) return 'marker';
+  return 'object';
+}
+
+function showSelectionPanel(obj) {
+  const kind = placementKind(obj);
+  selectionPanelEl.innerHTML = buildTooltipHTML(obj, kind);
+  selectionPanelEl.classList.add('open');
+  selectedPlacement = obj;
+}
+
+function hideSelectionPanel() {
+  selectionPanelEl.innerHTML = '';
+  selectionPanelEl.classList.remove('open');
+  selectedPlacement = null;
+}
+
 function hideTriggerPanel() {
   selectedTrigger = null;
   selectedTriggerCoid = null;
@@ -349,6 +388,18 @@ function renderReactionInspectorTree() {
   reactionInspectorTreeEl.innerHTML = buildTriggerInspectorHTML(selectedTrigger, current.data, {
     selectedReactionCoid,
   });
+}
+
+function renderReactionTypeReference() {
+  if (!reactionTypeRefBodyEl) return;
+  const filter = reactionTypeRefSearchEl?.value || '';
+  reactionTypeRefBodyEl.innerHTML = buildReactionTypeReferenceHTML(filter);
+}
+
+function setReactionTypeRefOpen(open) {
+  reactionTypeRefEl?.classList.toggle('open', open);
+  if (showReactionTypeRefEl) showReactionTypeRefEl.checked = open;
+  if (open) renderReactionTypeReference();
 }
 
 function showReactionDetail(reactionCoid) {
@@ -498,8 +549,10 @@ async function loadLevel(name) {
     current = { name, data, byCoid };
     history.replaceState(null, '', `#${encodeURIComponent(name)}`);
     renderList();
+    populateEnvControls(name);       // sets envSel.key before the terrain material is built
 
     const bounds = await buildTerrain(data);
+    applyEnv();                      // atmosphere + object fill lights from the resolved env
     fitCamera(bounds, data);
     setStatus(`Placing ${data.Objects.length.toLocaleString()} objects…`);
     // Yield so terrain shows before the (heavier) object build.
@@ -509,6 +562,7 @@ async function loadLevel(name) {
     await buildRoads(data);
     buildMarkers(data);
     buildPaths(data);
+    applyWorldGroupDoubleSide();
     applyVisibility();
     renderInfo();
     renderTriggerList();
@@ -534,6 +588,7 @@ function clearWorld() {
   worldGroup.add(highlightMesh);
   highlightMesh.visible = false;
   hideTooltip();
+  hideSelectionPanel();
   hideTriggerPanel();
   renderTriggerList();
 }
@@ -556,7 +611,7 @@ async function buildTerrain(data) {
     const step = Math.max(1, Math.ceil(Math.max(t.Width, t.Height) / TERRAIN_MAX_SEG));
     const nx = Math.floor(t.Width / step);
     const nz = Math.floor(t.Height / step);
-    const heightScale = (t.HeightScale || HEIGHT_SCALE) / 256; // 16-bit height -> world Y
+    const heightScale = (t.HeightScale || HEIGHT_SCALE) / 256;
     const positions = new Float32Array(nx * nz * 3);
     let minY = Infinity, maxY = -Infinity;
     for (let r = 0; r < nz; r++) {
@@ -566,7 +621,8 @@ async function buildTerrain(data) {
         positions[i] = c * step * grid;
         positions[i + 1] = y;
         positions[i + 2] = r * step * grid;
-        if (y < minY) minY = y; if (y > maxY) maxY = y;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
       }
     }
     const indices = [];
@@ -576,17 +632,15 @@ async function buildTerrain(data) {
         indices.push(a, d2, b, b, d2, e2);
       }
     }
-    // Bilinear height sampler over the DECIMATED render grid, so draped geometry
-    // (roads) can follow the rendered surface rather than the full-res heights.
     const cell = step * grid;
     current.terrainSampler = (x, z) => {
       const fx = Math.min(Math.max(x / cell, 0), nx - 1.001);
       const fz = Math.min(Math.max(z / cell, 0), nz - 1.001);
       const c0 = Math.floor(fx), r0 = Math.floor(fz);
       const tx = fx - c0, tz = fz - r0;
-      const h = (r, c) => positions[(r * nx + c) * 3 + 1];
-      return (h(r0, c0) * (1 - tx) + h(r0, c0 + 1) * tx) * (1 - tz)
-           + (h(r0 + 1, c0) * (1 - tx) + h(r0 + 1, c0 + 1) * tx) * tz;
+      const hAt = (qr, qc) => positions[(qr * nx + qc) * 3 + 1];
+      return (hAt(r0, c0) * (1 - tx) + hAt(r0, c0 + 1) * tx) * (1 - tz)
+           + (hAt(r0 + 1, c0) * (1 - tx) + hAt(r0 + 1, c0 + 1) * tx) * tz;
     };
 
     const geo = new THREE.BufferGeometry();
@@ -596,12 +650,12 @@ async function buildTerrain(data) {
 
     const mat = buildTerrainMaterial(data, tga) ??
       new THREE.MeshStandardMaterial({ color: 0x5a6150, roughness: 1, metalness: 0, side: THREE.DoubleSide });
+    if (current) current.terrainMat = mat;
     group.add(new THREE.Mesh(geo, mat));
     bounds.minY = minY; bounds.maxY = maxY;
 
-    // Per-cell tint map (<map>_tint.tga) arrives async; flat mid-gray until then.
     loadTintTexture(t).then((tex) => {
-      if (tex && mat.uniforms?.uTint) { mat.uniforms.uTint.value = tex; }
+      if (tex && mat.uniforms?.uTint) mat.uniforms.uTint.value = tex;
     });
   } else {
     // Flat reference plane if TGA missing/mismatched.
@@ -631,15 +685,13 @@ async function buildObjects(data) {
   layers.boxesFailed = failGroup;
   worldGroup.add(failGroup);
 
-  const nonTriggers = data.Triggers?.length
-    ? data.Objects
-    : data.Objects.filter((o) => !isTrigger(o));
+  const nonTriggers = placementObjects(data);
 
   // Group placements by resolved model path.
   const byModel = new Map();  // path -> [obj...]
   const unresolved = [];
   for (const o of nonTriggers) {
-    const p = resolveModelPath(o);
+    const p = resolveModelPath(o, modelByStem);
     if (p) { (byModel.get(p) ?? byModel.set(p, []).get(p)).push(o); }
     else unresolved.push(o);
   }
@@ -700,9 +752,9 @@ async function buildObjects(data) {
         inst.userData.category = category;
         const m = new THREE.Matrix4(), q = new THREE.Quaternion(), sv = new THREE.Vector3(), pv = new THREE.Vector3();
         objs.forEach((o, i) => {
-          pv.set(o.Pos[0], o.Pos[1], o.Pos[2]);
+          pv.set(o.Pos[0], placementY(o), o.Pos[2]);
           q.set(o.Rot[0], o.Rot[1], o.Rot[2], o.Rot[3]);
-          const sc = (o.Scale || 1) * correction;
+          const sc = placementScale(o, correction);
           sv.set(sc, sc, sc);
           inst.setMatrixAt(i, m.compose(pv, q, sv));
         });
@@ -767,8 +819,8 @@ function addPlacementBoxes(targetGroup, objs, color, opacity, parseFailed) {
   }));
   const m = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), p = new THREE.Vector3();
   objs.forEach((o, i) => {
-    const sc = Math.min(Math.max((o.Scale || 1) * 3, 2), 40);
-    p.set(o.Pos[0], o.Pos[1] + sc / 2, o.Pos[2]);
+    const sc = Math.min(Math.max(placementScale(o) * 3, 2), 40);
+    p.set(o.Pos[0], placementY(o) + sc / 2, o.Pos[2]);
     q.set(o.Rot[0], o.Rot[1], o.Rot[2], o.Rot[3]);
     s.set(sc, sc, sc);
     inst.setMatrixAt(i, m.compose(p, q, s));
@@ -822,15 +874,19 @@ async function loadGeo(path) {
 const MARKER_COLORS = { spawn: 0x40ff80, enter: 0x40b0ff, store: 0xffd040, outpost: 0xff7040 };
 
 // --- terrain texturing ---------------------------------------------------------
-// Game-accurate per-cell tile blending, RE'd from autoassault.exe
-// (CVOGTerrainChunk::BuildVertexBuffer @0x5c01e0, CVOGTerrain::BuildTileUVTable
-// @0x5bedd0) + the shipped NDDiffTerrainLayered2.fx shader. See docs/level-renderer.md.
+// Per-pixel tile blending in the fragment shader (correct across decimated quads).
+// Vertex UV LUT is still used in terrain-uv-table.js for tests / reference.
 //
 // The tileset's tile2_*.dds is an 8x8 atlas of 256^2 cells: row = tile layer index
 // (the map TGA's G&7), column = transition pattern (0 corner / 1 edge / 2 three-corner
 // / 3 diagonal, 4..7 solid variants). For each terrain cell the distinct corner layers
 // are painted lowest-first: solid base, then each higher layer lerped by the atlas
-// alpha (the authored transition mask).
+// alpha (the authored transition mask). When all 4 corners share one tile the engine
+// shifts U by a single (rand&3)*0.125 to pick one of the 4 solid variants (cols 4..7).
+//
+// Final color = 2 * VertColor * light * blend, where VertColor is only the smoothly
+// interpolated _tint.tga per-cell color (game NDDiffTerrainLayered2.fx / GetCornerData
+// / LoadTintMap; 0x7f = neutral). No separate per-vertex "verttint" multiply exists.
 //
 // Corner mask bits (A=cell-min corner, B=+x, C=+z, D=+xz): A=1, C=2, B=4, D=8.
 // LUTs (in the fragment shader) from 0xaf3fc8 / 0xaf4008; rotation r means sampling
@@ -840,26 +896,27 @@ const TERRAIN_VERT = /* glsl */`
 varying vec3 vWorldPos;
 varying vec3 vNormal;
 void main() {
-  vWorldPos = position;   // terrain geometry is authored in world space
+  vWorldPos = position;
   vNormal = normal;
   gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
 }`;
 
 const TERRAIN_FRAG = /* glsl */`
-uniform sampler2D uAtlas;   // 8x8 tileset atlas (tile2_*.dds)
-uniform sampler2D uTiles;   // R8 per-cell tile layer index (0-7)
-uniform sampler2D uTint;    // per-cell vertex tint (<map>_tint.tga), mid-gray default
-uniform vec2 uMapSize;      // map size in grid cells
-uniform float uGrid;        // world units per grid cell
-uniform vec3 uSunDir;
-uniform vec3 uSunColor;
-uniform vec3 uAmbient;
+uniform sampler2D uAtlas;
+uniform sampler2D uTiles;
+uniform sampler2D uTint;
+uniform vec2 uMapSize;
+uniform float uGrid;
+uniform vec3 uSunDir;      // sun travel direction (env directionalDirection)
+uniform vec3 uSunColor;    // env directionalDifuse (linear)
+uniform vec3 uHemiTop;     // env hemiTopColor  = sky   (linear)
+uniform vec3 uHemiBottom;  // env hemiBottomColor = ground (linear)
 varying vec3 vWorldPos;
 varying vec3 vNormal;
 
-const float CELL = 0.125;        // atlas cell size in UV
-const float INSET = 0.0078125;   // 2-texel inset (from CVOGTerrain::BuildTileUVTable)
-const float EXTENT = 0.109375;   // usable cell extent
+const float CELL = 0.125;
+const float INSET = 0.0078125;
+const float EXTENT = 0.109375;
 const int MASK_COL[16] = int[16](4, 0, 0, 1, 0, 1, 3, 2, 0, 3, 1, 2, 1, 2, 2, 4);
 const int MASK_ROT[16] = int[16](0, 0, 3, 3, 1, 0, 1, 0, 2, 0, 2, 3, 1, 1, 2, 0);
 
@@ -868,54 +925,171 @@ float tileAt(vec2 c) {
   return floor(texture2D(uTiles, (c + 0.5) / uMapSize).r * 255.0 + 0.5);
 }
 
-vec2 rot90(vec2 f, int r) {   // Ra(x,y) = (y, 1-x), applied r times
+vec2 rot90(vec2 f, int r) {
   if (r == 1) return vec2(f.y, 1.0 - f.x);
   if (r == 2) return vec2(1.0 - f.x, 1.0 - f.y);
   if (r == 3) return vec2(1.0 - f.y, f.x);
   return f;
 }
 
-vec4 layerSample(float row, int col, int rot, vec2 f) {
+// Atlas UVs are computed per fragment and jump discontinuously at every cell boundary,
+// so the implicit texture LOD (from screen-space UV derivatives) spikes on those seams and
+// samples a tiny mip -> bright seam lines. Select the mip from the CONTINUOUS grid coord
+// instead: dGdx/dGdy are smooth across cells; the atlas footprint scales by EXTENT.
+vec4 layerSample(float row, int col, int rot, vec2 f, float uOff, vec2 dGdx, vec2 dGdy) {
   vec2 p = rot90(f, rot) * EXTENT + INSET;
-  return texture2D(uAtlas, vec2(float(col), row) * CELL + p);
+  vec2 uv = vec2(float(col), row) * CELL + p + vec2(uOff, 0.0);
+  return texture2DGradEXT(uAtlas, uv, dGdx * EXTENT, dGdy * EXTENT);
 }
 
-float cellHash(vec2 c) {   // stand-in for the game's RNG stream (solid-variant pick)
-  return floor(fract(sin(dot(c, vec2(12.9898, 78.233))) * 43758.5453) * 4.0);
+float solidVariantU(vec2 cell) {
+  return floor(fract(sin(dot(cell, vec2(12.9898, 78.233))) * 43758.5453) * 4.0) * CELL;
 }
 
 void main() {
-  // Tile grid is offset (-1,-1) from the height-vertex grid
-  // (CVOGTerrainChunk::GetCornerData fetches tile at (x-1, y-1)).
   vec2 g = vWorldPos.xz / uGrid - 1.0;
   vec2 base = floor(g);
   vec2 f = g - base;
-  float tA = tileAt(base);                    // corner at local (0,0)
-  float tB = tileAt(base + vec2(1.0, 0.0));   // +x
-  float tC = tileAt(base + vec2(0.0, 1.0));   // +z
-  float tD = tileAt(base + vec2(1.0, 1.0));   // +xz
+  // Continuous atlas-UV derivatives for seam-free mip selection (see layerSample).
+  vec2 dGdx = dFdx(g);
+  vec2 dGdy = dFdy(g);
+  float tA = tileAt(base);
+  float tB = tileAt(base + vec2(1.0, 0.0));
+  float tC = tileAt(base + vec2(0.0, 1.0));
+  float tD = tileAt(base + vec2(1.0, 1.0));
   float lo = min(min(tA, tB), min(tC, tD));
 
   bool uniformCell = (tA == tB && tA == tC && tA == tD);
-  int baseCol = 4 + (uniformCell ? int(cellHash(base)) : 0);
-  vec3 blend = layerSample(lo, baseCol, 0, f).rgb;
+  // Base = solid column 4; for a uniform cell the engine shifts U by a single
+  // (rand&3)*0.125 to pick one of the 4 solid variants (columns 4..7). Applying the
+  // offset both here AND in baseCol would sample columns 8/10 (outside the atlas).
+  float uOff = uniformCell ? solidVariantU(base) : 0.0;
+  vec3 blend = layerSample(lo, 4, 0, f, uOff, dGdx, dGdy).rgb;
 
   for (int v = 0; v < 8; v++) {
     float fv = float(v);
-    if (fv <= lo + 0.5) continue;   // base layer (and below) already painted
+    if (fv <= lo + 0.5) continue;
     int m = (tA == fv ? 1 : 0) | (tC == fv ? 2 : 0) | (tB == fv ? 4 : 0) | (tD == fv ? 8 : 0);
     if (m == 0) continue;
-    vec4 s = layerSample(fv, MASK_COL[m], MASK_ROT[m], f);
+    vec4 s = layerSample(fv, MASK_COL[m], MASK_ROT[m], f, 0.0, dGdx, dGdy);
     blend = mix(blend, s.rgb, s.a);
   }
 
+  // Terrain color = 2 * VertColor * light * blend, where VertColor is only the
+  // smoothly-interpolated _tint.tga per-cell color (game: NDTerrainLayered). 0x7f = neutral.
   vec3 tint = texture2D(uTint, (g + 0.5) / uMapSize).rgb;
   vec3 n = normalize(vNormal);
-  vec3 light = uAmbient + uSunColor * max(dot(n, normalize(uSunDir)), 0.0);
+  // Game terrain lighting (NDDiffTerrainLayered2.fx): hemispheric sky/ground + one sun,
+  // no spec; both scaled by 2*vertColor(tint) against the blended albedo.
+  vec3 hemi = mix(uHemiBottom, uHemiTop, 0.5 * (n.y + 1.0));
+  vec3 diff = uSunColor * max(dot(n, -normalize(uSunDir)), 0.0);
+  vec3 light = hemi + diff;
   gl_FragColor = vec4(2.0 * tint * light * blend, 1.0);
   #include <tonemapping_fragment>
   #include <colorspace_fragment>
 }`;
+
+// --- environment lighting (real per-region values from env-lighting.json) ------
+// The game switches lighting per sub-area region (dawn/midday/night/sunset); that
+// region binding isn't in our exports, so the viewer defaults each map to its zone
+// env at midday and exposes a region + time-of-day picker to switch (see level.html).
+let envLighting = null;                         // key -> { zone, tod: { dawn|midday|... } }
+const envSel = { key: null, tod: 'midday' };
+const TODS = ['dawn', 'midday', 'night', 'sunset'];
+// Neutral fallback for maps with no shipped env (e.g. interior missions).
+const DEFAULT_ENV = { hemiTop: [150, 165, 190], hemiBottom: [60, 55, 60], sun: [235, 225, 200], dir: [-0.2, -0.6, 0.2], fogColor: [120, 120, 130] };
+
+/** Best env key for a level: match the map's own zone token (its last alphabetic,
+ *  >=4-char name segment) against env zones, preferring an exact then containment
+ *  match, and the zone-level entry over a specific sub-area. Short 2-3 char zone
+ *  codes are ignored so e.g. "titaniumfactory" doesn't spuriously match zone "ti". */
+function resolveEnvKey(levelName) {
+  if (!envLighting) return null;
+  const segs = levelName.toLowerCase().split(/[^a-z]+/).filter((s) => s.length >= 4);
+  const mapZone = segs.length ? segs[segs.length - 1] : levelName.toLowerCase();
+  let best = null, bestScore = 0;
+  for (const key of Object.keys(envLighting)) {
+    const zone = (envLighting[key].zone || '').toLowerCase();
+    if (zone.length < 4) continue;
+    let score = 0;
+    if (zone === mapZone) score = 1000 + zone.length;
+    else if (mapZone.includes(zone) || zone.includes(mapZone)) score = Math.min(zone.length, mapZone.length);
+    else continue;
+    if (score > bestScore) { bestScore = score; best = key; }
+  }
+  if (!best) return null;
+  const zone = envLighting[best].zone.toLowerCase();
+  const zoneOnly = Object.keys(envLighting).find(
+    (k) => envLighting[k].zone.toLowerCase() === zone && k.split('_').length === 4);
+  return zoneOnly || best;
+}
+
+function envRecord(key, tod) {
+  const rec = key && envLighting?.[key]?.tod;
+  return (rec && (rec[tod] || rec.midday)) || DEFAULT_ENV;
+}
+
+const envColor = (rgb) => new THREE.Color(rgb[0] / 255, rgb[1] / 255, rgb[2] / 255).convertSRGBToLinear();
+
+/** Terrain-shader light uniform values for an env record. */
+function envUniforms(e) {
+  return {
+    uHemiTop: envColor(e.hemiTop || DEFAULT_ENV.hemiTop),
+    uHemiBottom: envColor(e.hemiBottom || DEFAULT_ENV.hemiBottom),
+    uSunColor: envColor(e.sun || DEFAULT_ENV.sun),
+    uSunDir: new THREE.Vector3(...(e.dir || DEFAULT_ENV.dir)).normalize(),
+  };
+}
+
+/** Re-apply the current env selection to the live terrain material, object fill
+ *  lights, and atmosphere (background). Safe to call before a terrain exists. */
+function applyEnv() {
+  const e = envRecord(envSel.key, envSel.tod);
+  const u = envUniforms(e);
+  const un = current?.terrainMat?.uniforms;
+  if (un && un.uHemiTop) {
+    un.uHemiTop.value.copy(u.uHemiTop);
+    un.uHemiBottom.value.copy(u.uHemiBottom);
+    un.uSunColor.value.copy(u.uSunColor);
+    un.uSunDir.value.copy(u.uSunDir);
+  }
+  // Object fill lights + horizon so props read consistently with the terrain.
+  sun.color.copy(u.uSunColor);
+  sun.position.copy(u.uSunDir).multiplyScalar(-1);
+  sceneAmbient.color.copy(u.uHemiBottom).lerp(u.uHemiTop, 0.5);
+  sceneHemi.color.copy(u.uHemiTop);
+  sceneHemi.groundColor.copy(u.uHemiBottom);
+  scene.background = envColor(e.fogColor || DEFAULT_ENV.fogColor);
+}
+
+/** Populate the region + time-of-day <select>s for a level and pick its default env. */
+function populateEnvControls(levelName) {
+  const todSel = document.getElementById('env-tod');
+  const regSel = document.getElementById('env-region');
+  if (!todSel || !regSel) return;
+  if (!todSel.options.length) {
+    for (const t of TODS) { const o = document.createElement('option'); o.value = o.textContent = t; todSel.appendChild(o); }
+    todSel.value = envSel.tod;
+    todSel.onchange = () => { envSel.tod = todSel.value; applyEnv(); };
+    regSel.onchange = () => { envSel.key = regSel.value || null; applyEnv(); };
+  }
+  const def = resolveEnvKey(levelName);
+  envSel.key = def;
+  regSel.innerHTML = '';
+  const zone = def ? envLighting[def].zone.toLowerCase() : null;
+  const keys = zone ? Object.keys(envLighting).filter((k) => envLighting[k].zone.toLowerCase() === zone) : [];
+  if (!keys.length) {
+    const o = document.createElement('option'); o.value = ''; o.textContent = '(no env — neutral default)';
+    regSel.appendChild(o);
+  }
+  for (const k of keys) {
+    const o = document.createElement('option');
+    o.value = k;
+    o.textContent = k.replace(/^env_[a-z]_[a-z]_/i, '').replace(/_/g, ' ');
+    if (k === def) o.selected = true;
+    regSel.appendChild(o);
+  }
+}
 
 /** Build the game-accurate terrain material, or null if the tileset atlas is unavailable. */
 function buildTerrainMaterial(data, tga) {
@@ -924,6 +1098,8 @@ function buildTerrainMaterial(data, tga) {
   const atlasName = (entry?.tile2 || '').toLowerCase();
   if (!atlasName || !bank.has(atlasName)) return null;
   const atlas = bank.load(atlasName, { srgb: true }).texture;
+  atlas.wrapS = atlas.wrapT = THREE.ClampToEdgeWrapping;
+  const el = envUniforms(envRecord(envSel.key, envSel.tod));
 
   const tileTex = new THREE.DataTexture(tga.tile, tga.w, tga.h, THREE.RedFormat, THREE.UnsignedByteType);
   tileTex.minFilter = tileTex.magFilter = THREE.NearestFilter;
@@ -934,16 +1110,18 @@ function buildTerrainMaterial(data, tga) {
     vertexShader: TERRAIN_VERT,
     fragmentShader: TERRAIN_FRAG,
     side: THREE.DoubleSide,
+    // dFdx / texture2DGradEXT: core in WebGL2, extension-gated in WebGL1.
+    extensions: { derivatives: true, shaderTextureLOD: true },
     uniforms: {
       uAtlas: { value: atlas },
       uTiles: { value: tileTex },
       uTint: { value: makeFlatTintTexture() },
       uMapSize: { value: new THREE.Vector2(tga.w, tga.h) },
       uGrid: { value: t.GridSize || 1 },
-      // Match the scene lights (sun + ambient/hemi), pre-halved for the game's x2.
-      uSunDir: { value: sun.position.clone().normalize() },
-      uSunColor: { value: sun.color.clone().multiplyScalar(sun.intensity * 0.5) },
-      uAmbient: { value: new THREE.Color(0x516080).multiplyScalar(0.7) },
+      uSunDir: { value: el.uSunDir },
+      uSunColor: { value: el.uSunColor },
+      uHemiTop: { value: el.uHemiTop },
+      uHemiBottom: { value: el.uHemiBottom },
     },
   });
   return mat;
@@ -1004,7 +1182,7 @@ function buildMarkers(data) {
 // Junction nodes carry a pad piece model (road_*.geo) + up to 6 arm attach points
 // (local, rotated by `Rotation` around Y) that chain endpoints snap to.
 
-const ROAD_LIFT = 0.4;          // lift above terrain to avoid z-fighting
+const ROAD_LIFT = 0.05;         // small lift above terrain; polygonOffset handles z-fighting
 const ROAD_SUBDIV = 4;          // spline subdivisions per node interval
 
 function roadWidth(tex) {
@@ -1015,6 +1193,45 @@ function roadWidth(tex) {
 function rotY(v, ang) {
   const c = Math.cos(ang), s = Math.sin(ang);
   return new THREE.Vector3(v[0] * c + v[2] * s, v[1], -v[0] * s + v[2] * c);
+}
+
+function roadRibbonSampleY(x, z, nodeY, sample, drape) {
+  if (drape && sample) return sample(x, z);
+  return nodeY;
+}
+
+function junctionPadY(x, z, nodeY, sample) {
+  if (sample) return sample(x, z);
+  return nodeY;
+}
+
+function ribbonPathPoints(chain) {
+  return chain.map((node, i) => {
+    if (node.Type === 'junction' && node.ArmPos) {
+      const other = chain[i === 0 ? 1 : chain.length - 2];
+      const arm = node.Links.indexOf(other?.Id);
+      if (arm >= 0 && arm < node.ArmPos.length) {
+        const world = rotY(node.ArmPos[arm], node.Rotation || 0)
+          .add(new THREE.Vector3(node.Pos[0], node.Pos[1], node.Pos[2]));
+        return new THREE.Vector3(world.x, 0, world.z);
+      }
+    }
+    return new THREE.Vector3(node.Pos[0], 0, node.Pos[2]);
+  });
+}
+
+function riverPathPoints(chain) {
+  return chain.map((node, i) => {
+    if (node.Type === 'junction' && node.ArmPos) {
+      const other = chain[i === 0 ? 1 : chain.length - 2];
+      const arm = node.Links.indexOf(other?.Id);
+      if (arm >= 0 && arm < node.ArmPos.length) {
+        return rotY(node.ArmPos[arm], node.Rotation || 0)
+          .add(new THREE.Vector3(node.Pos[0], node.Pos[1], node.Pos[2]));
+      }
+    }
+    return new THREE.Vector3(node.Pos[0], node.Pos[1], node.Pos[2]);
+  });
 }
 
 /** Walk the node graph into chains between junctions / degree!=2 nodes (plus loops). */
@@ -1058,13 +1275,10 @@ function ribbonGeometry(points, width, drape = true) {
   const half = width / 2;
   let dist = 0;
   const tan = new THREE.Vector3(), side = new THREE.Vector3();
-  // Drape onto the (decimated) rendered terrain: node heights are exact, but the
-  // render mesh deviates by several units on big maps and would bury the ribbon.
-  // Rivers are NOT draped — their water surface legitimately sits below the banks.
   const sample = drape ? current?.terrainSampler : null;
   for (let i = 0; i < n; i++) {
     const p = pts[i];
-    if (sample) p.y = Math.max(p.y, sample(p.x, p.z));
+    p.y = roadRibbonSampleY(p.x, p.z, p.y, sample, drape);
     if (i > 0) dist += p.distanceTo(pts[i - 1]);
     tan.subVectors(pts[Math.min(i + 1, n - 1)], pts[Math.max(i - 1, 0)]);
     side.set(tan.z, 0, -tan.x).normalize().multiplyScalar(half);
@@ -1121,18 +1335,7 @@ async function buildRoads(data) {
     if (!profile) continue;
     const isRiver = chain.some((c) => c.Type === 'river');
     const width = roadWidth(profile);
-    const points = chain.map((node, i) => {
-      // Snap chain ends to the junction's matching arm attach point.
-      if (node.Type === 'junction' && node.ArmPos) {
-        const other = chain[i === 0 ? 1 : chain.length - 2];
-        const arm = node.Links.indexOf(other?.Id);
-        if (arm >= 0 && arm < node.ArmPos.length) {
-          return rotY(node.ArmPos[arm], node.Rotation || 0)
-            .add(new THREE.Vector3(node.Pos[0], node.Pos[1], node.Pos[2]));
-        }
-      }
-      return new THREE.Vector3(node.Pos[0], node.Pos[1], node.Pos[2]);
-    });
+    const points = isRiver ? riverPathPoints(chain) : ribbonPathPoints(chain);
     if (points.length < 2) continue;
     let mat = matCache.get(profile);
     if (!mat) { mat = roadMaterial(profile, isRiver); matCache.set(profile, mat); }
@@ -1157,8 +1360,8 @@ async function buildRoads(data) {
       const m = new THREE.Matrix4(), q = new THREE.Quaternion(), sv = new THREE.Vector3(), pv = new THREE.Vector3();
       const sample = current?.terrainSampler;
       list.forEach((j, i) => {
-        const gy = sample ? Math.max(j.Pos[1], sample(j.Pos[0], j.Pos[2])) : j.Pos[1];
-        pv.set(j.Pos[0], gy + ROAD_LIFT * 0.5, j.Pos[2]);
+        const gy = junctionPadY(j.Pos[0], j.Pos[2], j.Pos[1], sample);
+        pv.set(j.Pos[0], gy + ROAD_LIFT, j.Pos[2]);
         q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), j.Rotation || 0);
         sv.setScalar(correction);
         inst.setMatrixAt(i, m.compose(pv, q, sv));
@@ -1197,6 +1400,17 @@ function fitCamera(b, data) {
   camera.near = Math.max(span / 5000, 0.5);
   camera.far = span * 12;
   camera.updateProjectionMatrix();
+}
+
+function applyWorldGroupDoubleSide() {
+  // Z-reflection flips winding; default FrontSide materials would backface-cull.
+  worldGroup.traverse((obj) => {
+    const mat = obj.material;
+    if (!mat) return;
+    for (const m of Array.isArray(mat) ? mat : [mat]) {
+      if (m) m.side = THREE.DoubleSide;
+    }
+  });
 }
 
 function applyVisibility() {
@@ -1321,12 +1535,22 @@ function onCanvasClick(e) {
   mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
 
   const hits = raycastPlacements(true);
-  if (!hits.length) return;
+  if (!hits.length) {
+    hideSelectionPanel();
+    if (!selectedTrigger) highlightMesh.visible = false;
+    return;
+  }
 
   const hit = selectRaycastHit(hits);
   const obj = placementFromHit(hit);
-  if (obj?._category === 'trigger') {
+  if (!obj) return;
+
+  showSelectionPanel(obj);
+
+  if (obj._category === 'trigger') {
     showTriggerPanel(obj);
+  } else {
+    hideTriggerPanel();
   }
 }
 
@@ -1346,7 +1570,7 @@ function processHover() {
     }
   }
 
-  if (!selectedTrigger) {
+  if (!selectedTrigger && !selectedPlacement) {
     highlightMesh.visible = false;
   }
   hideTooltip();
@@ -1372,6 +1596,9 @@ for (const id of visibilityCheckboxIds)
   el(id).addEventListener('change', applyVisibility);
 
 reactionInspectorCloseEl?.addEventListener('click', hideTriggerPanel);
+reactionTypeRefCloseEl?.addEventListener('click', () => setReactionTypeRefOpen(false));
+reactionTypeRefSearchEl?.addEventListener('input', renderReactionTypeReference);
+showReactionTypeRefEl?.addEventListener('change', () => setReactionTypeRefOpen(showReactionTypeRefEl.checked));
 reactionInspectorEl?.addEventListener('click', (e) => {
   const nodeBtn = e.target.closest('.tp-node-select');
   if (nodeBtn) {
@@ -1416,8 +1643,10 @@ async function boot() {
   try {
     tilesetTable = await (await fetch('./tileset-table.json')).json();
   } catch { tilesetTable = null; /* terrain falls back to untextured */ }
-  modelByStem = new Map();
-  for (const m of assetIndex.models) modelByStem.set(m.name.toLowerCase().replace(/\.geo$/, ''), m.path);
+  try {
+    envLighting = await (await fetch('./env-lighting.json')).json();
+  } catch { envLighting = null; /* lighting falls back to neutral default */ }
+  modelByStem = buildModelStemMap(assetIndex.models);
   bank = new TextureBank(assetIndex.textures, ROOT);
   setStatus('');
   renderList();

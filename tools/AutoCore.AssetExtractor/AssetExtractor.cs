@@ -1,10 +1,8 @@
 namespace AutoCore.AssetExtractor;
 
-using System.Text.RegularExpressions;
-
 public static class AssetExtractor
 {
-    public static int Run(string gamePath, string outputPath, string? filter = null)
+    public static int Run(string gamePath, string outputPath, string? filter = null, bool uiOnly = false)
     {
         if (!Directory.Exists(gamePath))
         {
@@ -26,8 +24,9 @@ public static class AssetExtractor
             return name.Equals("misc.glm", StringComparison.OrdinalIgnoreCase) ? "\0" : name;
         })];
 
-        Regex? filterRegex = filter != null ? BuildFilterRegex(filter) : null;
-        if (filterRegex != null)
+        if (uiOnly)
+            Console.WriteLine("Filter: --ui-only (i_* interface textures and layouts)");
+        else if (filter != null)
             Console.WriteLine($"Filter: {filter}");
 
         Directory.CreateDirectory(outputPath);
@@ -43,7 +42,7 @@ public static class AssetExtractor
 
         foreach (var glmPath in glmFiles)
         {
-            var result = ExtractGlm(glmPath, outputPath, manifest, seen, filterRegex);
+            var result = ExtractGlm(glmPath, outputPath, manifest, seen, filter, uiOnly);
             totalExtracted += result.Extracted;
             totalSkipped   += result.Skipped;
             foreach (var (key, count) in result.SchemeCounts)
@@ -80,7 +79,7 @@ public static class AssetExtractor
 
     private static ExtractionResult ExtractGlm(
         string glmPath, string outputRoot, ManifestWriter manifest,
-        Dictionary<string, string> seen, Regex? filter)
+        Dictionary<string, string> seen, string? filter, bool uiOnly)
     {
         var result = new ExtractionResult(Path.GetFileName(glmPath));
 
@@ -91,7 +90,7 @@ public static class AssetExtractor
             // Audit every entry, including filtered-out ones, so any run covers the whole archive.
             result.CountScheme(entry);
 
-            if (filter != null && !filter.IsMatch(entry.Name))
+            if (!ExtractFilter.Matches(entry.Name, filter, uiOnly))
                 continue;
 
             var category   = AssetCategory.GetCategory(entry.Name);
@@ -123,18 +122,5 @@ public static class AssetExtractor
         }
 
         return result;
-    }
-
-    // Converts a filter string to a case-insensitive regex.
-    // Patterns without * or ? are treated as substring matches (implicitly *pattern*).
-    private static Regex BuildFilterRegex(string pattern)
-    {
-        if (!pattern.Contains('*') && !pattern.Contains('?'))
-            return new Regex(Regex.Escape(pattern), RegexOptions.IgnoreCase);
-
-        var escaped = Regex.Escape(pattern)
-            .Replace(@"\*", ".*")
-            .Replace(@"\?", ".");
-        return new Regex($"^{escaped}$", RegexOptions.IgnoreCase);
     }
 }

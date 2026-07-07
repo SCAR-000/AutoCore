@@ -48,10 +48,12 @@ public static class TriggerGraphResolver
         {
             Coid = coid,
             ReactionType = reaction.ReactionType,
-            Summary = desc.Summary
+            Summary = desc.Summary,
+            Semantics = desc.Semantics,
         };
         node.Details.AddRange(desc.Details);
         node.TargetCoids.AddRange(desc.TargetCoids);
+        node.LinkedTriggerCoids.AddRange(desc.LinkedTriggerCoids.Distinct());
 
         if (visited.Contains(coid))
         {

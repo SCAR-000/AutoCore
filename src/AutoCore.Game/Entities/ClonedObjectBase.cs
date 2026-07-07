@@ -61,6 +61,8 @@ public abstract class ClonedObjectBase
     //public bool HasGraphics { get; protected set; }
     //public bool Dirty { get; protected set; }
     public bool IsCorpse { get; protected set; }
+    public bool LogicActive { get; private set; } = true;
+    public bool LogicEnabled { get; private set; } = true;
     //public bool IsActive { get; protected set; }
     public bool IsInvincible { get; protected set; }
     //public bool IsChampion { get; protected set; }
@@ -102,6 +104,12 @@ public abstract class ClonedObjectBase
     {
         return IsCorpse;
     }
+
+    public void SetLogicActive(bool active) => LogicActive = active;
+
+    public void SetEnabled(bool enabled) => LogicEnabled = enabled;
+
+    public void MarkDead() => IsCorpse = true;
 
     public ClonedObjectBase()
     {

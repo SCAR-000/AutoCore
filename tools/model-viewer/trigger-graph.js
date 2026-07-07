@@ -4,6 +4,16 @@
  */
 
 import { inferReactionExecutionRealm, realmBadgeClass } from './reaction-execution.js';
+import {
+  getReactionTypeInfo,
+  buildCatalogDetailLines,
+  getAllReactionTypes,
+  REACTION_CATALOG_GHIDRA,
+} from './reaction-catalog.js';
+import {
+  resolveGhidraCallees,
+  buildGhidraCalleeHTML,
+} from './ghidra-functions.js';
 
 const REACTION_OPS = {
   Activate: (r, idx) => `${r.ReactionType} ${formatTargets(r.Objects, idx)}`,
@@ -95,18 +105,29 @@ export function lookupReaction(data, coid) {
 function summarizeReaction(r, index, variables) {
   const fn = REACTION_OPS[r.ReactionType];
   const summary = fn ? fn(r, index, variables) : (r.ReactionType || 'Unknown');
-  const details = [];
+  const details = [...buildCatalogDetailLines(r, variables)];
   if (r.ActOnActivator) details.push('Acts on activator');
   if (r.DoForAllPlayers) details.push('For all players');
   if (r.DoForConvoy) details.push('For convoy');
   const nested = [...(r.Reactions || [])];
+  const linkedTriggers = [];
   if (r.Text?.Choices) {
     for (const ch of r.Text.Choices) {
-      if (ch.TriggerCoid > 0) nested.push(ch.TriggerCoid);
+      if (ch.TriggerCoid > 0) linkedTriggers.push(ch.TriggerCoid);
     }
   }
   const targets = [...(r.Objects || [])];
-  return { summary, details, nested, targets, reactionType: r.ReactionType, coid: r.Coid };
+  const catalog = getReactionTypeInfo(r.ReactionType);
+  return {
+    summary,
+    details,
+    nested,
+    linkedTriggers,
+    targets,
+    reactionType: r.ReactionType,
+    coid: r.Coid,
+    semantics: catalog,
+  };
 }
 
 export function resolveTriggerGraph(trigger, data, maxDepth = 32) {
@@ -132,8 +153,17 @@ function resolveNode(coid, byCoid, index, variables, visited, maxDepth, depth) {
     return { Coid: coid, ReactionType: 'Missing', Summary: `Reaction #${coid} not found on map`, Details: [], TargetCoids: [], Children: [], IsCycle: false };
   }
 
-  const { summary, details, nested, targets, reactionType } = summarizeReaction(r, index, variables);
-  const node = { Coid: coid, ReactionType: reactionType, Summary: summary, Details: details, TargetCoids: targets, Children: [], IsCycle: false };
+  const { summary, details, nested, linkedTriggers, targets, reactionType } = summarizeReaction(r, index, variables);
+  const node = {
+    Coid: coid,
+    ReactionType: reactionType,
+    Summary: summary,
+    Details: details,
+    TargetCoids: targets,
+    LinkedTriggerCoids: linkedTriggers,
+    Children: [],
+    IsCycle: false,
+  };
 
   if (visited.has(coid)) {
     node.IsCycle = true;
@@ -227,6 +257,20 @@ export function buildReactionDetailHTML(reactionCoid, data) {
 
   for (const d of details) html += `<div class="tp-detail">${escapeHtml(d)}</div>`;
 
+  const catalogInfo = getReactionTypeInfo(reaction.ReactionType);
+  if (catalogInfo?.implementationStatus) {
+    html += `<div class="tp-row tp-impl-status"><span class="tp-k">AutoCore</span> <span class="tp-impl-badge">${escapeHtml(catalogInfo.implementationStatus)}</span></div>`;
+  }
+  if (catalogInfo?.ghidra?.handler) {
+    html += `<div class="tp-row tp-semantics"><span class="tp-k">Ghidra</span> ${escapeHtml(catalogInfo.ghidra.handler)} (case ${catalogInfo.ghidra.dispatchCase})</div>`;
+  }
+
+  const calleeEntries = resolveGhidraCallees(catalogInfo?.callees);
+  if (calleeEntries.length) {
+    html += `<div class="tp-section">Ghidra callees</div>`;
+    html += buildGhidraCalleeHTML(calleeEntries, escapeHtml);
+  }
+
   if (reaction.Objects?.length) {
     html += `<div class="tp-row"><span class="tp-k">Targets</span></div>`;
     html += `<div class="tp-targets">${reaction.Objects.map((c) => `<button type="button" class="tp-focus" data-coid="${c}">${escapeHtml(formatCoid(c, index))}</button>`).join(' ')}</div>`;
@@ -269,6 +313,9 @@ export function buildReactionDetailHTML(reactionCoid, data) {
     const t = reaction.Text;
     html += `<div class="tp-row"><span class="tp-k">Text</span> [${escapeHtml(t.Type)}] → ${escapeHtml(t.TargetType || '?')}</div>`;
     if (t.Main) html += `<div class="tp-detail tp-quote">"${escapeHtml(t.Main)}"</div>`;
+    if (t.Params?.length) {
+      html += `<div class="tp-row"><span class="tp-k">Params</span> ${t.Params.map((p) => `${escapeHtml(p.Type)}:${p.Id}`).join(', ')}</div>`;
+    }
     if (t.Choices?.length) {
       html += `<div class="tp-row"><span class="tp-k">Choices</span></div>`;
       html += `<ul class="tp-choice-list">${t.Choices.map((ch, i) => {
@@ -287,6 +334,7 @@ export function buildReactionDetailHTML(reactionCoid, data) {
 function renderNode(node, data, index, depth, selectedReactionCoid) {
   const reaction = lookupReaction(data, node.Coid);
   const realm = inferReactionExecutionRealm(reaction);
+  const catalog = getReactionTypeInfo(node.ReactionType);
   const selected = Number(selectedReactionCoid) === Number(node.Coid);
   let html = `<li class="tp-node${node.IsCycle ? ' cycle' : ''}${selected ? ' selected' : ''}">`;
   html += `<button type="button" class="tp-node-select${selected ? ' selected' : ''}" data-reaction-coid="${node.Coid}">`;
@@ -294,7 +342,16 @@ function renderNode(node, data, index, depth, selectedReactionCoid) {
   html += `<span class="${realmBadgeClass(realm)}">${escapeHtml(realm.label)}</span> `;
   html += `<span class="tp-summary">${escapeHtml(node.Summary)}</span>`;
   html += `</button>`;
+  if (catalog?.summary && catalog.summary !== node.Summary) {
+    html += `<div class="tp-detail tp-semantics">${escapeHtml(catalog.summary)}</div>`;
+  }
   for (const d of node.Details || []) html += `<div class="tp-detail">${escapeHtml(d)}</div>`;
+  const linked = node.LinkedTriggerCoids?.length
+    ? node.LinkedTriggerCoids
+    : (reaction?.Text?.Choices || []).map((c) => c.TriggerCoid).filter((c) => c > 0);
+  if (linked?.length) {
+    html += `<div class="tp-detail">Dialog → triggers: ${linked.map((c) => `<button type="button" class="tp-trigger-link" data-trigger-coid="${c}">#${c}</button>`).join(' ')}</div>`;
+  }
   if (node.Children?.length) {
     html += `<ul class="tp-tree">${node.Children.map((c) => renderNode(c, data, index, depth + 1, selectedReactionCoid)).join('')}</ul>`;
   }
@@ -426,4 +483,40 @@ export function getTriggers(data) {
     Reactions: o.Reactions ?? o.reactions ?? [],
     Graph: o.Graph ?? o.graph,
   }));
+}
+
+/** Searchable reference list of all 88 reaction types (Ghidra catalog). */
+export function buildReactionTypeReferenceHTML(filter = '') {
+  const q = filter.trim().toLowerCase();
+  const types = getAllReactionTypes().filter((t) => {
+    if (!q) return true;
+    return (
+      t.name.toLowerCase().includes(q)
+      || (t.summary || '').toLowerCase().includes(q)
+      || String(t.id).includes(q)
+      || (t.realm || '').includes(q)
+    );
+  });
+
+  let html = `<div class="tp-row tp-semantics">Dispatch: ${escapeHtml(REACTION_CATALOG_GHIDRA.dispatchSymbol)} @ ${escapeHtml(REACTION_CATALOG_GHIDRA.dispatch)}</div>`;
+  html += `<ul class="tp-type-ref-list">`;
+  for (const t of types) {
+    html += `<li class="tp-type-ref-item"><span class="tp-type">${t.id}</span> <strong>${escapeHtml(t.name)}</strong>`;
+    html += ` <span class="tp-realm ${t.realm === 'client' ? 'client' : 'server'}">${escapeHtml(t.realm)}</span>`;
+    if (t.implementationStatus) {
+      html += ` <span class="tp-impl-badge">${escapeHtml(t.implementationStatus)}</span>`;
+    }
+    html += `<div class="tp-detail">${escapeHtml(t.summary || '')}</div>`;
+    if (t.description && t.description !== t.summary) {
+      html += `<div class="tp-detail tp-semantics">${escapeHtml(t.description)}</div>`;
+    }
+    const callees = resolveGhidraCallees(t.callees);
+    if (callees.length) {
+      html += buildGhidraCalleeHTML(callees, escapeHtml);
+    }
+    html += `</li>`;
+  }
+  html += `</ul>`;
+  if (!types.length) html += `<div class="tp-empty">No reaction types match "${escapeHtml(filter)}".</div>`;
+  return html;
 }

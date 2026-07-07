@@ -1,0 +1,33 @@
+{
+  "program": "AA-decode / autoassault.exe",
+  "functions": [
+    { "address": "0x004059f0", "symbol": "Client_SendLogicUiPacket" },
+    { "address": "0x0040d260", "symbol": "CVOGPhysics_ApplyImpulseVector" },
+    { "address": "0x004149d0", "symbol": "CVOGReaction_FailMissionNotify" },
+    { "address": "0x004bae70", "symbol": "CVOGReaction_ResolveObjectTarget" },
+    { "address": "0x004cd3a0", "symbol": "CVOGReaction_FireNestedReactions" },
+    { "address": "0x004d09a0", "symbol": "CVOGReaction_CastSkillOnTarget" },
+    { "address": "0x004d37f0", "symbol": "CVOGReaction_TransferMap" },
+    { "address": "0x004d38b0", "symbol": "CVOGReaction_UpdateRepairStationPosition" },
+    { "address": "0x004db8b0", "symbol": "CVOGReaction_RemoveObject" },
+    { "address": "0x004de550", "symbol": "CVOGReaction_SpawnObject" },
+    { "address": "0x004e4870", "symbol": "CVOGReaction_BuildTextParams" },
+    { "address": "0x0051a170", "symbol": "CVOGReaction_GiveItemByCbid" },
+    { "address": "0x00521e00", "symbol": "CVOGReaction_MarkRepairStation" },
+    { "address": "0x00522bc0", "symbol": "CVOGReaction_RecordFirstTimeEvent" },
+    { "address": "0x0052a1b0", "symbol": "CVOGReaction_RelockContinentObject" },
+    { "address": "0x0052da30", "symbol": "CVOGReaction_FailMission" },
+    { "address": "0x00531c80", "symbol": "CVOGReaction_UnlockContinentObject" },
+    { "address": "0x005327c0", "symbol": "CVOGReaction_GiveMission" },
+    { "address": "0x00533c30", "symbol": "CVOGReaction_AddExperience" },
+    { "address": "0x00533f90", "symbol": "CVOGReaction_CompleteObjective" },
+    { "address": "0x0053d790", "symbol": "CVOGReaction_TeleportTarget" },
+    { "address": "0x0054c570", "symbol": "CVOGReaction_ResolveSkillTargets" },
+    { "address": "0x005721c0", "symbol": "CVOGReaction_RemoveInventoryItem" },
+    { "address": "0x0057a190", "symbol": "CVOGReaction_ShowDialog" },
+    { "address": "0x0057c4a0", "symbol": "CVOGReaction_ShowScreenText" },
+    { "address": "0x005afbc0", "symbol": "CVOGMap_SetVariable" },
+    { "address": "0x005b05f0", "symbol": "CVOGMap_LookupVariable" },
+    { "address": "0x007a4330", "symbol": "CVOGReaction_RandomUnitScalar" }
+  ]
+}

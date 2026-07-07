@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Auto Assault — Tactical Arc Visualizer</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --bg: #0b0d13;
+    --panel: rgba(23, 28, 38, 0.85);
+    --panel2: #1c2330;
+    --line: #2d3748;
+    --text: #e2e8f0;
+    --dim: #a0aec0;
+    --accent: #4fd1c5;
+    --accent-glow: rgba(79, 209, 197, 0.35);
+    --warn: #ed8936;
+    --red: #f56565;
+    --green: #48bb78;
+    --blue: #4299e1;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    display: flex; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    overflow: hidden;
+  }
+  
+  #sidebar {
+    width: 380px; min-width: 380px; height: 100%; display: flex; flex-direction: column;
+    background: var(--panel); border-right: 1px solid var(--line);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    z-index: 10; overflow-y: auto;
+  }
+  
+  header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--line);
+    background: rgba(15, 23, 42, 0.4);
+  }
+  header h1 {
+    margin: 0; font-size: 18px; font-weight: 700; color: #fff;
+    letter-spacing: 0.5px;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+  }
+  header p { margin: 6px 0 0; font-size: 12px; color: var(--dim); }
+
+  .section {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--line);
+  }
+  .section h2 {
+    margin: 0 0 16px; font-size: 13px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 1px; color: var(--accent);
+  }
+  
+  .control-group {
+    margin-bottom: 16px;
+  }
+  .control-group:last-child { margin-bottom: 0; }
+  
+  label {
+    display: block; font-size: 12px; color: var(--dim); margin-bottom: 6px;
+  }
+  .label-with-val {
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .label-val { font-family: monospace; color: #fff; font-size: 12px; }
+
+  input[type=range] {
+    width: 100%; height: 6px; background: var(--line); border-radius: 3px;
+    outline: none; -webkit-appearance: none; margin: 8px 0;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%;
+    background: var(--accent); cursor: pointer; box-shadow: 0 0 8px var(--accent-glow);
+    transition: background 0.15s;
+  }
+  input[type=range]::-webkit-slider-thumb:hover {
+    background: #fff;
+  }
+
+  .select-pill-container {
+    display: flex; gap: 4px; background: rgba(15, 23, 42, 0.5);
+    padding: 3px; border-radius: 8px; border: 1px solid var(--line);
+  }
+  .select-pill {
+    flex: 1; text-align: center; padding: 6px 4px; font-size: 11px; font-weight: 600;
+    border-radius: 6px; cursor: pointer; transition: all 0.2s; color: var(--dim);
+  }
+  .select-pill:hover { color: #fff; background: rgba(255, 255, 255, 0.05); }
+  .select-pill.active {
+    background: var(--accent); color: #0b0d13; font-weight: 700;
+    box-shadow: 0 2px 6px rgba(79, 209, 197, 0.4);
+  }
+
+  .color-pill-container {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
+  }
+  .color-pill {
+    text-align: center; padding: 8px 4px; font-size: 11px; font-weight: 600;
+    border-radius: 6px; cursor: pointer; border: 1px solid transparent;
+    transition: all 0.2s;
+  }
+  .color-pill.ready { background: rgba(72, 187, 120, 0.15); color: var(--green); border-color: rgba(72, 187, 120, 0.3); }
+  .color-pill.ready.active { background: var(--green); color: #fff; box-shadow: 0 0 8px rgba(72, 187, 120, 0.4); }
+  .color-pill.reloading { background: rgba(245, 101, 101, 0.15); color: var(--red); border-color: rgba(245, 101, 101, 0.3); }
+  .color-pill.reloading.active { background: var(--red); color: #fff; box-shadow: 0 0 8px rgba(245, 101, 101, 0.4); }
+  .color-pill.locked { background: rgba(66, 153, 225, 0.15); color: var(--blue); border-color: rgba(66, 153, 225, 0.3); }
+  .color-pill.locked.active { background: var(--blue); color: #fff; box-shadow: 0 0 8px rgba(66, 153, 225, 0.4); }
+  .color-pill.default { background: rgba(237, 137, 54, 0.15); color: var(--warn); border-color: rgba(237, 137, 54, 0.3); }
+  .color-pill.default.active { background: var(--warn); color: #fff; box-shadow: 0 0 8px rgba(237, 137, 54, 0.4); }
+
+  .toggle-container {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 4px 0;
+  }
+  .switch {
+    position: relative; display: inline-block; width: 38px; height: 20px;
+  }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider {
+    position: absolute; cursor: pointer; inset: 0; background-color: var(--line);
+    border-radius: 20px; transition: .3s;
+  }
+  .slider:before {
+    position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px;
+    background-color: white; border-radius: 50%; transition: .3s;
+  }
+  input:checked + .slider { background-color: var(--accent); }
+  input:checked + .slider:before { transform: translateX(18px); }
+
+  #main { flex: 1; position: relative; height: 100%; }
+  #canvas-wrap { position: absolute; inset: 0; }
+  #canvas-wrap canvas { display: block; }
+  
+  #hint {
+    position: absolute; right: 16px; bottom: 16px; color: var(--dim); font-size: 11px;
+    pointer-events: none; text-align: right; background: rgba(15, 23, 42, 0.7);
+    padding: 6px 12px; border-radius: 6px; border: 1px solid var(--line);
+  }
+
+  .status-overlay {
+    position: absolute; top: 16px; left: 50%; transform: translateX(-50%);
+    background: rgba(15, 23, 42, 0.85); border: 1px solid var(--line);
+    border-radius: 8px; padding: 6px 14px; font-size: 12px; font-weight: 500;
+    pointer-events: none; z-index: 10;
+  }
+  
+  #details-panel {
+    background: rgba(15, 23, 42, 0.4);
+    padding: 16px 24px; font-size: 11px; line-height: 1.6; color: var(--dim);
+    border-top: 1px solid var(--line); flex: 1;
+  }
+  #details-panel code {
+    font-family: Consolas, monospace; color: #fff; background: rgba(255,255,255,0.06);
+    padding: 1px 4px; border-radius: 3px; font-size: 11px;
+  }
+  .formula {
+    margin: 8px 0; background: rgba(0,0,0,0.25); border-left: 2px solid var(--accent);
+    padding: 6px 10px; font-family: Consolas, monospace; color: #cbd5e0;
+  }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://esm.sh/three@0.165.0",
+    "three/addons/": "https://esm.sh/three@0.165.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+  <aside id="sidebar">
+    <header>
+      <h1>Tactical Arc Visualizer</h1>
+      <p>Replicating Auto Assault's Weapon Cone of Fire</p>
+    </header>
+    
+    <div class="section">
+      <h2>Aiming Target Mode</h2>
+      <div class="control-group">
+        <div class="select-pill-container" id="target-mode-select">
+          <div class="select-pill active" data-mode="turret">Turret (Mouse)</div>
+          <div class="select-pill" data-mode="front">Front Lock</div>
+          <div class="select-pill" data-mode="rear">Rear Lock</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Weapon State (Color)</h2>
+      <div class="control-group">
+        <div class="color-pill-container" id="state-select">
+          <div class="color-pill ready active" data-state="ready">Ready</div>
+          <div class="color-pill reloading" data-state="reloading">Reload</div>
+          <div class="color-pill locked" data-state="locked">Locked</div>
+          <div class="color-pill default" data-state="default">Default</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Cone Configuration</h2>
+      
+      <div class="control-group">
+        <div class="label-with-val">
+          <label for="range-slider">Range (Radius)</label>
+          <span class="label-val" id="range-val">50.0m</span>
+        </div>
+        <input type="range" id="range-slider" min="5" max="100" value="50" step="1">
+      </div>
+
+      <div class="control-group">
+        <div class="label-with-val">
+          <label for="angle-slider">Cone Angle (Full FOV)</label>
+          <span class="label-val" id="angle-val">90.0°</span>
+        </div>
+        <input type="range" id="angle-slider" min="5" max="360" value="90" step="1">
+      </div>
+
+      <div class="control-group">
+        <div class="label-with-val">
+          <label for="segments-slider">Segments</label>
+          <span class="label-val" id="segments-val">30</span>
+        </div>
+        <input type="range" id="segments-slider" min="3" max="60" value="30" step="1">
+      </div>
+      
+      <div class="control-group">
+        <div class="label-with-val">
+          <label for="scroll-speed-slider">Texture Scroll Speed</label>
+          <span class="label-val" id="scroll-speed-val">1.0x</span>
+        </div>
+        <input type="range" id="scroll-speed-slider" min="-3" max="3" value="1" step="0.1">
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Simulation Features</h2>
+      <div class="control-group">
+        <div class="toggle-container">
+          <span>Display Obstacle Block</span>
+          <label class="switch">
+            <input type="checkbox" id="toggle-obstacle" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+      <div class="control-group">
+        <div class="toggle-container">
+          <span>Depth-Fail Ghosting (Z-Fail Pass)</span>
+          <label class="switch">
+            <input type="checkbox" id="toggle-zfail" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div id="details-panel">
+      <h2>Reverse Engineering Notes</h2>
+      The cone uses two sets of texture coordinates. 
+      <br>Base <code>UV1</code> wraps radially:
+      <div class="formula">
+        UV1 = (0.1, V_radial)<br>
+        V_radial (outer) = 0.0625<br>
+        V_radial (origin) = 0.9
+      </div>
+      Effect <code>UV2</code> maps angularly and scrolls over time:
+      <div class="formula">
+        UV2 = (U_angular + offset, V_radial)<br>
+        U_angular += 1.0 / (segments * 5)<br>
+        offset += deltaTime * 0.1 * speed
+      </div>
+      Blended Additively in pixel shader:
+      <div class="formula">
+        C = 2.0 * StateColor * (t1.a*t1 + t0.a*t0)
+      </div>
+      Z-Fail Pass displays blocked regions in dark purple:
+      <div class="formula">
+        MatZFailColor = rgba(13, 0, 51, 90)
+      </div>
+    </div>
+  </aside>
+
+  <main id="main">
+    <div class="status-overlay" id="status">Loading textures...</div>
+    <div id="canvas-wrap"></div>
+    <div id="hint">Left click & drag: orbit camera &middot; Move mouse: aim weapon &middot; Right click & drag: pan &middot; Scroll: zoom</div>
+  </main>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { TextureBank } from './materials.js';
+
+    // ── CONFIGURATION & STATE ──
+    const state = {
+      targetMode: 'turret', // 'turret', 'front', 'rear'
+      weaponState: 'ready', // 'ready', 'reloading', 'locked', 'default'
+      range: 50.0,
+      fov: 90.0, // degrees
+      segments: 30,
+      scrollSpeed: 1.0,
+      showObstacle: true,
+      useZFail: true,
+      aimPoint: new THREE.Vector3(0, 0, 50),
+      texturesLoaded: false
+    };
+
+    const colors = {
+      ready: new THREE.Vector4(64/255, 255/255, 107/255, 102/255),       // #40ff6b66
+      reloading: new THREE.Vector4(255/255, 80/255, 29/255, 102/255),    // #ff501d66
+      locked: new THREE.Vector4(10/255, 125/255, 251/255, 102/255),      // #0a7dfb66
+      default: new THREE.Vector4(255/255, 51/255, 0, 102/255),           // #ff330066
+      zfail: new THREE.Vector4(13/255, 0, 51/255, 90/255)                // rgba(13, 0, 51, 90) -> (0.05, 0, 0.2, 0.35)
+    };
+
+    // ── SETUP THREE.JS SCENE ──
+    const container = document.getElementById('canvas-wrap');
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    container.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0e1117);
+
+    const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+    camera.position.set(0, 50, 90);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.maxPolarAngle = Math.PI / 2 - 0.05; // don't go under ground
+    controls.minDistance = 10;
+    controls.maxDistance = 250;
+
+    // Grid Floor
+    const grid = new THREE.GridHelper(200, 50, 0x2b3648, 0x181e29);
+    grid.position.y = -0.01;
+    scene.add(grid);
+
+    // Dynamic ground plane for mouse raycasting
+    const groundGeo = new THREE.PlaneGeometry(300, 300);
+    groundGeo.rotateX(-Math.PI / 2);
+    const groundMat = new THREE.MeshBasicMaterial({ visible: false });
+    const groundMesh = new THREE.Mesh(groundGeo, groundMat);
+    scene.add(groundMesh);
+
+    // Lights
+    const ambientLight = new THREE.AmbientLight(0x222630, 0.8);
+    scene.add(ambientLight);
+
+    const dirLight1 = new THREE.DirectionalLight(0x6b7d96, 1.5);
+    dirLight1.position.set(20, 60, 20);
+    scene.add(dirLight1);
+
+    const dirLight2 = new THREE.DirectionalLight(0x1a2130, 1.0);
+    dirLight2.position.set(-20, 40, -20);
+    scene.add(dirLight2);
+
+    // ── STYLIZED VEHICLE AND TURRET ──
+    const vehicleGroup = new THREE.Group();
+    scene.add(vehicleGroup);
+
+    // Vehicle Chassis base
+    const chassisGeo = new THREE.BoxGeometry(4, 1.2, 7);
+    const chassisMat = new THREE.MeshStandardMaterial({ color: 0x1f293d, roughness: 0.5 });
+    const chassisMesh = new THREE.Mesh(chassisGeo, chassisMat);
+    chassisMesh.position.y = 1.0;
+    vehicleGroup.add(chassisMesh);
+
+    // Stylized Wheels
+    const wheelGeo = new THREE.CylinderGeometry(0.9, 0.9, 0.8, 16);
+    wheelGeo.rotateZ(Math.PI / 2);
+    const wheelMat = new THREE.MeshStandardMaterial({ color: 0x090c12, roughness: 0.8 });
+    const wheelPositions = [
+      [-2.2, 0.9, 2.2],  // Front Left
+      [2.2, 0.9, 2.2],   // Front Right
+      [-2.2, 0.9, -2.2], // Rear Left
+      [2.2, 0.9, -2.2]   // Rear Right
+    ];
+    wheelPositions.forEach(pos => {
+      const w = new THREE.Mesh(wheelGeo, wheelMat);
+      w.position.set(...pos);
+      vehicleGroup.add(w);
+    });
+
+    // Turret Mount
+    const mountGeo = new THREE.CylinderGeometry(1.2, 1.5, 0.6, 16);
+    const mountMat = new THREE.MeshStandardMaterial({ color: 0x2d3748, roughness: 0.4 });
+    const mountMesh = new THREE.Mesh(mountGeo, mountMat);
+    mountMesh.position.set(0, 1.8, -0.5);
+    vehicleGroup.add(mountMesh);
+
+    // Turret Rotator (yaw assembly)
+    const turretRotator = new THREE.Group();
+    turretRotator.position.set(0, 2.1, -0.5);
+    vehicleGroup.add(turretRotator);
+
+    const turretBodyGeo = new THREE.SphereGeometry(0.9, 16, 16);
+    const turretBodyMat = new THREE.MeshStandardMaterial({ color: 0x4a5568, roughness: 0.3 });
+    const turretBody = new THREE.Mesh(turretBodyGeo, turretBodyMat);
+    turretRotator.add(turretBody);
+
+    // Barrel (pitch assembly)
+    const barrelGroup = new THREE.Group();
+    barrelGroup.position.set(0, 0, 0);
+    turretRotator.add(barrelGroup);
+
+    const barrelGeo = new THREE.CylinderGeometry(0.2, 0.25, 3.5, 12);
+    barrelGeo.rotateX(Math.PI / 2);
+    barrelGeo.translate(0, 0, 1.75); // Pivot at the base
+    const barrelMat = new THREE.MeshStandardMaterial({ color: 0x090c12, metalness: 0.8 });
+    const barrelMesh = new THREE.Mesh(barrelGeo, barrelMat);
+    barrelGroup.add(barrelMesh);
+
+    // Muzzle flash point visualization
+    const muzzleLight = new THREE.PointLight(0x4fd1c5, 0, 8);
+    muzzleLight.position.set(0, 0, 3.6);
+    barrelGroup.add(muzzleLight);
+
+    // Glowing Target Indicator
+    const targetGeo = new THREE.RingGeometry(0.8, 1.0, 16);
+    targetGeo.rotateX(-Math.PI / 2);
+    const targetMat = new THREE.MeshBasicMaterial({ color: 0x4fd1c5, side: THREE.DoubleSide });
+    const targetMesh = new THREE.Mesh(targetGeo, targetMat);
+    targetMesh.position.set(0, 0.05, 50);
+    scene.add(targetMesh);
+
+    const targetCenterGeo = new THREE.SphereGeometry(0.2, 8, 8);
+    const targetCenterMat = new THREE.MeshBasicMaterial({ color: 0x4fd1c5 });
+    const targetCenter = new THREE.Mesh(targetCenterGeo, targetCenterMat);
+    targetCenter.position.set(0, 0.05, 50);
+    scene.add(targetCenter);
+
+    // ── OBSTACLE INTERSECTION WALL ──
+    const obstacleGeo = new THREE.BoxGeometry(40, 15, 6);
+    const obstacleMat = new THREE.MeshStandardMaterial({ color: 0x242b35, roughness: 0.7 });
+    const obstacleMesh = new THREE.Mesh(obstacleGeo, obstacleMat);
+    obstacleMesh.position.set(0, 7.5, 25);
+    scene.add(obstacleMesh);
+
+    // ── TEXTURE BANK LOADING ──
+    let assetsIndex = null;
+    let textureBank = null;
+    let tBase = null;
+    let tEffect = null;
+
+    async function initTextures() {
+      const statusEl = document.getElementById('status');
+      try {
+        const res = await fetch('./index.json');
+        if (!res.ok) throw new Error('index.json not found');
+        assetsIndex = await res.json();
+        
+        textureBank = new TextureBank(assetsIndex.textures, '../../');
+        
+        const loadBase = textureBank.load('veh_tacarc.dds');
+        const loadEffect = textureBank.load('veh_tacarc_effect.dds');
+        
+        tBase = loadBase.texture;
+        tEffect = loadEffect.texture;
+        
+        tBase.wrapS = THREE.RepeatWrapping;
+        tBase.wrapT = THREE.RepeatWrapping;
+        tEffect.wrapS = THREE.RepeatWrapping;
+        tEffect.wrapT = THREE.RepeatWrapping;
+        
+        // Feed textures to materials
+        normalMaterial.uniforms.tBase.value = tBase;
+        normalMaterial.uniforms.tEffect.value = tEffect;
+        zfailMaterial.uniforms.tBase.value = tBase;
+        zfailMaterial.uniforms.tEffect.value = tEffect;
+
+        state.texturesLoaded = true;
+        statusEl.style.display = 'none';
+      } catch (err) {
+        console.warn('Failed to load real DDS textures, using canvas fallbacks:', err.message);
+        statusEl.textContent = 'Using generated texture fallbacks';
+        statusEl.style.borderColor = 'var(--warn)';
+        
+        // Canvas Fallback Base
+        const c1 = document.createElement('canvas');
+        c1.width = 64; c1.height = 64;
+        const ctx1 = c1.getContext('2d');
+        const grad1 = ctx1.createLinearGradient(0, 0, 0, 64);
+        grad1.addColorStop(0.0, 'rgba(255, 255, 255, 1.0)');
+        grad1.addColorStop(0.3, 'rgba(255, 255, 255, 0.4)');
+        grad1.addColorStop(0.8, 'rgba(255, 255, 255, 0.05)');
+        grad1.addColorStop(1.0, 'rgba(255, 255, 255, 0.0)');
+        ctx1.fillStyle = grad1;
+        ctx1.fillRect(0, 0, 64, 64);
+        
+        tBase = new THREE.CanvasTexture(c1);
+        tBase.wrapS = THREE.RepeatWrapping;
+        tBase.wrapT = THREE.RepeatWrapping;
+        
+        // Canvas Fallback Effect (Noise columns)
+        const c2 = document.createElement('canvas');
+        c2.width = 128; c2.height = 128;
+        const ctx2 = c2.getContext('2d');
+        ctx2.fillStyle = '#000';
+        ctx2.fillRect(0, 0, 128, 128);
+        for(let i=0; i<128; i++) {
+          const u = i/128;
+          const a = 0.5 + 0.5 * Math.sin(u * Math.PI * 8.0);
+          ctx2.fillStyle = `rgba(255, 255, 255, ${a})`;
+          ctx2.fillRect(i, 0, 1, 128);
+        }
+        tEffect = new THREE.CanvasTexture(c2);
+        tEffect.wrapS = THREE.RepeatWrapping;
+        tEffect.wrapT = THREE.RepeatWrapping;
+        
+        normalMaterial.uniforms.tBase.value = tBase;
+        normalMaterial.uniforms.tEffect.value = tEffect;
+        zfailMaterial.uniforms.tBase.value = tBase;
+        zfailMaterial.uniforms.tEffect.value = tEffect;
+        
+        setTimeout(() => { statusEl.style.display = 'none'; }, 2000);
+      }
+    }
+
+    // ── SHADER LOGIC (NDTacArc.fx recreation) ──
+    const tacArcVertexShader = `
+      attribute vec2 uv2;
+      varying vec2 vUv1;
+      varying vec2 vUv2;
+      varying vec4 vColor;
+      
+      void main() {
+        vUv1 = uv;
+        vUv2 = uv2;
+        vColor = color;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `;
+
+    const tacArcFragmentShader = `
+      uniform sampler2D tBase;
+      uniform sampler2D tEffect;
+      uniform vec4 uStateColor;
+      
+      varying vec2 vUv1;
+      varying vec2 vUv2;
+      varying vec4 vColor;
+      
+      void main() {
+        vec4 texBase = texture2D(tBase, vUv1);
+        vec4 texEffect = texture2D(tEffect, vUv2);
+        
+        // mad r0, t1.a, t1, c0
+        // mad r0, t0.a, t0, r0
+        vec4 blended = (texEffect.a * texEffect) + (texBase.a * texBase);
+        
+        // mul_x2 r0, v0, r0
+        vec4 finalColor = 2.0 * vColor * blended;
+        
+        // Additive blending looks best when transparency is handled correctly
+        gl_FragColor = finalColor;
+      }
+    `;
+
+    // ── DYNAMIC CUSTOM GEOMETRY CREATION ──
+    const arcGeometry = new THREE.BufferGeometry();
+    
+    // Shader materials
+    const normalMaterial = new THREE.ShaderMaterial({
+      vertexShader: tacArcVertexShader,
+      fragmentShader: tacArcFragmentShader,
+      uniforms: {
+        tBase: { value: null },
+        tEffect: { value: null },
+        uStateColor: { value: colors.ready }
+      },
+      transparent: true,
+      depthWrite: false,
+      depthFunc: THREE.LessEqualDepth,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide,
+      vertexColors: true
+    });
+
+    const zfailMaterial = new THREE.ShaderMaterial({
+      vertexShader: tacArcVertexShader,
+      fragmentShader: tacArcFragmentShader,
+      uniforms: {
+        tBase: { value: null },
+        tEffect: { value: null },
+        uStateColor: { value: colors.zfail }
+      },
+      transparent: true,
+      depthWrite: false,
+      depthFunc: THREE.GreaterDepth, // Renders obscured sections
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide,
+      vertexColors: true
+    });
+
+    const arcMesh = new THREE.Mesh(arcGeometry, normalMaterial);
+    const zfailMesh = new THREE.Mesh(arcGeometry, zfailMaterial);
+    
+    // Attach to barrel assembly so it pivots/rotates with weapon
+    barrelGroup.add(arcMesh);
+    barrelGroup.add(zfailMesh);
+
+    // Update TacArc geometry vertices, UVs, colors
+    let textureOffset = 0.0;
+
+    function updateArcGeometry(dt) {
+      const segments = state.segments;
+      const range = state.range;
+      const halfFov = (state.fov * Math.PI / 180) / 2;
+      const stepAngle = (halfFov * 2.0) / segments;
+      const stepUv = 1.0 / (segments * 5.0);
+
+      // Scroll speed update
+      textureOffset += dt * 0.1 * state.scrollSpeed;
+      const fracOffset = textureOffset % 1.0;
+
+      const positions = [];
+      const uvs = [];
+      const uv2s = [];
+      const colorsList = [];
+
+      let currentAngle = -halfFov;
+      let currentUv = fracOffset * 0.9;
+      
+      const activeColor = colors[state.weaponState];
+      const zfColor = colors.zfail;
+
+      for (let i = 0; i < segments; i++) {
+        const nextAngle = currentAngle + stepAngle;
+        const nextUv = currentUv + stepUv;
+
+        // Triangle vertex 1 (Outer edge, current angle)
+        positions.push(Math.sin(currentAngle) * range, 0.3, Math.cos(currentAngle) * range);
+        uvs.push(0.1, 0.0625);
+        uv2s.push(currentUv, 0.0);
+        
+        // Triangle vertex 2 (Outer edge, next angle)
+        positions.push(Math.sin(nextAngle) * range, 0.3, Math.cos(nextAngle) * range);
+        uvs.push(0.1, 0.0625);
+        uv2s.push(nextUv, 0.0);
+
+        // Triangle vertex 3 (Origin)
+        positions.push(0, 0.3, 0);
+        uvs.push(0.1, 0.9);
+        uv2s.push(fracOffset, 1.0);
+
+        // Populate colors for vertex shader
+        for(let v=0; v<3; v++) {
+          colorsList.push(activeColor.x, activeColor.y, activeColor.z, activeColor.w);
+        }
+
+        currentAngle = nextAngle;
+        currentUv = nextUv;
+      }
+
+      // Update attributes
+      arcGeometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+      arcGeometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+      arcGeometry.setAttribute('uv2', new THREE.Float32BufferAttribute(uv2s, 2));
+      arcGeometry.setAttribute('color', new THREE.Float32BufferAttribute(colorsList, 4));
+      
+      // Compute bounding volumes
+      arcGeometry.computeBoundingBox();
+      arcGeometry.computeBoundingSphere();
+      
+      // Update ZFail colors
+      const zfColorsList = [];
+      for (let i = 0; i < segments * 3; i++) {
+        zfColorsList.push(zfColor.x, zfColor.y, zfColor.z, zfColor.w);
+      }
+      // Replicate geometry colors for ghost pass
+      zfailMaterial.uniforms.uStateColor.value = colors.zfail;
+      normalMaterial.uniforms.uStateColor.value = activeColor;
+    }
+
+    // ── MOUSE RAYCAST TARGETING ──
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+
+    window.addEventListener('mousemove', (e) => {
+      // Calculate mouse position in normalized device coordinates (-1 to +1)
+      const rect = renderer.domElement.getBoundingClientRect();
+      mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+      raycaster.setFromCamera(mouse, camera);
+      const intersects = raycaster.intersectObject(groundMesh);
+
+      if (intersects.length > 0) {
+        state.aimPoint.copy(intersects[0].point);
+        targetMesh.position.copy(state.aimPoint).y = 0.05;
+        targetCenter.position.copy(state.aimPoint).y = 0.05;
+      }
+    });
+
+    // ── TURRET AIMING LOGIC ──
+    function updateTurretAiming(dt) {
+      if (state.targetMode === 'front') {
+        // Locked forward relative to chassis
+        turretRotator.rotation.y = 0;
+        barrelGroup.rotation.x = 0;
+        return;
+      } else if (state.targetMode === 'rear') {
+        // Locked backward
+        turretRotator.rotation.y = Math.PI;
+        barrelGroup.rotation.x = 0;
+        return;
+      }
+
+      // Track target (Mouse)
+      const targetLocal = state.aimPoint.clone();
+      vehicleGroup.worldToLocal(targetLocal);
+
+      // Vector from turret rotator base
+      const localPivot = turretRotator.position;
+      const toTarget = new THREE.Vector3().subVectors(targetLocal, localPivot);
+
+      // Compute yaw
+      const yaw = Math.atan2(toTarget.x, toTarget.z);
+      
+      // Smooth turret rotation (SLERP approximation)
+      const yawDiff = yaw - turretRotator.rotation.y;
+      // Handle wrapping
+      const wrappedDiff = Math.atan2(Math.sin(yawDiff), Math.cos(yawDiff));
+      turretRotator.rotation.y += wrappedDiff * 0.15; // lerp rate
+
+      // Compute pitch (Barrel vertical tilt)
+      const distance2D = Math.sqrt(toTarget.x * toTarget.x + toTarget.z * toTarget.z);
+      const pitch = Math.atan2(-toTarget.y, distance2D);
+      // Clamp pitch to realistic barrel limits (-30 to +10 degrees)
+      const clampedPitch = Math.max(-0.5, Math.min(0.18, pitch));
+      barrelGroup.rotation.x += (clampedPitch - barrelGroup.rotation.x) * 0.15;
+    }
+
+    // ── SETTINGS PANELS BINDING ──
+    function setupControls() {
+      // Aim Mode
+      document.querySelectorAll('#target-mode-select .select-pill').forEach(pill => {
+        pill.addEventListener('click', () => {
+          document.querySelectorAll('#target-mode-select .select-pill').forEach(p => p.classList.remove('active'));
+          pill.classList.add('active');
+          state.targetMode = pill.dataset.mode;
+        });
+      });
+
+      // Weapon State
+      document.querySelectorAll('#state-select .color-pill').forEach(pill => {
+        pill.addEventListener('click', () => {
+          document.querySelectorAll('#state-select .color-pill').forEach(p => p.classList.remove('active'));
+          pill.classList.add('active');
+          state.weaponState = pill.dataset.state;
+        });
+      });
+
+      // Range Slider
+      const rangeSlider = document.getElementById('range-slider');
+      const rangeVal = document.getElementById('range-val');
+      rangeSlider.addEventListener('input', (e) => {
+        state.range = parseFloat(e.target.value);
+        rangeVal.textContent = state.range.toFixed(1) + 'm';
+      });
+
+      // Angle Slider
+      const angleSlider = document.getElementById('angle-slider');
+      const angleVal = document.getElementById('angle-val');
+      angleSlider.addEventListener('input', (e) => {
+        state.fov = parseFloat(e.target.value);
+        angleVal.textContent = state.fov.toFixed(1) + '°';
+      });
+
+      // Segments Slider
+      const segmentsSlider = document.getElementById('segments-slider');
+      const segmentsVal = document.getElementById('segments-val');
+      segmentsSlider.addEventListener('input', (e) => {
+        state.segments = parseInt(e.target.value);
+        segmentsVal.textContent = state.segments;
+      });
+
+      // Scroll Speed Slider
+      const speedSlider = document.getElementById('scroll-speed-slider');
+      const speedVal = document.getElementById('scroll-speed-val');
+      speedSlider.addEventListener('input', (e) => {
+        state.scrollSpeed = parseFloat(e.target.value);
+        speedVal.textContent = state.scrollSpeed.toFixed(1) + 'x';
+      });
+
+      // Show/Hide Obstacle Toggle
+      const obstacleToggle = document.getElementById('toggle-obstacle');
+      obstacleToggle.addEventListener('change', (e) => {
+        state.showObstacle = e.target.checked;
+        obstacleMesh.visible = state.showObstacle;
+      });
+
+      // Show/Hide ZFail Toggle
+      const zfailToggle = document.getElementById('toggle-zfail');
+      zfailToggle.addEventListener('change', (e) => {
+        state.useZFail = e.target.checked;
+        zfailMesh.visible = state.useZFail;
+      });
+    }
+
+    // Handle Window Resizing
+    window.addEventListener('resize', () => {
+      camera.aspect = container.clientWidth / container.clientHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(container.clientWidth, container.clientHeight);
+    });
+
+    // ── MAIN LOOP ──
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      const dt = clock.getDelta();
+
+      // Slow target visual orbit
+      targetMesh.rotation.z += dt * 0.5;
+
+      updateTurretAiming(dt);
+      updateArcGeometry(dt);
+
+      controls.update();
+      renderer.render(scene, camera);
+    }
+
+    // Run Initializations
+    setupControls();
+    initTextures();
+    animate();
+  </script>
+</body>
+</html>

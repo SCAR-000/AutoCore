@@ -1,7 +1,9 @@
 /**
  * Infer likely server vs client execution realm for map reactions.
- * Heuristic only — map files have no explicit realm field.
+ * Uses Ghidra-derived reaction-catalog when available; heuristics as fallback.
  */
+
+import { inferRealmFromCatalog, getReactionTypeInfo } from './reaction-catalog.js';
 
 /** Reaction types that primarily present UI/audio on the client (server still initiates). */
 export const CLIENT_UI_REACTION_TYPES = new Set([
@@ -41,6 +43,11 @@ export function inferReactionExecutionRealm(reaction) {
       label: 'Unknown',
       hint: 'Reaction record not found on this map.',
     };
+  }
+
+  const fromCatalog = inferRealmFromCatalog(reaction);
+  if (fromCatalog) {
+    return fromCatalog;
   }
 
   const type = reaction.ReactionType || '';
@@ -100,10 +107,11 @@ export function inferReactionExecutionRealm(reaction) {
     };
   }
 
+  const info = getReactionTypeInfo(type);
   return {
     id: 'server',
     label: 'Server',
-    hint: 'Authoritative game logic on the sector server (may notify clients via packets).',
+    hint: info?.summary || 'Authoritative game logic on the sector server (may notify clients via packets).',
   };
 }
 

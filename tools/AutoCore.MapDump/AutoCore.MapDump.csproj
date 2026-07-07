@@ -13,4 +13,9 @@
     <ProjectReference Include="..\..\src\AutoCore.Game\AutoCore.Game.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="..\model-viewer\reaction-catalog.json" Link="reaction-catalog.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\model-viewer\ghidra-functions.json" Link="ghidra-functions.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

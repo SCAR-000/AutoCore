@@ -47,7 +47,8 @@ GBOD v3
 ├── (body fields: texture path table "C:\VOG\4_game\textures\*.dds", fx names,
 │    LOD handler data w/ "LODLevel" strings — not needed; skip via child scan)
 ├── XOBB v2                    whole-body bounds
-├── NOBP v1 ─ TADB v2          bones (skinned/attachment data; record, unused)
+├── NOBP v1                    phyBone — contains nested TADB (root transform, see PBON below)
+│   └── TADB v2                phyBoneSharedData — hkQsTransform {rotation, translation, scale}
 └── ECPG v10 × N               one per mesh section  (sections are SIBLINGS, never nested)
     ├── (1 byte: has-effect bool)
     ├── TCFE v3                material/effect
@@ -141,6 +142,57 @@ Texture values are bare `.dds` basenames; resolve against extracted `textures/`.
 ## BBOX (`XOBB`) v2
 
 Body (41 bytes): `u8 flag` + 10 × f32: `min[3], max[3], center[3], radius`.
+
+The **GBOD-level** XOBB is the whole-body bounds **in the model's true (physics) frame** —
+i.e. the frame the geometry lands in *after* the root transform below. It is the ground truth
+for validating that transform (see PBON).
+
+## PBON (`NOBP`) + BDAT (`TADB`) — root transform
+
+Verified 2026-07-06 in Ghidra (`autoassault.exe`). **Not "unused"** — this is the per-model
+root transform that maps the raw `TREV` vertices into the model's true (`XOBB` body) frame.
+Dropping it leaves some models rotated/offset: vehicle props render on their side, tunnel
+doors sink into the ground. Buildings mostly ship an identity transform, which is why the
+omission went unnoticed for so long.
+
+**Nesting:** `TADB` is a **child of `NOBP`**, not a GBOD-level sibling — a GBOD child scan
+skips over it. Scan the `NOBP` body for the transform (or descend into it for the `TADB`).
+
+**Structure** (`phyBoneSharedData::unserialize`, `FUN_00997540`): a bone-name string, then an
+**`hkQsTransform`** written as contiguous f32:
+
+| field | floats | notes |
+|---|---|---|
+| rotation | 4 | quaternion `[x, y, z, w]` (unit) |
+| translation | 3 | |
+| scale | 3 | **version 2 only**; v1 omits it (rotation + translation) |
+
+A trailing 4×4 (near-always identity) follows — a bind matrix, **not** the transform. Because
+the leading string is variable-length, locate the transform by scanning the `NOBP` body for
+the first 4-float run that forms a unit quaternion followed by a plausible translation +
+positive scale.
+
+**Apply as** `v' = translation + rotation · (scale · v)` (Havok hkQsTransform order); rotate
+normals by the quaternion. Then validate against the GBOD `XOBB`: the transformed vertex
+bounds must match the body bounds, otherwise the located transform is wrong and must be
+ignored (a mis-locate then can never move a correct model).
+
+Note the transform's **scale ≈ the old `modelCorrection` heuristic** (`bodyExt / visExt`) —
+e.g. jeep 0.801 vs 0.795 — so apply the transform's scale *instead of* `modelCorrection`, not
+in addition to it.
+
+### Ghidra references (`autoassault.exe`, project AA-decode)
+
+| function | address | role |
+|---|---|---|
+| `phyBone::unserialize` | `0x0096e280` | reads `NOBP` (tag `0x50424f4e`), delegates to shared data |
+| `phyBoneSharedData::unserialize` | `0x00997540` | reads `TADB` (tag `0x42444154 "BDAT"`); v1=2 reads, v2=3 reads (+scale) |
+| component reader | `0x00436090` | reads N f32 into a vector |
+| source | — | `C:\vog\1_code\palantir\palantir\physics\phyBone.cpp`, `phyBoneSharedData.cpp` |
+
+Implemented in `tools/model-viewer/geo-parser.js` (`parseBoneTransform`, returns
+`rootTransform`) and applied in `level-objects.js` (`applyRootTransform`, with the
+XOBB-alignment safety check).
 
 ## LODs
 

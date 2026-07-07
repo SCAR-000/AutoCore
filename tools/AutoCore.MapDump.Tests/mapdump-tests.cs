@@ -60,6 +60,58 @@ public class ReactionDescriberTests
 
         Assert.Contains("gate_open", desc.Summary);
     }
+
+    [Fact]
+    public void Describe_MarkRepairStation_uses_catalog_semantics()
+    {
+        var reaction = new ReactionDto
+        {
+            ReactionType = "MarkRepairStation",
+            GenericVar1 = 12,
+        };
+
+        var desc = ReactionDescriber.Describe(reaction, new Dictionary<string, ObjectIndexEntryDto>(), new Dictionary<int, VariableDto>());
+
+        Assert.Contains("repair station", desc.Summary, StringComparison.OrdinalIgnoreCase);
+        Assert.NotNull(desc.Semantics);
+        Assert.Equal("server", desc.Semantics!.Realm);
+        Assert.True(desc.Semantics.Callees.Count >= 2);
+        Assert.Contains(desc.Semantics.Callees, c => c.Symbol == "CVOGReaction_MarkRepairStation");
+        Assert.Contains(desc.Semantics.Callees, c => c.DecompiledSignature.Contains("CVOGReaction_MarkRepairStation"));
+    }
+
+    [Fact]
+    public void ResolveTriggerGraph_text_choices_are_linked_triggers_not_children()
+    {
+        var trigger = new TriggerDto { Coid = 1 };
+        trigger.Reactions.Add(10);
+
+        var reactions = new Dictionary<long, ReactionDto>
+        {
+            [10] = new()
+            {
+                Coid = 10,
+                ReactionType = "Text",
+                Text = new ReactionTextDto
+                {
+                    Type = "ChoiceDialog",
+                    TargetType = "Client",
+                    Main = "Pick",
+                },
+            },
+        };
+        reactions[10].Text!.Choices.Add(new ReactionTextChoiceDto { TriggerCoid = 99, Text = "Go" });
+
+        var graph = TriggerGraphResolver.ResolveTriggerGraph(
+            trigger,
+            reactions,
+            new Dictionary<string, ObjectIndexEntryDto>(),
+            new Dictionary<int, VariableDto>());
+
+        Assert.Single(graph.Nodes);
+        Assert.Contains(99L, graph.Nodes[0].LinkedTriggerCoids);
+        Assert.Empty(graph.Nodes[0].Children);
+    }
 }
 
 public class TriggerGraphResolverTests
@@ -167,5 +219,25 @@ public class LevelExporterIntegrationTests
         }
 
         Assert.True(level.ObjectIndex.Count > level.Objects.Count);
+    }
+}
+
+public class ObjectDtoExportTests
+{
+    [Fact]
+    public void ObjectDto_includes_placement_fidelity_fields()
+    {
+        var dto = new ObjectDto
+        {
+            IsActive = false,
+            TerrainOffset = 0.5f,
+            FxCreateExtraName = "fx_test",
+            CloneScale = 2f,
+        };
+
+        Assert.False(dto.IsActive);
+        Assert.Equal(0.5f, dto.TerrainOffset);
+        Assert.Equal("fx_test", dto.FxCreateExtraName);
+        Assert.Equal(2f, dto.CloneScale);
     }
 }
