@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>mapdump</AssemblyName>
+    <RootNamespace>AutoCore.MapDump</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\AutoCore.Game\AutoCore.Game.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="..\reaction-catalog.json" Link="reaction-catalog.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\ghidra-functions.json" Link="ghidra-functions.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

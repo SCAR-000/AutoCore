@@ -2,9 +2,9 @@
 
 Human new-user experience (NUX) instanced map **Ark Bay 313**. Players learn controls, complete a linear mission chain, and exit to **The Hestia Back Range** (continent object **693**). This document maps every trigger, reaction, and mission gate from spawn through exit.
 
-**Level viewer:** [`tools/model-viewer/level.html#sec_f_h_map_tut_j2_arkbaytutorial`](../tools/model-viewer/level.html#sec_f_h_map_tut_j2_arkbaytutorial)
+**Level viewer:** [`tools/level-viewer/level.html#sec_f_h_map_tut_j2_arkbaytutorial`](../tools/level-viewer/level.html#sec_f_h_map_tut_j2_arkbaytutorial)
 
-**Machine-readable dump:** [`tools/model-viewer/levels/sec_f_h_map_tut_j2_arkbaytutorial.json`](../tools/model-viewer/levels/sec_f_h_map_tut_j2_arkbaytutorial.json)
+**Machine-readable dump:** [`tools/level-viewer/levels/sec_f_h_map_tut_j2_arkbaytutorial.json`](../tools/level-viewer/levels/sec_f_h_map_tut_j2_arkbaytutorial.json)
 
 Regenerate appendix tables: `node tools/scripts/generate-arkbay-doc.mjs`
 

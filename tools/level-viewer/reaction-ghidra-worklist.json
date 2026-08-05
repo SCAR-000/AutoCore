@@ -1,0 +1,625 @@
+{
+  "version": 1,
+  "generatedAt": "2026-07-06T03:00:25.689Z",
+  "maps": [
+    {
+      "stem": "sec_f_h_map_tut_j2_arkbaytutorial",
+      "triggers": 206,
+      "reactions": 376
+    },
+    {
+      "stem": "sec_f_b_map_hwy_a2_1_scrapvalley",
+      "triggers": 303,
+      "reactions": 339
+    }
+  ],
+  "reactionTypes": [
+    {
+      "name": "Activate",
+      "count": 179,
+      "dispatchCase": 0,
+      "catalogCallees": [
+        "FUN_004bae70",
+        "vtable+0x114",
+        "FUN_004cd3a0"
+      ],
+      "missingCallee": false
+    },
+    {
+      "name": "Create",
+      "count": 158,
+      "dispatchCase": 2,
+      "catalogCallees": [
+        "FUN_004de550",
+        "FUN_004cd3a0"
+      ],
+      "missingCallee": false
+    },
+    {
+      "name": "Delete",
+      "count": 65,
+      "dispatchCase": 3,
+      "catalogCallees": [
+        "FUN_004db8b0",
+        "FUN_004cd3a0"
+      ],
+      "missingCallee": false
+    },
+    {
+      "name": "CompleteObjective",
+      "count": 56,
+      "dispatchCase": 31,
+      "catalogCallees": [
+        "FUN_00533f90"
+      ],
+      "missingCallee": false
+    },
+    {
+      "name": "Text",
+      "count": 36,
+      "dispatchCase": 18,
+      "catalogCallees": [
+        "FUN_0057a190",
+        "FUN_0057c4a0",
+        "FUN_004e4870"
+      ],
+      "missingCallee": false
+    },
+    {
+      "name": "VariableSet",
+      "count": 28,
+      "dispatchCase": 13,
+      "catalogCallees": [
+        "FUN_005b05f0",
+        "FUN_005afbc0"
+      ],
+      "missingCallee": false
+    },
+    {
+      "name": "MarkRepairStation",
+      "count": 25,
+      "dispatchCase": 29,
+      "catalogCallees": [
+        "FUN_00521e00",
+        "FUN_004d38b0"
+      ],
+      "missingCallee": false
+    },
+    {
+      "name": "Death",
+      "count": 23,
+      "dispatchCase": 8,
+      "catalogCallees": [
+        "FUN_004db8b0(,,1,0)"
+      ],
+      "missingCallee": false
+    },
+    {
+      "name": "VariableSetRandom",
+      "count": 21,
+      "dispatchCase": 48,
+      "catalogCallees": [
+        "FUN_007a4330",
+        "FUN_005afbc0"
+      ],
+      "missingCallee": false
+    },
+    {
+      "name": "MakeInvincible",
+      "count": 20,
+      "dispatchCase": 6,
+      "catalogCallees": [
+        "vtable+0x1bc(1)"
+      ],
+      "missingCallee": true
+    },
+    {
+      "name": "RelockContObj",
+      "count": 16,
+      "dispatchCase": 70,
+      "catalogCallees": [
+        "FUN_0052a1b0"
+      ],
+      "missingCallee": false
+    },
+    {
+      "name": "TransferMap",
+      "count": 15,
+      "dispatchCase": 10,
+      "catalogCallees": [
+        "FUN_004d37f0"
+      ],
+      "missingCallee": false
+    },
+    {
+      "name": "UnlockContObj",
+      "count": 15,
+      "dispatchCase": 32,
+      "catalogCallees": [
+        "FUN_00531c80"
+      ],
+      "missingCallee": false
+    },
+    {
+      "name": "SetPath",
+      "count": 14,
+      "dispatchCase": 43,
+      "catalogCallees": [
+        "vtable+0x14c"
+      ],
+      "missingCallee": true
+    },
+    {
+      "name": "OpenStore",
+      "count": 11,
+      "dispatchCase": 52,
+      "catalogCallees": [
+        "FUN_004059f0",
+        "FUN_004cd3a0"
+      ],
+      "missingCallee": false
+    },
+    {
+      "name": "Boost",
+      "count": 4,
+      "dispatchCase": 24,
+      "catalogCallees": [
+        "FUN_005b05f0",
+        "FUN_0040d260",
+        "vtable+0x40",
+        "FUN_004cd3a0"
+      ],
+      "missingCallee": false
+    },
+    {
+      "name": "GiveMission",
+      "count": 4,
+      "dispatchCase": 30,
+      "catalogCallees": [
+        "FUN_005327c0"
+      ],
+      "missingCallee": false
+    },
+    {
+      "name": "GiveItemNumCBID",
+      "count": 4,
+      "dispatchCase": 38,
+      "catalogCallees": [
+        "FUN_0051a170",
+        "Client_SendInventoryAddItem"
+      ],
+      "missingCallee": false
+    },
+    {
+      "name": "SkillCast",
+      "count": 4,
+      "dispatchCase": 12,
+      "catalogCallees": [
+        "FUN_0054c570",
+        "FUN_004d09a0"
+      ],
+      "missingCallee": false
+    },
+    {
+      "name": "FailMission",
+      "count": 3,
+      "dispatchCase": 72,
+      "catalogCallees": [
+        "FUN_0052da30",
+        "FUN_004149d0"
+      ],
+      "missingCallee": false
+    },
+    {
+      "name": "SetActiveObjective",
+      "count": 3,
+      "dispatchCase": 60,
+      "catalogCallees": [
+        "FUN_004cd3a0",
+        "FUN_004059f0"
+      ],
+      "missingCallee": false
+    },
+    {
+      "name": "VariableAdd",
+      "count": 2,
+      "dispatchCase": 14,
+      "catalogCallees": [
+        "FUN_005b05f0",
+        "FUN_005afbc0"
+      ],
+      "missingCallee": false
+    },
+    {
+      "name": "AddXP",
+      "count": 1,
+      "dispatchCase": 28,
+      "catalogCallees": [
+        "FUN_00533c30"
+      ],
+      "missingCallee": false
+    },
+    {
+      "name": "MakeNotInvincbile",
+      "count": 1,
+      "dispatchCase": 7,
+      "catalogCallees": [
+        "vtable+0x1bc(0)"
+      ],
+      "missingCallee": true
+    },
+    {
+      "name": "FirstTimeEvent",
+      "count": 1,
+      "dispatchCase": 74,
+      "catalogCallees": [
+        "FUN_00522bc0"
+      ],
+      "missingCallee": false
+    },
+    {
+      "name": "Teleport",
+      "count": 1,
+      "dispatchCase": 45,
+      "catalogCallees": [
+        "FUN_0053d790"
+      ],
+      "missingCallee": false
+    },
+    {
+      "name": "SetFactionFromVar",
+      "count": 1,
+      "dispatchCase": 22,
+      "catalogCallees": [
+        "FUN_005b05f0",
+        "vtable+0x288"
+      ],
+      "missingCallee": false
+    },
+    {
+      "name": "RemoveFromInv",
+      "count": 1,
+      "dispatchCase": 25,
+      "catalogCallees": [
+        "FUN_005721c0"
+      ],
+      "missingCallee": false
+    },
+    {
+      "name": "OpenBodyShop",
+      "count": 1,
+      "dispatchCase": 40,
+      "catalogCallees": [
+        "FUN_004059f0",
+        "FUN_004cd3a0"
+      ],
+      "missingCallee": false
+    },
+    {
+      "name": "Enable",
+      "count": 1,
+      "dispatchCase": 16,
+      "catalogCallees": [
+        "vtable+0x11c"
+      ],
+      "missingCallee": true
+    },
+    {
+      "name": "Disable",
+      "count": 1,
+      "dispatchCase": 17,
+      "catalogCallees": [
+        "vtable+0x120"
+      ],
+      "missingCallee": true
+    }
+  ],
+  "functions": [
+    {
+      "address": "0x004059f0",
+      "legacyNames": [
+        "FUN_004059f0"
+      ],
+      "reactionTypes": [
+        "OpenStore",
+        "SetActiveObjective",
+        "OpenBodyShop"
+      ],
+      "status": "pending"
+    },
+    {
+      "address": "0x0040d260",
+      "legacyNames": [
+        "FUN_0040d260"
+      ],
+      "reactionTypes": [
+        "Boost"
+      ],
+      "status": "pending"
+    },
+    {
+      "address": "0x004149d0",
+      "legacyNames": [
+        "FUN_004149d0"
+      ],
+      "reactionTypes": [
+        "FailMission"
+      ],
+      "status": "pending"
+    },
+    {
+      "address": "0x004bae70",
+      "legacyNames": [
+        "FUN_004bae70"
+      ],
+      "reactionTypes": [
+        "Activate"
+      ],
+      "status": "pending"
+    },
+    {
+      "address": "0x004cd3a0",
+      "legacyNames": [
+        "FUN_004cd3a0"
+      ],
+      "reactionTypes": [
+        "Activate",
+        "Create",
+        "Delete",
+        "OpenStore",
+        "Boost",
+        "SetActiveObjective",
+        "OpenBodyShop"
+      ],
+      "status": "pending"
+    },
+    {
+      "address": "0x004d09a0",
+      "legacyNames": [
+        "FUN_004d09a0"
+      ],
+      "reactionTypes": [
+        "SkillCast"
+      ],
+      "status": "pending"
+    },
+    {
+      "address": "0x004d37f0",
+      "legacyNames": [
+        "FUN_004d37f0"
+      ],
+      "reactionTypes": [
+        "TransferMap"
+      ],
+      "status": "pending"
+    },
+    {
+      "address": "0x004d38b0",
+      "legacyNames": [
+        "FUN_004d38b0"
+      ],
+      "reactionTypes": [
+        "MarkRepairStation"
+      ],
+      "status": "pending"
+    },
+    {
+      "address": "0x004db8b0",
+      "legacyNames": [
+        "FUN_004db8b0"
+      ],
+      "reactionTypes": [
+        "Delete",
+        "Death"
+      ],
+      "status": "pending"
+    },
+    {
+      "address": "0x004de550",
+      "legacyNames": [
+        "FUN_004de550"
+      ],
+      "reactionTypes": [
+        "Create"
+      ],
+      "status": "pending"
+    },
+    {
+      "address": "0x004e4870",
+      "legacyNames": [
+        "FUN_004e4870"
+      ],
+      "reactionTypes": [
+        "Text"
+      ],
+      "status": "pending"
+    },
+    {
+      "address": "0x0051a170",
+      "legacyNames": [
+        "FUN_0051a170"
+      ],
+      "reactionTypes": [
+        "GiveItemNumCBID"
+      ],
+      "status": "pending"
+    },
+    {
+      "address": "0x00521e00",
+      "legacyNames": [
+        "FUN_00521e00"
+      ],
+      "reactionTypes": [
+        "MarkRepairStation"
+      ],
+      "status": "pending"
+    },
+    {
+      "address": "0x00522bc0",
+      "legacyNames": [
+        "FUN_00522bc0"
+      ],
+      "reactionTypes": [
+        "FirstTimeEvent"
+      ],
+      "status": "pending"
+    },
+    {
+      "address": "0x0052a1b0",
+      "legacyNames": [
+        "FUN_0052a1b0"
+      ],
+      "reactionTypes": [
+        "RelockContObj"
+      ],
+      "status": "pending"
+    },
+    {
+      "address": "0x0052da30",
+      "legacyNames": [
+        "FUN_0052da30"
+      ],
+      "reactionTypes": [
+        "FailMission"
+      ],
+      "status": "pending"
+    },
+    {
+      "address": "0x00531c80",
+      "legacyNames": [
+        "FUN_00531c80"
+      ],
+      "reactionTypes": [
+        "UnlockContObj"
+      ],
+      "status": "pending"
+    },
+    {
+      "address": "0x005327c0",
+      "legacyNames": [
+        "FUN_005327c0"
+      ],
+      "reactionTypes": [
+        "GiveMission"
+      ],
+      "status": "pending"
+    },
+    {
+      "address": "0x00533c30",
+      "legacyNames": [
+        "FUN_00533c30"
+      ],
+      "reactionTypes": [
+        "AddXP"
+      ],
+      "status": "pending"
+    },
+    {
+      "address": "0x00533f90",
+      "legacyNames": [
+        "FUN_00533f90"
+      ],
+      "reactionTypes": [
+        "CompleteObjective"
+      ],
+      "status": "pending"
+    },
+    {
+      "address": "0x0053d790",
+      "legacyNames": [
+        "FUN_0053d790"
+      ],
+      "reactionTypes": [
+        "Teleport"
+      ],
+      "status": "pending"
+    },
+    {
+      "address": "0x0054c570",
+      "legacyNames": [
+        "FUN_0054c570"
+      ],
+      "reactionTypes": [
+        "SkillCast"
+      ],
+      "status": "pending"
+    },
+    {
+      "address": "0x005721c0",
+      "legacyNames": [
+        "FUN_005721c0"
+      ],
+      "reactionTypes": [
+        "RemoveFromInv"
+      ],
+      "status": "pending"
+    },
+    {
+      "address": "0x0057a190",
+      "legacyNames": [
+        "FUN_0057a190"
+      ],
+      "reactionTypes": [
+        "Text"
+      ],
+      "status": "pending"
+    },
+    {
+      "address": "0x0057c4a0",
+      "legacyNames": [
+        "FUN_0057c4a0"
+      ],
+      "reactionTypes": [
+        "Text"
+      ],
+      "status": "pending"
+    },
+    {
+      "address": "0x005afbc0",
+      "legacyNames": [
+        "FUN_005afbc0"
+      ],
+      "reactionTypes": [
+        "VariableSet",
+        "VariableSetRandom",
+        "VariableAdd"
+      ],
+      "status": "pending"
+    },
+    {
+      "address": "0x005b05f0",
+      "legacyNames": [
+        "FUN_005b05f0"
+      ],
+      "reactionTypes": [
+        "VariableSet",
+        "Boost",
+        "VariableAdd",
+        "SetFactionFromVar"
+      ],
+      "status": "pending"
+    },
+    {
+      "address": "0x007a4330",
+      "legacyNames": [
+        "FUN_007a4330"
+      ],
+      "reactionTypes": [
+        "VariableSetRandom"
+      ],
+      "status": "pending"
+    }
+  ],
+  "summary": {
+    "mapCount": 2,
+    "reactionTypeCount": 31,
+    "functionCount": 28,
+    "missingCalleeTypes": [
+      "MakeInvincible",
+      "SetPath",
+      "MakeNotInvincbile",
+      "Enable",
+      "Disable"
+    ]
+  }
+}

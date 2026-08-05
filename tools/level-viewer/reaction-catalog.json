@@ -1,0 +1,2222 @@
+{
+  "version": 1,
+  "ghidra": {
+    "dispatch": "0x0057c500",
+    "dispatchSymbol": "CVOGReaction_Dispatch",
+    "variableLookup": "0x005b05f0",
+    "variableSet": "0x005afbc0",
+    "nestedReactionFire": "0x004cd3a0",
+    "sourceFile": "VOGReaction.cpp"
+  },
+  "types": [
+    {
+      "id": 0,
+      "name": "Activate",
+      "realm": "server",
+      "summary": "Activate target map objects (enable interaction / visibility state).",
+      "description": "Resolves each Objects[] TFID via map lookup and calls the cloned-object activate vfunc (vtable+0x114). Fires nested Reactions[] when complete.",
+      "fields": {
+        "Objects": {
+          "role": "targets",
+          "label": "Objects to activate"
+        }
+      },
+      "sideEffects": [
+        "objectState"
+      ],
+      "nestedReactions": true,
+      "callees": [
+        "FUN_004bae70",
+        "vtable+0x114",
+        "FUN_004cd3a0"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "tier-a",
+      "ghidra": {
+        "dispatchCase": 0,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 1,
+      "name": "Deactivate",
+      "realm": "server",
+      "summary": "Deactivate target map objects.",
+      "description": "Calls deactivate vfunc (vtable+0x118) on each Objects[] target.",
+      "fields": {
+        "Objects": {
+          "role": "targets",
+          "label": "Objects to deactivate"
+        }
+      },
+      "sideEffects": [
+        "objectState"
+      ],
+      "nestedReactions": true,
+      "callees": [
+        "vtable+0x118"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "tier-a",
+      "ghidra": {
+        "dispatchCase": 1,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 2,
+      "name": "Create",
+      "realm": "server",
+      "summary": "Spawn clones of target template objects on the map.",
+      "description": "FUN_004de550 spawns each Objects[] entry; chains nested reactions.",
+      "fields": {
+        "Objects": {
+          "role": "targets",
+          "label": "Object templates to spawn"
+        }
+      },
+      "sideEffects": [
+        "objectSpawn"
+      ],
+      "nestedReactions": true,
+      "callees": [
+        "FUN_004de550",
+        "FUN_004cd3a0"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "tier-a",
+      "ghidra": {
+        "dispatchCase": 2,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 3,
+      "name": "Delete",
+      "realm": "server",
+      "summary": "Remove / despawn target objects from the map.",
+      "description": "FUN_004db8b0 removes each Objects[] TFID (death flag 0). Does not grant loot.",
+      "fields": {
+        "Objects": {
+          "role": "targets",
+          "label": "Objects to delete"
+        }
+      },
+      "sideEffects": [
+        "objectDespawn"
+      ],
+      "nestedReactions": true,
+      "callees": [
+        "FUN_004db8b0",
+        "FUN_004cd3a0"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "tier-a",
+      "ghidra": {
+        "dispatchCase": 3,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 4,
+      "name": "MakeFriend",
+      "realm": "server",
+      "summary": "Set friendly disposition (unimplemented in retail dispatch).",
+      "description": "No switch case in CVOGReaction_Dispatch — falls through to default error log.",
+      "fields": {
+        "Objects": {
+          "role": "targets",
+          "label": "Target objects"
+        }
+      },
+      "sideEffects": [],
+      "confidence": "verified",
+      "implementationStatus": "unsupported-retail",
+      "ghidra": {
+        "dispatchCase": 4,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 5,
+      "name": "MakeEnemy",
+      "realm": "server",
+      "summary": "Set hostile disposition (unimplemented in retail dispatch).",
+      "description": "No switch case in CVOGReaction_Dispatch — falls through to default error log.",
+      "fields": {
+        "Objects": {
+          "role": "targets",
+          "label": "Target objects"
+        }
+      },
+      "sideEffects": [],
+      "confidence": "verified",
+      "implementationStatus": "unsupported-retail",
+      "ghidra": {
+        "dispatchCase": 5,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 6,
+      "name": "MakeInvincible",
+      "realm": "server",
+      "summary": "Mark target objects invincible.",
+      "fields": {
+        "Objects": {
+          "role": "targets",
+          "label": "Objects"
+        }
+      },
+      "sideEffects": [
+        "combatState"
+      ],
+      "nestedReactions": true,
+      "callees": [
+        "vtable+0x1bc(1)"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 6,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 7,
+      "name": "MakeNotInvincbile",
+      "realm": "server",
+      "summary": "Clear invincibility on target objects.",
+      "fields": {
+        "Objects": {
+          "role": "targets",
+          "label": "Objects"
+        }
+      },
+      "sideEffects": [
+        "combatState"
+      ],
+      "nestedReactions": true,
+      "callees": [
+        "vtable+0x1bc(0)"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 7,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 8,
+      "name": "Death",
+      "realm": "server",
+      "summary": "Kill / destroy target objects (death path).",
+      "description": "FUN_004db8b0 with death flag 1 — triggers death handling on each Objects[] target.",
+      "fields": {
+        "Objects": {
+          "role": "targets",
+          "label": "Objects to kill"
+        }
+      },
+      "sideEffects": [
+        "objectDeath",
+        "loot"
+      ],
+      "nestedReactions": true,
+      "callees": [
+        "FUN_004db8b0(,,1,0)"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "tier-a",
+      "ghidra": {
+        "dispatchCase": 8,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 9,
+      "name": "TakeArena",
+      "realm": "server",
+      "summary": "Transfer arena ownership to activator.",
+      "fields": {
+        "GenericVar1": {
+          "role": "arenaId",
+          "label": "Arena id"
+        }
+      },
+      "sideEffects": [
+        "arena"
+      ],
+      "callees": [
+        "FUN_004cd300"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 9,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 10,
+      "name": "TransferMap",
+      "realm": "server",
+      "summary": "Warp activator to another map / instance.",
+      "fields": {
+        "MapTransfer": {
+          "role": "transferType",
+          "label": "Transfer type"
+        },
+        "MapTransferData": {
+          "role": "transferData",
+          "label": "Transfer payload id"
+        }
+      },
+      "sideEffects": [
+        "mapTransfer"
+      ],
+      "callees": [
+        "FUN_004d37f0"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "tier-a",
+      "ghidra": {
+        "dispatchCase": 10,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 11,
+      "name": "ClientText",
+      "realm": "client",
+      "summary": "Client-only text (no dispatch case in retail binary).",
+      "description": "Enum value exists in map format but CVOGReaction_Dispatch has no case 11 — logs unknown type.",
+      "sideEffects": [
+        "clientUi"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "unsupported-retail",
+      "ghidra": {
+        "dispatchCase": 11,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 12,
+      "name": "SkillCast",
+      "realm": "server",
+      "summary": "Cast a skill on activator or resolved targets.",
+      "fields": {
+        "GenericVar1": {
+          "role": "skillId",
+          "label": "Skill id"
+        },
+        "GenericVar3": {
+          "role": "skillLevel",
+          "label": "Skill level / rank"
+        },
+        "Objects": {
+          "role": "targets",
+          "label": "Optional explicit targets"
+        }
+      },
+      "sideEffects": [
+        "combat"
+      ],
+      "callees": [
+        "FUN_0054c570",
+        "FUN_004d09a0"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 12,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 13,
+      "name": "VariableSet",
+      "realm": "server",
+      "summary": "Set a map variable to a constant or other variable value.",
+      "fields": {
+        "GenericVar1": {
+          "role": "variableId",
+          "label": "Destination variable id"
+        },
+        "GenericVar2": {
+          "role": "sourceVariableId",
+          "label": "Source variable id (float operand)"
+        },
+        "GenericVar3": {
+          "role": "constant",
+          "label": "Constant value when non-zero"
+        }
+      },
+      "sideEffects": [
+        "mapVariable"
+      ],
+      "callees": [
+        "FUN_005b05f0",
+        "FUN_005afbc0"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "tier-a",
+      "ghidra": {
+        "dispatchCase": 13,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 14,
+      "name": "VariableAdd",
+      "realm": "server",
+      "summary": "Add to a map variable.",
+      "fields": {
+        "GenericVar1": {
+          "role": "variableId",
+          "label": "Variable id"
+        },
+        "GenericVar3": {
+          "role": "addendVariableId",
+          "label": "Addend variable id"
+        }
+      },
+      "sideEffects": [
+        "mapVariable"
+      ],
+      "callees": [
+        "FUN_005b05f0",
+        "FUN_005afbc0"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "tier-a",
+      "ghidra": {
+        "dispatchCase": 14,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 15,
+      "name": "VariableSub",
+      "realm": "server",
+      "summary": "Subtract from a map variable.",
+      "fields": {
+        "GenericVar1": {
+          "role": "variableId",
+          "label": "Variable id"
+        },
+        "GenericVar3": {
+          "role": "subtrahendVariableId",
+          "label": "Subtrahend variable id"
+        }
+      },
+      "sideEffects": [
+        "mapVariable"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "tier-a",
+      "ghidra": {
+        "dispatchCase": 15,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 16,
+      "name": "Enable",
+      "realm": "server",
+      "summary": "Enable target objects (collision / logic on).",
+      "fields": {
+        "Objects": {
+          "role": "targets",
+          "label": "Objects"
+        }
+      },
+      "sideEffects": [
+        "objectState"
+      ],
+      "nestedReactions": true,
+      "callees": [
+        "vtable+0x11c"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "tier-a",
+      "ghidra": {
+        "dispatchCase": 16,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 17,
+      "name": "Disable",
+      "realm": "server",
+      "summary": "Disable target objects.",
+      "fields": {
+        "Objects": {
+          "role": "targets",
+          "label": "Objects"
+        }
+      },
+      "sideEffects": [
+        "objectState"
+      ],
+      "nestedReactions": true,
+      "callees": [
+        "vtable+0x120"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "tier-a",
+      "ghidra": {
+        "dispatchCase": 17,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 18,
+      "name": "Text",
+      "realm": "client",
+      "summary": "Show dialog / screen text to player; choices link to triggers.",
+      "description": "When Text payload present: shows ChoiceDialog/OKDialog/ScreenTop/ChatQueue via FUN_0057a190/FUN_0057c4a0. Choice buttons fire TriggerCoid (not nested reactions).",
+      "fields": {
+        "Text": {
+          "role": "dialog",
+          "label": "Dialog payload (Type, TargetType, Main, Choices)"
+        },
+        "Objects": {
+          "role": "targets",
+          "label": "Optional target list for text params"
+        }
+      },
+      "sideEffects": [
+        "clientUi",
+        "dialog"
+      ],
+      "linkedTriggers": true,
+      "callees": [
+        "FUN_0057a190",
+        "FUN_0057c4a0",
+        "FUN_004e4870"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 18,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 19,
+      "name": "ResetTrigger",
+      "realm": "server",
+      "summary": "Reset a trigger volume by COID.",
+      "fields": {
+        "GenericVar1": {
+          "role": "triggerCoid",
+          "label": "Trigger COID to reset"
+        }
+      },
+      "sideEffects": [
+        "triggerState"
+      ],
+      "callees": [
+        "CVOGTrigger::Reset"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "tier-a",
+      "ghidra": {
+        "dispatchCase": 19,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 20,
+      "name": "SetFaction",
+      "realm": "server",
+      "summary": "Set faction on player / character targets.",
+      "fields": {
+        "GenericVar1": {
+          "role": "factionId",
+          "label": "Faction id"
+        },
+        "Objects": {
+          "role": "targets",
+          "label": "Character targets"
+        }
+      },
+      "sideEffects": [
+        "faction"
+      ],
+      "callees": [
+        "vtable+0x288"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 20,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 21,
+      "name": "ResetFaction",
+      "realm": "server",
+      "summary": "Reset faction to default on targets.",
+      "fields": {
+        "Objects": {
+          "role": "targets",
+          "label": "Character targets"
+        }
+      },
+      "sideEffects": [
+        "faction"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 21,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 22,
+      "name": "SetFactionFromVar",
+      "realm": "server",
+      "summary": "Set faction from map variable value.",
+      "fields": {
+        "GenericVar1": {
+          "role": "variableId",
+          "label": "Variable holding faction id"
+        },
+        "Objects": {
+          "role": "targets",
+          "label": "Character targets"
+        }
+      },
+      "sideEffects": [
+        "faction",
+        "mapVariable"
+      ],
+      "callees": [
+        "FUN_005b05f0",
+        "vtable+0x288"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 22,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 23,
+      "name": "SetHP",
+      "realm": "server",
+      "summary": "Set HP to a percentage of maximum.",
+      "fields": {
+        "GenericVar1": {
+          "role": "variableId",
+          "label": "Variable holding HP percent (0-100)"
+        },
+        "Objects": {
+          "role": "targets",
+          "label": "Damageable targets"
+        }
+      },
+      "sideEffects": [
+        "combatState"
+      ],
+      "callees": [
+        "FUN_005b05f0",
+        "vtable+0x240/0x244"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 23,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 24,
+      "name": "Boost",
+      "realm": "server",
+      "summary": "Apply physics impulse boost to targets.",
+      "description": "Reads magnitude from map variable via FUN_005b05f0, normalizes facing vector with FUN_0040d260, applies physics impulse vfunc (+0x40) on CVOGPhysicsBase targets.",
+      "fields": {
+        "GenericVar1": {
+          "role": "variableId",
+          "label": "Magnitude variable id"
+        },
+        "GenericVar3": {
+          "role": "directionMode",
+          "label": "-1 = additive to facing vector"
+        },
+        "Objects": {
+          "role": "targets",
+          "label": "Physics objects"
+        }
+      },
+      "sideEffects": [
+        "physics"
+      ],
+      "nestedReactions": true,
+      "callees": [
+        "FUN_005b05f0",
+        "FUN_0040d260",
+        "vtable+0x40",
+        "FUN_004cd3a0"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 24,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 25,
+      "name": "RemoveFromInv",
+      "realm": "server",
+      "summary": "Remove items from player inventory.",
+      "description": "FUN_005721c0 removes item by CBID/slot rule from activator inventory.",
+      "fields": {
+        "GenericVar1": {
+          "role": "cbidOrSlot",
+          "label": "Item CBID or slot rule"
+        },
+        "Objects": {
+          "role": "targets",
+          "label": "Players"
+        }
+      },
+      "sideEffects": [
+        "inventory"
+      ],
+      "callees": [
+        "FUN_005721c0"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 25,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 26,
+      "name": "AdjustCredits",
+      "realm": "server",
+      "summary": "Add credits to activator (clamped ±500000 per tick).",
+      "fields": {
+        "GenericVar1": {
+          "role": "variableId",
+          "label": "Variable holding credit delta"
+        }
+      },
+      "sideEffects": [
+        "economy"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 26,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 27,
+      "name": "AddSkillPoints",
+      "realm": "server",
+      "summary": "Grant skill points to character.",
+      "fields": {
+        "GenericVar1": {
+          "role": "variableId",
+          "label": "Points variable id"
+        }
+      },
+      "sideEffects": [
+        "progression"
+      ],
+      "callees": [
+        "FUN_00531250"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 27,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 28,
+      "name": "AddXP",
+      "realm": "server",
+      "summary": "Grant experience points.",
+      "fields": {
+        "GenericVar1": {
+          "role": "variableId",
+          "label": "XP amount variable id"
+        }
+      },
+      "sideEffects": [
+        "progression"
+      ],
+      "callees": [
+        "FUN_00533c30"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 28,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 29,
+      "name": "MarkRepairStation",
+      "realm": "server",
+      "summary": "Bookmark repair station for INC airlift / respawn.",
+      "description": "FUN_00521e00(GenericVar1) stores repair-station id on the player character (offsets 0x740/0x744) and updates world position via FUN_004d38b0. This is the \"last repair station visited\" used by INC.",
+      "fields": {
+        "GenericVar1": {
+          "role": "repairStationId",
+          "label": "Repair station id (map object index)"
+        }
+      },
+      "sideEffects": [
+        "playerState",
+        "respawn"
+      ],
+      "callees": [
+        "FUN_00521e00",
+        "FUN_004d38b0"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "tier-a",
+      "ghidra": {
+        "dispatchCase": 29,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 30,
+      "name": "GiveMission",
+      "realm": "server",
+      "summary": "Give mission to character on map.",
+      "fields": {
+        "GenericVar1": {
+          "role": "missionId",
+          "label": "Mission id"
+        }
+      },
+      "sideEffects": [
+        "mission"
+      ],
+      "callees": [
+        "FUN_005327c0"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "tier-a",
+      "ghidra": {
+        "dispatchCase": 30,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 31,
+      "name": "CompleteObjective",
+      "realm": "server",
+      "summary": "Complete current mission objective for mission id.",
+      "description": "FUN_00533f90(missionId, 0xFFFFFFFF, 0xFFFFFFFF, 1) advances objective chain, grants rewards/XP/credits, may show \"Completed!\" UI. ObjectiveIDCheck in map file is validated in CanTrigger, not passed to handler.",
+      "fields": {
+        "GenericVar1": {
+          "role": "missionId",
+          "label": "Mission id"
+        },
+        "ObjectiveIDCheck": {
+          "role": "objectiveGate",
+          "label": "Required objective index (condition)"
+        }
+      },
+      "sideEffects": [
+        "mission",
+        "progression",
+        "clientUi"
+      ],
+      "packets": [
+        "mission_complete UI via FUN_004059f0"
+      ],
+      "callees": [
+        "FUN_00533f90"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "tier-a",
+      "ghidra": {
+        "dispatchCase": 31,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 32,
+      "name": "UnlockContObj",
+      "realm": "server",
+      "summary": "Unlock continent / zone object for player.",
+      "fields": {
+        "GenericVar1": {
+          "role": "continentObjectId",
+          "label": "Continent object id"
+        }
+      },
+      "sideEffects": [
+        "worldUnlock"
+      ],
+      "callees": [
+        "FUN_00531c80"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 32,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 33,
+      "name": "AddMissionString",
+      "realm": "server",
+      "summary": "Add mission log string.",
+      "fields": {
+        "GenericVar1": {
+          "role": "stringId",
+          "label": "String id"
+        },
+        "GenericVar3": {
+          "role": "missionId",
+          "label": "Mission id"
+        }
+      },
+      "sideEffects": [
+        "mission"
+      ],
+      "callees": [
+        "FUN_004dbbb0"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 33,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 34,
+      "name": "DelMissionString",
+      "realm": "server",
+      "summary": "Remove mission log string.",
+      "fields": {
+        "GenericVar1": {
+          "role": "stringId",
+          "label": "String id"
+        },
+        "GenericVar3": {
+          "role": "missionId",
+          "label": "Mission id"
+        }
+      },
+      "sideEffects": [
+        "mission"
+      ],
+      "callees": [
+        "FUN_004d2e30"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 34,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 35,
+      "name": "AddWaypoint",
+      "realm": "client",
+      "summary": "Add mission HUD waypoint.",
+      "fields": {
+        "GenericVar1": {
+          "role": "waypointId",
+          "label": "Waypoint id"
+        },
+        "WaypointType": {
+          "role": "waypointKind",
+          "label": "Kill / Protect / Interact"
+        },
+        "WaypointText": {
+          "role": "label",
+          "label": "Waypoint label text"
+        }
+      },
+      "sideEffects": [
+        "missionUi"
+      ],
+      "callees": [
+        "FUN_00531d50"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 35,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 36,
+      "name": "DelWaypoint",
+      "realm": "client",
+      "summary": "Remove mission HUD waypoint.",
+      "fields": {
+        "GenericVar1": {
+          "role": "waypointId",
+          "label": "Waypoint id"
+        }
+      },
+      "sideEffects": [
+        "missionUi"
+      ],
+      "callees": [
+        "FUN_0052a240"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 36,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 37,
+      "name": "GiveMissionDialog",
+      "realm": "client",
+      "summary": "Open mission-offer dialog filtered by mission types.",
+      "fields": {
+        "Missions": {
+          "role": "missionFilter",
+          "label": "Allowed mission ids"
+        },
+        "MissionTypes": {
+          "role": "typeFilter",
+          "label": "Allowed mission type ids"
+        }
+      },
+      "sideEffects": [
+        "clientUi",
+        "mission"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 37,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 38,
+      "name": "GiveItemNumCBID",
+      "realm": "server",
+      "summary": "Give item by CBID to activator.",
+      "fields": {
+        "GenericVar1": {
+          "role": "cbid",
+          "label": "Clonebase item CBID"
+        },
+        "GenericVar3": {
+          "role": "count",
+          "label": "Stack count"
+        }
+      },
+      "sideEffects": [
+        "inventory"
+      ],
+      "callees": [
+        "FUN_0051a170",
+        "Client_SendInventoryAddItem"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 38,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 39,
+      "name": "GiveItemNumCBIDGen",
+      "realm": "server",
+      "summary": "Give procedurally generated item by CBID.",
+      "fields": {
+        "GenericVar1": {
+          "role": "cbid",
+          "label": "Clonebase item CBID"
+        },
+        "GenericVar3": {
+          "role": "count",
+          "label": "Stack count"
+        }
+      },
+      "sideEffects": [
+        "inventory"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 39,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 40,
+      "name": "OpenBodyShop",
+      "realm": "client",
+      "summary": "Open body shop UI.",
+      "description": "Sends client UI packet via FUN_004059f0 with opcode 1.",
+      "sideEffects": [
+        "clientUi"
+      ],
+      "clientUiOpcode": 1,
+      "callees": [
+        "FUN_004059f0",
+        "FUN_004cd3a0"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 40,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 41,
+      "name": "OpenRefinery",
+      "realm": "client",
+      "summary": "Open refinery UI.",
+      "sideEffects": [
+        "clientUi"
+      ],
+      "clientUiOpcode": 2,
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 41,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 42,
+      "name": "OpenGarage",
+      "realm": "client",
+      "summary": "Open garage UI.",
+      "sideEffects": [
+        "clientUi"
+      ],
+      "clientUiOpcode": 0,
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 42,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 43,
+      "name": "SetPath",
+      "realm": "server",
+      "summary": "Assign AI path to target creatures.",
+      "fields": {
+        "GenericVar1": {
+          "role": "pathId",
+          "label": "Map path id"
+        },
+        "Objects": {
+          "role": "targets",
+          "label": "Creatures"
+        }
+      },
+      "sideEffects": [
+        "ai"
+      ],
+      "callees": [
+        "vtable+0x14c"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 43,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 44,
+      "name": "SetPatrolDistance",
+      "realm": "server",
+      "summary": "Write patrol distance variable into creature path data.",
+      "fields": {
+        "GenericVar1": {
+          "role": "variableId",
+          "label": "Distance variable id"
+        },
+        "Objects": {
+          "role": "targets",
+          "label": "Creatures / vehicles"
+        }
+      },
+      "sideEffects": [
+        "ai",
+        "mapVariable"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 44,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 45,
+      "name": "Teleport",
+      "realm": "server",
+      "summary": "Teleport targets to offset from path node.",
+      "fields": {
+        "GenericVar2": {
+          "role": "scatterRadius",
+          "label": "Random scatter radius"
+        },
+        "Objects": {
+          "role": "targets",
+          "label": "Objects to teleport"
+        }
+      },
+      "sideEffects": [
+        "position"
+      ],
+      "callees": [
+        "FUN_0053d790"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 45,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 46,
+      "name": "TimerStart",
+      "realm": "server",
+      "summary": "Start a named map timer.",
+      "fields": {
+        "GenericVar3": {
+          "role": "timerId",
+          "label": "Timer id"
+        },
+        "MiscText": {
+          "role": "timerName",
+          "label": "Timer name string"
+        }
+      },
+      "sideEffects": [
+        "timer"
+      ],
+      "callees": [
+        "FUN_005a5190",
+        "FUN_004d3360"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 46,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 47,
+      "name": "TimerStop",
+      "realm": "server",
+      "summary": "Stop a map timer and fire nested reactions.",
+      "fields": {
+        "GenericVar3": {
+          "role": "timerId",
+          "label": "Timer id"
+        },
+        "MiscText": {
+          "role": "timerName",
+          "label": "Timer name string"
+        }
+      },
+      "sideEffects": [
+        "timer"
+      ],
+      "nestedReactions": true,
+      "callees": [
+        "FUN_005a5160"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 47,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 48,
+      "name": "VariableSetRandom",
+      "realm": "server",
+      "summary": "Set map variable to random value in [min, max] range.",
+      "description": "Uses global RNG table FUN_007a4330: value = rand * GenericVar2 + GenericVar1 (after abs on GenericVar1). Writes via FUN_005afbc0.",
+      "fields": {
+        "GenericVar1": {
+          "role": "variableId",
+          "label": "Destination variable id"
+        },
+        "GenericVar2": {
+          "role": "rangeScale",
+          "label": "Random range multiplier"
+        },
+        "GenericVar3": {
+          "role": "minOffset",
+          "label": "Minimum offset (timer id field reused as min in maps)"
+        }
+      },
+      "sideEffects": [
+        "mapVariable"
+      ],
+      "callees": [
+        "FUN_007a4330",
+        "FUN_005afbc0"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "tier-a",
+      "ghidra": {
+        "dispatchCase": 48,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 49,
+      "name": "VariableMul",
+      "realm": "server",
+      "summary": "Multiply map variable by another variable value.",
+      "fields": {
+        "GenericVar1": {
+          "role": "variableId",
+          "label": "Destination variable id"
+        },
+        "GenericVar3": {
+          "role": "multiplierVariableId",
+          "label": "Multiplier variable id"
+        }
+      },
+      "sideEffects": [
+        "mapVariable"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "tier-a",
+      "ghidra": {
+        "dispatchCase": 49,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 50,
+      "name": "VariableDiv",
+      "realm": "server",
+      "summary": "Divide map variable by another variable value.",
+      "fields": {
+        "GenericVar1": {
+          "role": "variableId",
+          "label": "Destination variable id"
+        },
+        "GenericVar3": {
+          "role": "divisorVariableId",
+          "label": "Divisor variable id"
+        }
+      },
+      "sideEffects": [
+        "mapVariable"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "tier-a",
+      "ghidra": {
+        "dispatchCase": 50,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 51,
+      "name": "GiveMedal",
+      "realm": "server",
+      "summary": "Award medal to character.",
+      "fields": {
+        "GenericVar1": {
+          "role": "medalId",
+          "label": "Medal id"
+        }
+      },
+      "sideEffects": [
+        "progression"
+      ],
+      "callees": [
+        "FUN_00530550"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 51,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 52,
+      "name": "OpenStore",
+      "realm": "client",
+      "summary": "Open vendor store UI.",
+      "description": "Sends client UI packet via FUN_004059f0 with opcode 3 and store id in payload.",
+      "fields": {
+        "GenericVar1": {
+          "role": "storeId",
+          "label": "Store id"
+        }
+      },
+      "sideEffects": [
+        "clientUi"
+      ],
+      "clientUiOpcode": 3,
+      "callees": [
+        "FUN_004059f0",
+        "FUN_004cd3a0"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 52,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 53,
+      "name": "SetTeamFaction",
+      "realm": "server",
+      "summary": "Set team faction on character targets.",
+      "fields": {
+        "GenericVar1": {
+          "role": "factionId",
+          "label": "Team faction id"
+        },
+        "Objects": {
+          "role": "targets",
+          "label": "Characters"
+        }
+      },
+      "sideEffects": [
+        "faction"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 53,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 54,
+      "name": "ResetTeamFaction",
+      "realm": "server",
+      "summary": "Reset team faction on targets.",
+      "fields": {
+        "Objects": {
+          "role": "targets",
+          "label": "Characters"
+        }
+      },
+      "sideEffects": [
+        "faction"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 54,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 55,
+      "name": "SetTeamFactionFromVar",
+      "realm": "server",
+      "summary": "Set team faction from map variable.",
+      "fields": {
+        "GenericVar1": {
+          "role": "variableId",
+          "label": "Faction variable id"
+        },
+        "Objects": {
+          "role": "targets",
+          "label": "Characters"
+        }
+      },
+      "sideEffects": [
+        "faction",
+        "mapVariable"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 55,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 56,
+      "name": "AddPoints",
+      "realm": "server",
+      "summary": "Add arena points (or decrement if GenericVar3 set).",
+      "fields": {
+        "GenericVar1": {
+          "role": "points",
+          "label": "Points delta"
+        },
+        "GenericVar3": {
+          "role": "mode",
+          "label": "Non-zero: subtract mode"
+        }
+      },
+      "sideEffects": [
+        "arena"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 56,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 57,
+      "name": "ResetPoints",
+      "realm": "server",
+      "summary": "Reset arena points for activator or all.",
+      "fields": {
+        "GenericVar1": {
+          "role": "arenaSlot",
+          "label": "Arena slot (-1 = all)"
+        }
+      },
+      "sideEffects": [
+        "arena"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 57,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 58,
+      "name": "OpenArena",
+      "realm": "client",
+      "summary": "Open arena UI.",
+      "sideEffects": [
+        "clientUi"
+      ],
+      "clientUiOpcode": 11,
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 58,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 59,
+      "name": "OpenClanManager",
+      "realm": "client",
+      "summary": "Open clan manager UI.",
+      "sideEffects": [
+        "clientUi"
+      ],
+      "clientUiOpcode": 16,
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 59,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 60,
+      "name": "SetActiveObjective",
+      "realm": "client",
+      "summary": "Highlight active mission objective in UI.",
+      "description": "Fires nested objective reactions then sends FUN_004059f0 UI packet (opcode 0x12) with mission/objective ids when activator matches active objective.",
+      "fields": {
+        "GenericVar1": {
+          "role": "missionId",
+          "label": "Mission id"
+        },
+        "GenericVar3": {
+          "role": "objectiveIndex",
+          "label": "Objective index"
+        }
+      },
+      "sideEffects": [
+        "missionUi"
+      ],
+      "clientUiOpcode": 18,
+      "callees": [
+        "FUN_004cd3a0",
+        "FUN_004059f0"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 60,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 61,
+      "name": "ProgressBar",
+      "realm": "client",
+      "summary": "Show indeterminate progress bar UI.",
+      "sideEffects": [
+        "clientUi"
+      ],
+      "confidence": "inferred",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 61,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 62,
+      "name": "SetMapWaypoint",
+      "realm": "client",
+      "summary": "Set static map waypoint at target object position.",
+      "fields": {
+        "GenericVar1": {
+          "role": "waypointId",
+          "label": "Waypoint id"
+        },
+        "GenericVar3": {
+          "role": "iconId",
+          "label": "Map icon id"
+        },
+        "Objects": {
+          "role": "targets",
+          "label": "Position source objects"
+        }
+      },
+      "sideEffects": [
+        "mapUi"
+      ],
+      "clientUiOpcode": 21,
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 62,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 63,
+      "name": "SetMapDynamicWaypoint",
+      "realm": "client",
+      "summary": "Set dynamic map waypoint following target.",
+      "fields": {
+        "GenericVar1": {
+          "role": "waypointId",
+          "label": "Waypoint id"
+        },
+        "GenericVar3": {
+          "role": "iconId",
+          "label": "Map icon id"
+        },
+        "Objects": {
+          "role": "targets",
+          "label": "Tracked objects"
+        }
+      },
+      "sideEffects": [
+        "mapUi"
+      ],
+      "clientUiOpcode": 22,
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 63,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 64,
+      "name": "SetStatusText",
+      "realm": "client",
+      "summary": "Set mission status text line.",
+      "fields": {
+        "GenericVar1": {
+          "role": "slotId",
+          "label": "Status slot id"
+        },
+        "WaypointText": {
+          "role": "text",
+          "label": "Status text"
+        }
+      },
+      "sideEffects": [
+        "missionUi"
+      ],
+      "clientUiOpcode": 27,
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 64,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 65,
+      "name": "SetProgressBar",
+      "realm": "client",
+      "summary": "Set mission progress bar value.",
+      "fields": {
+        "GenericVar1": {
+          "role": "barId",
+          "label": "Progress bar id"
+        },
+        "GenericVar3": {
+          "role": "maxValue",
+          "label": "Maximum value"
+        },
+        "WaypointText": {
+          "role": "label",
+          "label": "Bar label"
+        }
+      },
+      "sideEffects": [
+        "missionUi"
+      ],
+      "clientUiOpcode": 40,
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 65,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 66,
+      "name": "RemoveProgressBar",
+      "realm": "client",
+      "summary": "Remove mission progress bar.",
+      "fields": {
+        "GenericVar1": {
+          "role": "barId",
+          "label": "Progress bar id"
+        }
+      },
+      "sideEffects": [
+        "missionUi"
+      ],
+      "clientUiOpcode": 26,
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 66,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 67,
+      "name": "RemoveText",
+      "realm": "client",
+      "summary": "Clear mission status text.",
+      "fields": {
+        "GenericVar1": {
+          "role": "slotId",
+          "label": "Status slot id"
+        }
+      },
+      "sideEffects": [
+        "missionUi"
+      ],
+      "clientUiOpcode": 25,
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 67,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 68,
+      "name": "RemoveMapWaypoint",
+      "realm": "client",
+      "summary": "Remove static map waypoint.",
+      "fields": {
+        "GenericVar1": {
+          "role": "waypointId",
+          "label": "Waypoint id"
+        }
+      },
+      "sideEffects": [
+        "mapUi"
+      ],
+      "clientUiOpcode": 23,
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 68,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 69,
+      "name": "RemoveMapDynamicWaypoint",
+      "realm": "client",
+      "summary": "Remove dynamic map waypoint.",
+      "fields": {
+        "GenericVar1": {
+          "role": "waypointId",
+          "label": "Waypoint id"
+        }
+      },
+      "sideEffects": [
+        "mapUi"
+      ],
+      "clientUiOpcode": 24,
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 69,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 70,
+      "name": "RelockContObj",
+      "realm": "server",
+      "summary": "Re-lock previously unlocked continent object.",
+      "fields": {
+        "GenericVar1": {
+          "role": "continentObjectId",
+          "label": "Continent object id"
+        }
+      },
+      "sideEffects": [
+        "worldUnlock"
+      ],
+      "callees": [
+        "FUN_0052a1b0"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 70,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 71,
+      "name": "OpenSkillTrainer",
+      "realm": "client",
+      "summary": "Open skill trainer UI.",
+      "fields": {
+        "GenericVar1": {
+          "role": "trainerId",
+          "label": "Trainer id"
+        },
+        "GenericVar3": {
+          "role": "skillTree",
+          "label": "Skill tree id"
+        }
+      },
+      "sideEffects": [
+        "clientUi"
+      ],
+      "clientUiOpcode": 29,
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 71,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 72,
+      "name": "FailMission",
+      "realm": "server",
+      "summary": "Fail mission for activator.",
+      "description": "FUN_0052da30(missionId) logs failure and sends fail-mission packet (EMSG_Sector_FailMission / opcode 0x20B2).",
+      "fields": {
+        "GenericVar1": {
+          "role": "missionId",
+          "label": "Mission id"
+        },
+        "ObjectiveIDCheck": {
+          "role": "objectiveGate",
+          "label": "Objective gate for CanTrigger"
+        }
+      },
+      "sideEffects": [
+        "mission"
+      ],
+      "packets": [
+        "FailMission 0x20B2"
+      ],
+      "callees": [
+        "FUN_0052da30",
+        "FUN_004149d0"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "tier-a",
+      "ghidra": {
+        "dispatchCase": 72,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 73,
+      "name": "SpawnCollide",
+      "realm": "server",
+      "summary": "Spawn collision-only proxy at target.",
+      "fields": {
+        "Objects": {
+          "role": "targets",
+          "label": "Spawn anchors"
+        }
+      },
+      "sideEffects": [
+        "objectSpawn",
+        "physics"
+      ],
+      "callees": [
+        "FUN_00566a60"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 73,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 74,
+      "name": "FirstTimeEvent",
+      "realm": "server",
+      "summary": "Record first-time player event flag.",
+      "fields": {
+        "GenericVar1": {
+          "role": "eventId",
+          "label": "First-time event id"
+        }
+      },
+      "sideEffects": [
+        "playerState"
+      ],
+      "callees": [
+        "FUN_00522bc0"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 74,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 75,
+      "name": "OpenDialog",
+      "realm": "client",
+      "summary": "Open generic dialog UI (same text path as Text reaction).",
+      "fields": {
+        "Text": {
+          "role": "dialog",
+          "label": "Dialog payload"
+        }
+      },
+      "sideEffects": [
+        "clientUi",
+        "dialog"
+      ],
+      "linkedTriggers": true,
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 75,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 76,
+      "name": "PlayMusic",
+      "realm": "client",
+      "summary": "Play music track on client.",
+      "fields": {
+        "MiscText": {
+          "role": "musicTrack",
+          "label": "Music track name"
+        }
+      },
+      "sideEffects": [
+        "audio"
+      ],
+      "clientUiOpcode": 46,
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 76,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 77,
+      "name": "Path",
+      "realm": "server",
+      "summary": "Assign path from MiscText name to targets.",
+      "fields": {
+        "MiscText": {
+          "role": "pathName",
+          "label": "Path name"
+        },
+        "Objects": {
+          "role": "targets",
+          "label": "Creatures"
+        }
+      },
+      "sideEffects": [
+        "ai"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 77,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 78,
+      "name": "CaptureOutpost",
+      "realm": "server",
+      "summary": "Capture outpost for team at object position.",
+      "fields": {
+        "GenericVar1": {
+          "role": "outpostId",
+          "label": "Outpost id"
+        },
+        "Objects": {
+          "role": "targets",
+          "label": "Outpost objects"
+        }
+      },
+      "sideEffects": [
+        "pvp",
+        "worldState"
+      ],
+      "callees": [
+        "FUN_004d4440",
+        "FUN_004ce940"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 78,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 79,
+      "name": "SetLevel",
+      "realm": "server",
+      "summary": "Set character level from variable.",
+      "fields": {
+        "GenericVar1": {
+          "role": "variableId",
+          "label": "Level variable id"
+        },
+        "Objects": {
+          "role": "targets",
+          "label": "Characters"
+        }
+      },
+      "sideEffects": [
+        "progression"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 79,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 80,
+      "name": "GiveRespec",
+      "realm": "client",
+      "summary": "Open respec UI.",
+      "sideEffects": [
+        "clientUi"
+      ],
+      "clientUiOpcode": 36,
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 80,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 81,
+      "name": "RollFromLootTable",
+      "realm": "client",
+      "summary": "Roll loot table presentation on client.",
+      "sideEffects": [
+        "clientUi",
+        "loot"
+      ],
+      "clientUiOpcode": 37,
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 81,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 82,
+      "name": "TimerPause",
+      "realm": "server",
+      "summary": "Pause map timer.",
+      "fields": {
+        "GenericVar3": {
+          "role": "timerId",
+          "label": "Timer id"
+        },
+        "MiscText": {
+          "role": "timerName",
+          "label": "Timer name"
+        }
+      },
+      "sideEffects": [
+        "timer"
+      ],
+      "nestedReactions": true,
+      "callees": [
+        "FUN_005a5130"
+      ],
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 82,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 83,
+      "name": "TaxiStops",
+      "realm": "client",
+      "summary": "Show taxi stop list dialog.",
+      "fields": {
+        "MiscText": {
+          "role": "dialogText",
+          "label": "Taxi UI text"
+        }
+      },
+      "sideEffects": [
+        "clientUi"
+      ],
+      "clientUiOpcode": 39,
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 83,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 84,
+      "name": "RaceWaypointReached",
+      "realm": "client",
+      "summary": "Notify race waypoint reached (crazy taxi objectives).",
+      "sideEffects": [
+        "missionUi",
+        "race"
+      ],
+      "clientUiOpcode": 47,
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 84,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 85,
+      "name": "StartRaceTimer",
+      "realm": "client",
+      "summary": "Start race timer UI.",
+      "fields": {
+        "GenericVar1": {
+          "role": "raceId",
+          "label": "Race id"
+        },
+        "GenericVar3": {
+          "role": "duration",
+          "label": "Timer duration"
+        }
+      },
+      "sideEffects": [
+        "clientUi",
+        "race"
+      ],
+      "clientUiOpcode": 51,
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 85,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 86,
+      "name": "OpenMailBox",
+      "realm": "client",
+      "summary": "Open mailbox UI.",
+      "sideEffects": [
+        "clientUi"
+      ],
+      "clientUiOpcode": 54,
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 86,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    },
+    {
+      "id": 87,
+      "name": "OpenAuctionHouse",
+      "realm": "client",
+      "summary": "Open auction house UI.",
+      "sideEffects": [
+        "clientUi"
+      ],
+      "clientUiOpcode": 55,
+      "confidence": "verified",
+      "implementationStatus": "documented",
+      "ghidra": {
+        "dispatchCase": 87,
+        "handler": "inline@CVOGReaction_Dispatch"
+      }
+    }
+  ]
+}

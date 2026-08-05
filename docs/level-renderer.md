@@ -14,17 +14,20 @@ exactly and switching to bilinear sampling).
 
 ```
 # 1. (once) extract assets + build the model/texture index — see docs/geo-format.md
-python tools/build_viewer_index.py
+python tools/level-viewer/build_viewer_index.py
 
 # 2. dump every map's placements to JSON (needs clonebase.wad; no MySQL)
-tools/AutoCore.MapDump/bin/Release/net8.0/mapdump.exe \
+dotnet run --project tools/level-viewer/AutoCore.MapDump -- \
     "C:\Program Files (x86)\NetDevil\Auto Assault" \
-    assets/extracted/maps  tools/model-viewer/levels
+    assets/extracted/maps  tools/level-viewer/levels
 
 # 3. serve the repo root and open the level viewer
 python -m http.server 8080     # from repo root
-#   http://localhost:8080/tools/model-viewer/level.html
+#   http://localhost:8080/tools/level-viewer/level.html
 ```
+
+Package root: `tools/level-viewer/` (see `tools/level-viewer/README.md`). A copy of shared
+modules and dump data also remains under `tools/model-viewer/` for `play.html`.
 
 Deep-link a specific map with `#<mapname>` (e.g. `level.html#sec_f_m_map_town_e7_1_citadel`).
 
@@ -32,10 +35,11 @@ For particle/VFX preview see [vfx-viewer.md](vfx-viewer.md) (`tools/model-viewer
 
 ## Pipeline
 
-1. **`tools/AutoCore.MapDump/`** (C#, references `AutoCore.Game`) — loads `clonebase.wad`
+1. **`tools/level-viewer/AutoCore.MapDump/`** (C#, references `AutoCore.Game`; also at
+   `tools/AutoCore.MapDump/`) — loads `clonebase.wad`
    via the new `AssetManager.LoadCloneBasesOnly()` (no world DB / MySQL), then for each
    extracted `.fam` runs the server's own `MapData.Read` parser and emits
-   `tools/model-viewer/levels/<map>.json`:
+   `tools/level-viewer/levels/<map>.json`:
    - `Terrain`: `Width`, `Height`, `GridSize`, `HeightScale` (4.0), `Entry`, `Tga` path.
      (Width/Height are read directly from the `.fam` header since `MapData` discards them.)
    - `Objects`: every renderable `GraphicsObjectTemplate` placement (triggers are **not**
@@ -57,10 +61,10 @@ For particle/VFX preview see [vfx-viewer.md](vfx-viewer.md) (`tools/model-viewer
    Plus `levels-index.json` (map list + object/marker/trigger/reaction counts). All 104
    extracted maps parse (0 failures).
    Implementation: `LevelExporter`, `ReactionDescriber`, `TriggerGraphResolver`,
-   `ReactionCatalog` under `tools/AutoCore.MapDump/` (tests in
-   `tools/AutoCore.MapDump.Tests/`). Field semantics come from
-   `tools/model-viewer/reaction-catalog.json` — see [reaction-types.md](reaction-types.md).
-2. **`tools/model-viewer/level.html` + `level.js`** — loads a level JSON, reconstructs:
+   `ReactionCatalog` under `tools/level-viewer/AutoCore.MapDump/` (tests in
+   `tools/level-viewer/AutoCore.MapDump.Tests/`). Field semantics come from
+   `tools/level-viewer/reaction-catalog.json` — see [reaction-types.md](reaction-types.md).
+2. **`tools/level-viewer/level.html` + `level.js`** — loads a level JSON, reconstructs:
    - **Terrain**: fetches `<map>.tga`, decodes the **16-bit height** (world Y =
      `((A<<8)|B) * HeightScale/256`, i.e. h16/64 — smooth, no terracing), downsamples to
      ≤400² segments, builds a `BufferGeometry` surface textured by the game-accurate
@@ -122,9 +126,9 @@ For particle/VFX preview see [vfx-viewer.md](vfx-viewer.md) (`tools/model-viewer
        boxes), parse-failed (red boxes)
      - **Markers**: master + per-kind (spawn / enter / store / outpost)
      - **Lines**: paths
-     Classification helpers live in `tools/model-viewer/level-visibility.js` and
-     `tools/model-viewer/reaction-execution.js` and      `reaction-catalog.js` and `ghidra-functions.js` (Node tests:
-     `node --test tools/model-viewer/ghidra-functions.test.js tools/model-viewer/reaction-catalog.test.js tools/model-viewer/reaction-execution.test.js tools/model-viewer/trigger-graph.test.js`).
+     Classification helpers live in `tools/level-viewer/level-visibility.js` and
+     `tools/level-viewer/reaction-execution.js` and      `reaction-catalog.js` and `ghidra-functions.js` (Node tests:
+     `node --test tools/level-viewer/`).
    - **Hover/click inspection**: raycast against visible instanced meshes. Hover shows a
      follow-cursor tooltip; **click** pins the same details in a fixed panel (bottom-right)
      until another placement is clicked. Trigger wireframes explain green vs orange/yellow editor tints and the
@@ -145,7 +149,7 @@ The clonebase gives no direct `.geo` filename. Resolution lives in
 2. Suffix aliases (`-dead` → `_dead`, `-stump` → `_stump`, etc.).
 3. Controlled fuzzy match for `snag_tree` assets when only one stem matches.
 
-Run `node tools/audit-level-resolution.js` for per-map unresolved/capped stats.
+Run `node tools/level-viewer/audit-level-resolution.js` for per-map unresolved/capped stats.
 Measured globally after normalization: **~95%** of placements resolve (trees were the main
 gap). Town/tutorial maps like `arkbaytutorial` hit **100%**. Unresolved placements (and any
 beyond `MAX_UNIQUE_MODELS=800`) render as translucent boxes. `Physics` is a **collision
@@ -233,7 +237,7 @@ render quad) to avoid seams. The 4096-entry UV LUT in `terrain-uv-table.js` mirr
 
 ### Tileset → atlas
 
-`Terrain.TileSet` → `tools/model-viewer/tileset-table.json` (regenerated, now complete:
+`Terrain.TileSet` → `tools/level-viewer/tileset-table.json` (regenerated, now complete:
 per entry `label`, `tile`, `tile2`, `tileSpec`, `layerIndices[8]`, `layerScales[8]`,
 `layerColors[8]`; source = table at `0xaefb88`, stride 0x15 dwords, in
 `CVOGTerrain_ApplyTilesetTextures` 0x4a86f0). Only two textures actually ship per
@@ -284,8 +288,8 @@ environment files `assets/extracted/data/env_<zone>[_<subarea>]_<tod>_nfx.xml` (
 the env loader `FUN_004a18b0` @0x4a18b0): `hemiTopColor`, `hemiBottomColor`,
 `directionalDifuse` (sun color), `directionalDirection` (sun vector), plus fog/sky.
 
-`tools/build_env_lighting.py` extracts all of these into
-`tools/model-viewer/env-lighting.json` (key = env name minus `_<tod>_nfx`, with a `tod`
+`tools/level-viewer/build_env_lighting.py` extracts all of these into
+`tools/level-viewer/env-lighting.json` (key = env name minus `_<tod>_nfx`, with a `tod`
 map of dawn/midday/night/sunset). At load, `level.js` `resolveEnvKey()` picks the map's
 zone env (preferring the zone-level entry) at **midday** by default; the **Lighting** panel
 (region + time-of-day `<select>`s) switches it live. The game binds environments to

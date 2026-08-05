@@ -1,0 +1,301 @@
+{
+  "version": 1,
+  "program": "AA-decode / autoassault.exe",
+  "generatedAt": "2026-07-06T03:01:48.648Z",
+  "functions": {
+    "0x004059f0": {
+      "address": "0x004059f0",
+      "legacyName": "FUN_004059f0",
+      "symbol": "Client_SendLogicUiPacket",
+      "decompiledSignature": "void __thiscall Client_SendLogicUiPacket(int param_1, undefined4 param_2)",
+      "reactionTypes": [
+        "OpenStore",
+        "SetActiveObjective",
+        "OpenBodyShop"
+      ],
+      "confidence": "verified"
+    },
+    "0x0040d260": {
+      "address": "0x0040d260",
+      "legacyName": "FUN_0040d260",
+      "symbol": "CVOGPhysics_ApplyImpulseVector",
+      "decompiledSignature": "void __thiscall CVOGPhysics_ApplyImpulseVector(int param_1, undefined4 param_2)",
+      "reactionTypes": [
+        "Boost"
+      ],
+      "confidence": "verified"
+    },
+    "0x004149d0": {
+      "address": "0x004149d0",
+      "legacyName": "FUN_004149d0",
+      "symbol": "CVOGReaction_FailMissionNotify",
+      "decompiledSignature": "void __thiscall CVOGReaction_FailMissionNotify(int param_1, undefined4 *param_2)",
+      "reactionTypes": [
+        "FailMission"
+      ],
+      "confidence": "verified"
+    },
+    "0x004bae70": {
+      "address": "0x004bae70",
+      "legacyName": "FUN_004bae70",
+      "symbol": "CVOGReaction_ResolveObjectTarget",
+      "decompiledSignature": "undefined4 __thiscall CVOGReaction_ResolveObjectTarget(int param_1, char param_2, uint param_3, uint param_4)",
+      "reactionTypes": [
+        "Activate"
+      ],
+      "confidence": "verified"
+    },
+    "0x004cd3a0": {
+      "address": "0x004cd3a0",
+      "legacyName": "FUN_004cd3a0",
+      "symbol": "CVOGReaction_FireNestedReactions",
+      "decompiledSignature": "void __thiscall CVOGReaction_FireNestedReactions(CVOGReaction *this, CVOGClonedObjectBase *activator, int nestedFlags, int unused)",
+      "reactionTypes": [
+        "Activate",
+        "Create",
+        "Delete",
+        "OpenStore",
+        "Boost",
+        "SetActiveObjective",
+        "OpenBodyShop"
+      ],
+      "confidence": "verified"
+    },
+    "0x004d09a0": {
+      "address": "0x004d09a0",
+      "legacyName": "FUN_004d09a0",
+      "symbol": "CVOGReaction_CastSkillOnTarget",
+      "decompiledSignature": "undefined4 __thiscall CVOGReaction_CastSkillOnTarget(int param_1, int param_2, int param_3, int *param_4, ...)",
+      "reactionTypes": [
+        "SkillCast"
+      ],
+      "confidence": "verified"
+    },
+    "0x004d37f0": {
+      "address": "0x004d37f0",
+      "legacyName": "FUN_004d37f0",
+      "symbol": "CVOGReaction_TransferMap",
+      "decompiledSignature": "void __thiscall CVOGReaction_TransferMap(int param_1, int *param_2, undefined4 param_3)",
+      "reactionTypes": [
+        "TransferMap"
+      ],
+      "confidence": "verified"
+    },
+    "0x004d38b0": {
+      "address": "0x004d38b0",
+      "legacyName": "FUN_004d38b0",
+      "symbol": "CVOGReaction_UpdateRepairStationPosition",
+      "decompiledSignature": "undefined4 __thiscall CVOGReaction_UpdateRepairStationPosition(int param_1, uint *param_2, int param_3)",
+      "reactionTypes": [
+        "MarkRepairStation"
+      ],
+      "confidence": "verified"
+    },
+    "0x004db8b0": {
+      "address": "0x004db8b0",
+      "legacyName": "FUN_004db8b0",
+      "symbol": "CVOGReaction_RemoveObject",
+      "decompiledSignature": "undefined4 __thiscall CVOGReaction_RemoveObject(int param_1, uint param_2, undefined4 param_3, char param_4)",
+      "reactionTypes": [
+        "Delete",
+        "Death"
+      ],
+      "confidence": "verified"
+    },
+    "0x004de550": {
+      "address": "0x004de550",
+      "legacyName": "FUN_004de550",
+      "symbol": "CVOGReaction_SpawnObject",
+      "decompiledSignature": "undefined4 __thiscall CVOGReaction_SpawnObject(int param_1, undefined4 param_2, undefined4 param_3)",
+      "reactionTypes": [
+        "Create"
+      ],
+      "confidence": "verified"
+    },
+    "0x004e4870": {
+      "address": "0x004e4870",
+      "legacyName": "FUN_004e4870",
+      "symbol": "CVOGReaction_BuildTextParams",
+      "decompiledSignature": "void __thiscall CVOGReaction_BuildTextParams(int param_1, undefined4 param_2)",
+      "reactionTypes": [
+        "Text"
+      ],
+      "confidence": "verified"
+    },
+    "0x0051a170": {
+      "address": "0x0051a170",
+      "legacyName": "FUN_0051a170",
+      "symbol": "CVOGReaction_GiveItemByCbid",
+      "decompiledSignature": "int CVOGReaction_GiveItemByCbid(int param_1)",
+      "reactionTypes": [
+        "GiveItemNumCBID"
+      ],
+      "confidence": "verified"
+    },
+    "0x00521e00": {
+      "address": "0x00521e00",
+      "legacyName": "FUN_00521e00",
+      "symbol": "CVOGReaction_MarkRepairStation",
+      "decompiledSignature": "uint __thiscall CVOGReaction_MarkRepairStation(int param_1, undefined4 param_2)",
+      "reactionTypes": [
+        "MarkRepairStation"
+      ],
+      "confidence": "verified"
+    },
+    "0x00522bc0": {
+      "address": "0x00522bc0",
+      "legacyName": "FUN_00522bc0",
+      "symbol": "CVOGReaction_RecordFirstTimeEvent",
+      "decompiledSignature": "uint __thiscall CVOGReaction_RecordFirstTimeEvent(int param_1, int param_2)",
+      "reactionTypes": [
+        "FirstTimeEvent"
+      ],
+      "confidence": "verified"
+    },
+    "0x0052a1b0": {
+      "address": "0x0052a1b0",
+      "legacyName": "FUN_0052a1b0",
+      "symbol": "CVOGReaction_RelockContinentObject",
+      "decompiledSignature": "void __thiscall CVOGReaction_RelockContinentObject(int param_1, undefined4 param_2)",
+      "reactionTypes": [
+        "RelockContObj"
+      ],
+      "confidence": "verified"
+    },
+    "0x0052da30": {
+      "address": "0x0052da30",
+      "legacyName": "FUN_0052da30",
+      "symbol": "CVOGReaction_FailMission",
+      "decompiledSignature": "undefined4 __thiscall CVOGReaction_FailMission(int param_1, uint param_2)",
+      "reactionTypes": [
+        "FailMission"
+      ],
+      "confidence": "verified"
+    },
+    "0x00531c80": {
+      "address": "0x00531c80",
+      "legacyName": "FUN_00531c80",
+      "symbol": "CVOGReaction_UnlockContinentObject",
+      "decompiledSignature": "void __thiscall CVOGReaction_UnlockContinentObject(int param_1, uint param_2)",
+      "reactionTypes": [
+        "UnlockContObj"
+      ],
+      "confidence": "verified"
+    },
+    "0x005327c0": {
+      "address": "0x005327c0",
+      "legacyName": "FUN_005327c0",
+      "symbol": "CVOGReaction_GiveMission",
+      "decompiledSignature": "undefined4 __thiscall CVOGReaction_GiveMission(int param_1, undefined4 param_2)",
+      "reactionTypes": [
+        "GiveMission"
+      ],
+      "confidence": "verified"
+    },
+    "0x00533c30": {
+      "address": "0x00533c30",
+      "legacyName": "FUN_00533c30",
+      "symbol": "CVOGReaction_AddExperience",
+      "decompiledSignature": "undefined4 __thiscall CVOGReaction_AddExperience(int param_1, int param_2, char param_3)",
+      "reactionTypes": [
+        "AddXP"
+      ],
+      "confidence": "verified"
+    },
+    "0x00533f90": {
+      "address": "0x00533f90",
+      "legacyName": "FUN_00533f90",
+      "symbol": "CVOGReaction_CompleteObjective",
+      "decompiledSignature": "undefined4 __thiscall CVOGReaction_CompleteObjective(int param_1, uint param_2, uint param_3, uint param_4, char param_5)",
+      "reactionTypes": [
+        "CompleteObjective"
+      ],
+      "confidence": "verified"
+    },
+    "0x0053d790": {
+      "address": "0x0053d790",
+      "legacyName": "FUN_0053d790",
+      "symbol": "CVOGReaction_TeleportTarget",
+      "decompiledSignature": "void __thiscall CVOGReaction_TeleportTarget(int *param_1, undefined4 *param_2)",
+      "reactionTypes": [
+        "Teleport"
+      ],
+      "confidence": "verified"
+    },
+    "0x0054c570": {
+      "address": "0x0054c570",
+      "legacyName": "FUN_0054c570",
+      "symbol": "CVOGReaction_ResolveSkillTargets",
+      "decompiledSignature": "undefined4 * CVOGReaction_ResolveSkillTargets(void *param_1, undefined4 param_2)",
+      "reactionTypes": [
+        "SkillCast"
+      ],
+      "confidence": "verified"
+    },
+    "0x005721c0": {
+      "address": "0x005721c0",
+      "legacyName": "FUN_005721c0",
+      "symbol": "CVOGReaction_RemoveInventoryItem",
+      "decompiledSignature": "int __thiscall CVOGReaction_RemoveInventoryItem(int param_1, int param_2, int param_3)",
+      "reactionTypes": [
+        "RemoveFromInv"
+      ],
+      "confidence": "verified"
+    },
+    "0x0057a190": {
+      "address": "0x0057a190",
+      "legacyName": "FUN_0057a190",
+      "symbol": "CVOGReaction_ShowDialog",
+      "decompiledSignature": "void __thiscall CVOGReaction_ShowDialog(int param_1, int param_2)",
+      "reactionTypes": [
+        "Text"
+      ],
+      "confidence": "verified"
+    },
+    "0x0057c4a0": {
+      "address": "0x0057c4a0",
+      "legacyName": "FUN_0057c4a0",
+      "symbol": "CVOGReaction_ShowScreenText",
+      "decompiledSignature": "void __thiscall CVOGReaction_ShowScreenText(int param_1, int param_2)",
+      "reactionTypes": [
+        "Text"
+      ],
+      "confidence": "verified"
+    },
+    "0x005afbc0": {
+      "address": "0x005afbc0",
+      "legacyName": "FUN_005afbc0",
+      "symbol": "CVOGMap_SetVariable",
+      "decompiledSignature": "void __thiscall CVOGMap_SetVariable(int param_1, uint param_2, float param_3, undefined4 param_4)",
+      "reactionTypes": [
+        "VariableSet",
+        "VariableSetRandom",
+        "VariableAdd"
+      ],
+      "confidence": "verified"
+    },
+    "0x005b05f0": {
+      "address": "0x005b05f0",
+      "legacyName": "FUN_005b05f0",
+      "symbol": "CVOGMap_LookupVariable",
+      "decompiledSignature": "undefined4 __thiscall CVOGMap_LookupVariable(int param_1, uint param_2, undefined4 *param_3)",
+      "reactionTypes": [
+        "VariableSet",
+        "Boost",
+        "VariableAdd",
+        "SetFactionFromVar"
+      ],
+      "confidence": "verified"
+    },
+    "0x007a4330": {
+      "address": "0x007a4330",
+      "legacyName": "FUN_007a4330",
+      "symbol": "CVOGReaction_RandomUnitScalar",
+      "decompiledSignature": "undefined * CVOGReaction_RandomUnitScalar(void)",
+      "reactionTypes": [
+        "VariableSetRandom"
+      ],
+      "confidence": "verified"
+    }
+  }
+}

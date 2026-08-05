@@ -2,7 +2,7 @@
 
 ## Viewers and formats
 
-- [Level renderer](level-renderer.md) — whole-map viewer (`tools/model-viewer/level.html`)
+- [Level renderer](level-renderer.md) — whole-map viewer (`tools/level-viewer/level.html`)
 - [Terrain format findings](terrain-format-findings.md) — map TGA channels, tileset RE
 - [Geo format](geo-format.md) — `.geo` mesh/material parser shared by model viewer
 
@@ -19,6 +19,7 @@
 
 ## Tools
 
-- `tools/build_viewer_index.py` — build `tools/model-viewer/index.json`
-- `tools/AutoCore.MapDump/` — dump `.fam` maps to level JSON
+- `tools/level-viewer/` — level viewer + MapDump + index/env builders (see package README)
+- `tools/build_viewer_index.py` — build `tools/model-viewer/index.json` (model/VFX viewers)
+- `tools/AutoCore.MapDump/` — dump `.fam` maps to level JSON (also under `tools/level-viewer/`)
 - `tools/audit-level-resolution.js` — per-map model resolution report

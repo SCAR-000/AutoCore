@@ -13,7 +13,7 @@ Repo-specific guidance for OpenCode sessions working in `AutoCore-SCAR`. Verifie
   - `AutoCore.Game` — game logic, references `lib/TNL.NET` (networking) and `AutoCore.Database`.
   - `AutoCore.Utils` — logging, command processor, base `ExitableProgram`.
 - `lib/TNL.NET` is a **git submodule** (`Blumster/TNL.NET`). After a fresh clone run `git submodule update --init`. It has its own `.sln` and `net8.0` target.
-- `tools/` contains standalone .NET console tools (`AssetExtractor`, `EquipmentDump`, `MapDump`, `PhysicsDump`) plus the JS/HTML `model-viewer`. These are **not in `AutoCore.sln`** — build by csproj directly.
+- `tools/` contains standalone .NET console tools (`AssetExtractor`, `EquipmentDump`, `MapDump`, `PhysicsDump`) plus the JS/HTML `model-viewer` and `level-viewer` packages. These are **not in `AutoCore.sln`** — build by csproj directly. Level viewer lives at `tools/level-viewer/` (see its README); MapDump also ships there.
 - `debug-tool/AutoCore.DebugTool` targets `net8.0-windows` (reads another process's memory via kernel32 P/Invoke). **Windows-only; won't restore on Linux/macOS.** Not in the solution either.
 
 ## Build / run
@@ -33,6 +33,8 @@ dotnet run --project src/AutoCore.Sector
 # Tools (not in .sln):
 dotnet build tools/AutoCore.MapDump/AutoCore.MapDump.csproj
 dotnet run --project tools/AutoCore.MapDump -- <gamePath> <mapsOutDir> <levelsOutDir>
+# Level viewer package (preferred for level.html):
+dotnet run --project tools/level-viewer/AutoCore.MapDump -- <gamePath> assets/extracted/maps tools/level-viewer/levels
 ```
 
 ## Tests
@@ -109,7 +111,7 @@ Full extract still uses no filter. Filtered extracts (e.g. `assets/buggy` with `
 - **Nullable context is per-project**, not solution-wide: enabled in `Auth`, `Communicator`, `Game.Tests`, `Launcher`, and the `tools/*` projects; **disabled** in `Database`, `Global`, `Game`, `Sector`, `Utils`. Match the host project's setting when editing.
 - **`ImplicitUsings` is enabled everywhere** — don't re-add `using System;` etc.
 - Tool assembly names are lowercase (`mapdump`, `debugtool`, `assetextractor`, `equipmentdump`, `physicsdump`), not the csproj name. Outputs land in `bin/<Config>/net8.0/`.
-- `AutoCore.MapDump` (and its tests) copy `tools/model-viewer/reaction-catalog.json` and `ghidra-functions.json` to the output dir as `Content`. If you rename/move those JSONs, update the `<Content Include>` links in both csprojs.
+- `AutoCore.MapDump` (and its tests) copy `reaction-catalog.json` and `ghidra-functions.json` (from `tools/model-viewer/` or package-local under `tools/level-viewer/`) to the output dir as `Content`. If you rename/move those JSONs, update the `<Content Include>` links in both csprojs.
 - TNL.NET namespace is `TNL` (no `.NET` suffix); `AllowUnsafeBlocks` is on for that project.
 
 ## RE / format docs
